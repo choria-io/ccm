@@ -181,3 +181,37 @@ resources:
     ensure: latest
     name: apache2
 ```
+
+### Go Programs
+
+Using from Go is pretty simple, first we need a manager:
+
+```golang
+appLogger:=slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+userLogger:=slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+mgr, _ := manager.NewManager(appLogger, userLogger)
+```
+
+Now we can use a type directly:
+
+```golang
+	pkg, _ := packageresource.New(ctx, mgr, model.PackageResourceProperties{
+		CommonResourceProperties: model.CommonResourceProperties{
+			Name:     "apache2",
+			Ensure:   model.EnsurePresent,
+		},
+	})
+
+    status, _ := pkg.Apply(ctx)
+```
+
+Or apply a manifest:
+
+```golang
+    manifest, _ := os.Open("manifest.yaml")
+
+    _, apply, err := mgr.ResolveManifestReader(ctx, manifest)
+
+    _, err = mgr.ApplyManifest(ctx, apply)
+```
