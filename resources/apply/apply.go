@@ -5,6 +5,7 @@
 package apply
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -15,14 +16,32 @@ import (
 
 // Apply represents a parsed and resolved manifest ready for execution
 type Apply struct {
-	resources []map[string]any
+	resources []map[string]model.ResourceProperties
 	data      map[string]any
 
 	mu sync.Mutex
 }
 
+func (a *Apply) MarshalYAML() ([]byte, error) {
+	return yaml.Marshal(a.toMap())
+}
+
+func (a *Apply) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.toMap())
+}
+
+func (a *Apply) toMap() map[string]any {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	return map[string]any{
+		"resources": a.resources,
+		"data":      a.data,
+	}
+}
+
 // Resources returns the list of resources in the manifest
-func (a *Apply) Resources() []map[string]any {
+func (a *Apply) Resources() []map[string]model.ResourceProperties {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -76,7 +95,7 @@ func ParseManifestHiera(resolved map[string]any, env *templates.Env, log model.L
 				return nil, fmt.Errorf("invalid manifest resource %d: %w", i+1, err)
 			}
 
-			res.resources = append(res.resources, map[string]any{typeName: prop.(any)})
+			res.resources = append(res.resources, map[string]model.ResourceProperties{typeName: prop})
 		}
 	}
 

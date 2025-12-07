@@ -1,0 +1,58 @@
+version: 2
+project_name: ccm
+
+release:
+  github:
+    owner: choria-io
+    name: ccm
+  name_template: "Release {{.Version}}"
+  draft: true
+
+changelog:
+  disable: true
+
+builds:
+  - id: ccm
+    main: ./cmd
+    binary: ccm
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "6"
+      - "7"
+
+archives:
+  - name_template: "ccm-{{.Version}}-{{.Os}}-{{.Arch}}{{if .Arm}}{{.Arm}}{{end}}"
+    wrap_in_directory: true
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+
+brews:
+  - name: ccm
+    directory: Formula
+    repository:
+      owner: choria-io
+      name: homebrew-tap
+    url_template: "https://github.com/choria-io/ccm/releases/download/{{ .Tag }}/ccm-{{.Version}}-{{ .Os }}-{{ .Arch }}{{if .Arm}}{{.Arm}}{{end}}.tar.gz"
+    homepage: "https://github.com/choria-io/ccm"
+    description: "Choria Configuration Management"
+    skip_upload: false
+    test: |
+      system "#{bin}/ccm --version"
+    install: |
+      bin.install "ccm"
+
+checksum:
+  name_template: "SHA256SUMS"
+  algorithm: sha256

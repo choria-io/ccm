@@ -34,6 +34,7 @@ type Resource interface {
 type ResourceProperties interface {
 	Validate() error
 	ResolveTemplates(*templates.Env) error
+	ToYamlManifest() (yaml.RawMessage, error)
 }
 
 // CommonResourceProperties contains properties shared by all resource types
