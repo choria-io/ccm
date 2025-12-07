@@ -119,7 +119,7 @@ func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.ReadCloser)
 		manifestData["resources"] = ccm["resources"]
 	}
 
-	apply, err := apply.ParseManifestHiera(manifestData, &templates.Env{Data: m.Data(), Facts: facts}, hieraLogger)
+	apply, err := apply.ParseManifestHiera(manifestData, &templates.Env{Data: resolved, Facts: facts}, hieraLogger)
 	if err != nil {
 		return nil, nil, err
 	}

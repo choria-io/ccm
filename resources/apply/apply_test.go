@@ -38,8 +38,12 @@ var _ = Describe("Apply", func() {
 	Describe("Resources", func() {
 		It("Should return the resources list", func() {
 			apply := &Apply{
-				resources: []map[string]any{
-					{model.PackageTypeName: "test"},
+				resources: []map[string]model.ResourceProperties{
+					{model.PackageTypeName: &model.PackageResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name: "test",
+						}},
+					},
 				},
 			}
 
@@ -263,8 +267,12 @@ var _ = Describe("Apply", func() {
 	Describe("Thread safety", func() {
 		It("Should handle concurrent access to Resources", func() {
 			apply := &Apply{
-				resources: []map[string]any{
-					{model.PackageTypeName: "test"},
+				resources: []map[string]model.ResourceProperties{
+					{model.PackageTypeName: &model.PackageResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name: "test",
+						}},
+					},
 				},
 			}
 

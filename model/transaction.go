@@ -12,7 +12,7 @@ import (
 )
 
 type Apply interface {
-	Resources() []map[string]any
+	Resources() []map[string]ResourceProperties
 	Data() map[string]any
 }
 

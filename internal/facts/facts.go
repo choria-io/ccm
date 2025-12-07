@@ -94,10 +94,10 @@ func standardFacts(ctx context.Context) (map[string]any, error) {
 	}
 
 	return map[string]any{
-		"memory":    memoryFacts,
-		"cpu":       cpuFacts,
-		"partition": partitionFacts,
 		"host":      hostFacts,
 		"network":   networkFacts,
+		"partition": partitionFacts,
+		"cpu":       cpuFacts,
+		"memory":    memoryFacts,
 	}, nil
 }

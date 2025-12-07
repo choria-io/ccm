@@ -50,6 +50,11 @@ func (p *PackageResourceProperties) ResolveTemplates(env *templates.Env) error {
 	return p.CommonResourceProperties.ResolveTemplates(env)
 }
 
+// ToYamlManifest returns the package resource properties as a yaml document
+func (p *PackageResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
+	return yaml.Marshal(p)
+}
+
 // NewPackageResourcePropertiesFromYaml creates a new package resource properties object from a yaml document, does not validate or expand templates
 func NewPackageResourcePropertiesFromYaml(raw yaml.RawMessage) (*PackageResourceProperties, error) {
 	prop := &PackageResourceProperties{}
