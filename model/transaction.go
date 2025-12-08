@@ -17,8 +17,9 @@ type Apply interface {
 }
 
 type SessionStore interface {
+	StartSession(Apply) error
 	RecordEvent(TransactionEvent)
-	ResetSession(manifest Apply)
+	EventsForResource(resourceType string, resourceName string) ([]TransactionEvent, error)
 }
 
 const TransactionEventProtocol = "io.choria.ccm.v1.transaction.event"

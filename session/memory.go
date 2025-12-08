@@ -29,8 +29,8 @@ func NewMemorySessionStore(logger model.Logger, writer model.Logger) (*MemorySes
 	}, nil
 }
 
-// ResetSession clears the event log and starts a new session for the given manifest
-func (s *MemorySessionStore) ResetSession(manifest model.Apply) {
+// StartSession clears the event log and starts a new session for the given manifest
+func (s *MemorySessionStore) StartSession(manifest model.Apply) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -38,6 +38,8 @@ func (s *MemorySessionStore) ResetSession(manifest model.Apply) {
 
 	s.events = make([]model.TransactionEvent, 0)
 	s.start = time.Now().UTC()
+
+	return nil
 }
 
 // RecordEvent adds a transaction event to the session and logs its status
@@ -48,6 +50,21 @@ func (s *MemorySessionStore) RecordEvent(event model.TransactionEvent) {
 	s.events = append(s.events, event)
 
 	event.LogStatus(s.out)
+}
+
+// EventsForResource returns all events for a given resource, the events are in time order with latest event at the end
+func (s *MemorySessionStore) EventsForResource(resourceType string, resourceName string) ([]model.TransactionEvent, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var res []model.TransactionEvent
+	for _, e := range s.events {
+		if e.ResourceType == resourceType && e.Name == resourceName {
+			res = append(res, e)
+		}
+	}
+
+	return res, nil
 }
 
 // ResourceEvents returns all events for a given resource

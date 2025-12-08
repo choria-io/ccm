@@ -196,7 +196,7 @@ mgr, _ := manager.NewManager(appLogger, userLogger)
 Now we can use a type directly:
 
 ```golang
-	pkg, _ := packageresource.New(ctx, mgr, model.PackageResourceProperties{
+	pkg, err := packageresource.New(ctx, mgr, model.PackageResourceProperties{
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:     "apache2",
 			Ensure:   model.EnsurePresent,
@@ -209,7 +209,7 @@ Now we can use a type directly:
 Or apply a manifest:
 
 ```golang
-    manifest, _ := os.Open("manifest.yaml")
+    manifest, err := os.Open("manifest.yaml")
 
     _, apply, err := mgr.ResolveManifestReader(ctx, manifest)
 
