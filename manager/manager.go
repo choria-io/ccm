@@ -129,7 +129,10 @@ func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.ReadCloser)
 
 // ApplyManifest applies a parsed manifest and records all changes to the session store
 func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.SessionStore, error) {
-	m.session.ResetSession(apply)
+	err := m.session.StartSession(apply)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, r := range apply.Resources() {
 		for _, v := range r {
