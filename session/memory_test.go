@@ -87,7 +87,7 @@ var _ = Describe("MemorySessionStore", func() {
 
 			// First session with events
 			store.StartSession(manifest)
-			event := model.TransactionEvent{
+			event := &model.TransactionEvent{
 				Name:         "test",
 				ResourceType: "package",
 			}
@@ -128,7 +128,7 @@ var _ = Describe("MemorySessionStore", func() {
 		})
 
 		It("Should record a single event", func() {
-			event := model.TransactionEvent{
+			event := &model.TransactionEvent{
 				Name:         "vim",
 				ResourceType: "package",
 				Changed:      true,
@@ -138,13 +138,15 @@ var _ = Describe("MemorySessionStore", func() {
 			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
 
 			Expect(store.events).To(HaveLen(1))
-			Expect(store.events[0].Name).To(Equal("vim"))
-			Expect(store.events[0].ResourceType).To(Equal("package"))
-			Expect(store.events[0].Changed).To(BeTrue())
+			Expect(store.events[0]).To(BeAssignableToTypeOf(&model.TransactionEvent{}))
+			te := store.events[0].(*model.TransactionEvent)
+			Expect(te.Name).To(Equal("vim"))
+			Expect(te.ResourceType).To(Equal("package"))
+			Expect(te.Changed).To(BeTrue())
 		})
 
 		It("Should record multiple events", func() {
-			events := []model.TransactionEvent{
+			events := []*model.TransactionEvent{
 				{Name: "vim", ResourceType: "package", Changed: true},
 				{Name: "git", ResourceType: "package", Changed: false},
 				{Name: "nginx", ResourceType: "service", Changed: true},
@@ -162,14 +164,15 @@ var _ = Describe("MemorySessionStore", func() {
 		It("Should maintain event order", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 
-			Expect(store.RecordEvent(model.TransactionEvent{Name: "first", ResourceType: "package"})).ToNot(HaveOccurred())
-			Expect(store.RecordEvent(model.TransactionEvent{Name: "second", ResourceType: "package"})).ToNot(HaveOccurred())
-			Expect(store.RecordEvent(model.TransactionEvent{Name: "third", ResourceType: "package"})).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(&model.TransactionEvent{Name: "first", ResourceType: "package"})).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(&model.TransactionEvent{Name: "second", ResourceType: "package"})).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(&model.TransactionEvent{Name: "third", ResourceType: "package"})).ToNot(HaveOccurred())
 
 			Expect(store.events).To(HaveLen(3))
-			Expect(store.events[0].Name).To(Equal("first"))
-			Expect(store.events[1].Name).To(Equal("second"))
-			Expect(store.events[2].Name).To(Equal("third"))
+			Expect(store.events[0]).To(BeAssignableToTypeOf(&model.TransactionEvent{}))
+			Expect(store.events[0].(*model.TransactionEvent).Name).To(Equal("first"))
+			Expect(store.events[1].(*model.TransactionEvent).Name).To(Equal("second"))
+			Expect(store.events[2].(*model.TransactionEvent).Name).To(Equal("third"))
 		})
 	})
 
@@ -184,7 +187,7 @@ var _ = Describe("MemorySessionStore", func() {
 			store.StartSession(manifest)
 
 			// Add test events
-			events := []model.TransactionEvent{
+			events := []*model.TransactionEvent{
 				{Name: "vim", ResourceType: "package", Changed: true},
 				{Name: "git", ResourceType: "package", Changed: false},
 				{Name: "nginx", ResourceType: "service", Changed: true},
@@ -199,7 +202,8 @@ var _ = Describe("MemorySessionStore", func() {
 		})
 
 		It("Should return events for a specific resource", func() {
-			events := store.ResourceEvents("package", "vim")
+			events, err := store.EventsForResource("package", "vim")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(events).To(HaveLen(2))
 			Expect(events[0].Name).To(Equal("vim"))
 			Expect(events[0].ResourceType).To(Equal("package"))
@@ -207,12 +211,14 @@ var _ = Describe("MemorySessionStore", func() {
 		})
 
 		It("Should return empty slice for non-existent resource", func() {
-			events := store.ResourceEvents("package", "nonexistent")
+			events, err := store.EventsForResource("package", "nonexistent")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(events).To(BeEmpty())
 		})
 
 		It("Should filter by both type and name", func() {
-			events := store.ResourceEvents("service", "nginx")
+			events, err := store.EventsForResource("service", "nginx")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(events).To(HaveLen(1))
 			Expect(events[0].Name).To(Equal("nginx"))
 			Expect(events[0].ResourceType).To(Equal("service"))
@@ -222,23 +228,26 @@ var _ = Describe("MemorySessionStore", func() {
 			// Add a package named "nginx"
 			writer.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(model.TransactionEvent{
+			store.RecordEvent(&model.TransactionEvent{
 				Name:         "nginx",
 				ResourceType: "package",
 				Changed:      true,
 			})
 
-			serviceEvents := store.ResourceEvents("service", "nginx")
+			serviceEvents, err := store.EventsForResource("service", "nginx")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(serviceEvents).To(HaveLen(1))
 			Expect(serviceEvents[0].ResourceType).To(Equal("service"))
 
-			packageEvents := store.ResourceEvents("package", "nginx")
+			packageEvents, err := store.EventsForResource("package", "nginx")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(packageEvents).To(HaveLen(1))
 			Expect(packageEvents[0].ResourceType).To(Equal("package"))
 		})
 
 		It("Should preserve event order", func() {
-			events := store.ResourceEvents("package", "vim")
+			events, err := store.EventsForResource("package", "vim")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(events).To(HaveLen(2))
 			Expect(events[0].Changed).To(BeTrue())
 			Expect(events[1].Changed).To(BeFalse())
@@ -263,7 +272,7 @@ var _ = Describe("MemorySessionStore", func() {
 			for i := 0; i < 10; i++ {
 				go func(index int) {
 					defer GinkgoRecover()
-					event := model.TransactionEvent{
+					event := &model.TransactionEvent{
 						Name:         "concurrent",
 						ResourceType: "package",
 					}
@@ -281,7 +290,7 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should handle concurrent ResourceEvents calls", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			Expect(store.RecordEvent(model.TransactionEvent{
+			Expect(store.RecordEvent(&model.TransactionEvent{
 				Name:         "test",
 				ResourceType: "package",
 			})).ToNot(HaveOccurred())
@@ -291,7 +300,8 @@ var _ = Describe("MemorySessionStore", func() {
 			for i := 0; i < 10; i++ {
 				go func() {
 					defer GinkgoRecover()
-					events := store.ResourceEvents("package", "test")
+					events, err := store.EventsForResource("package", "test")
+					Expect(err).ToNot(HaveOccurred())
 					Expect(events).To(HaveLen(1))
 					done <- true
 				}()
@@ -319,7 +329,7 @@ var _ = Describe("MemorySessionStore", func() {
 			go func() {
 				defer GinkgoRecover()
 				for i := 0; i < 5; i++ {
-					Expect(store.RecordEvent(model.TransactionEvent{
+					Expect(store.RecordEvent(&model.TransactionEvent{
 						Name:         "concurrent",
 						ResourceType: "package",
 					})).ToNot(HaveOccurred())
@@ -350,23 +360,25 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should handle events with empty names", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(model.TransactionEvent{
+			Expect(store.RecordEvent(&model.TransactionEvent{
 				Name:         "",
 				ResourceType: "package",
-			})
+			})).ToNot(HaveOccurred())
 
-			events := store.ResourceEvents("package", "")
+			events, err := store.EventsForResource("package", "")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(events).To(HaveLen(1))
 		})
 
 		It("Should handle events with empty types", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(model.TransactionEvent{
+			store.RecordEvent(&model.TransactionEvent{
 				Name:         "test",
 				ResourceType: "",
 			})
 
-			events := store.ResourceEvents("", "test")
+			events, err := store.EventsForResource("", "test")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(events).To(HaveLen(1))
 		})
 
@@ -393,7 +405,7 @@ var _ = Describe("MemorySessionStore", func() {
 			store.StartSession(manifest)
 
 			// Add test events
-			events := []model.TransactionEvent{
+			events := []*model.TransactionEvent{
 				{Name: "vim", ResourceType: "package", Changed: true},
 				{Name: "git", ResourceType: "package", Changed: false},
 				{Name: "nginx", ResourceType: "service", Changed: true},
@@ -468,7 +480,7 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should handle empty resourceType", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(model.TransactionEvent{
+			store.RecordEvent(&model.TransactionEvent{
 				Name:         "test",
 				ResourceType: "",
 			})
@@ -480,7 +492,7 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should handle empty resourceName", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			Expect(store.RecordEvent(model.TransactionEvent{
+			Expect(store.RecordEvent(&model.TransactionEvent{
 				Name:         "",
 				ResourceType: "package",
 			})).ToNot(HaveOccurred())

@@ -96,13 +96,13 @@ func (d *DirectorySessionStore) EventsForResource(resourceType string, name stri
 	return events, nil
 }
 
-func (d *DirectorySessionStore) RecordEvent(event model.TransactionEvent) error {
+func (d *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	// Validate EventID is a valid ksuid to prevent directory traversal
 	// Valid ksuids contain only safe characters (base62) and no path separators
-	_, err := ksuid.Parse(event.EventID)
+	_, err := ksuid.Parse(event.SessionEventID())
 	if err != nil {
 		return fmt.Errorf("invalid event ID: %w", err)
 	}
@@ -121,7 +121,7 @@ func (d *DirectorySessionStore) RecordEvent(event model.TransactionEvent) error 
 
 	// Write to file named <eventid>.event
 	// Safe to use EventID directly since it's validated as a ksuid
-	filename := filepath.Join(d.directory, event.EventID+".event")
+	filename := filepath.Join(d.directory, event.SessionEventID()+".event")
 	d.log.Info("Recording event", "filename", filename)
 
 	err = os.WriteFile(filename, data, 0644)

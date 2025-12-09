@@ -14,7 +14,7 @@ import (
 // MemorySessionStore stores transaction events in memory for a session
 type MemorySessionStore struct {
 	start  time.Time
-	events []model.TransactionEvent
+	events []model.SessionEvent
 	log    model.Logger
 	out    model.Logger
 	mu     sync.Mutex
@@ -26,7 +26,7 @@ func NewMemorySessionStore(logger model.Logger, writer model.Logger) (*MemorySes
 	return &MemorySessionStore{
 		out:    writer,
 		log:    logger,
-		events: make([]model.TransactionEvent, 0),
+		events: make([]model.SessionEvent, 0),
 	}, nil
 }
 
@@ -37,20 +37,23 @@ func (s *MemorySessionStore) StartSession(manifest model.Apply) error {
 
 	s.out.Info("Creating new session record", "resources", len(manifest.Resources()))
 
-	s.events = make([]model.TransactionEvent, 0)
+	s.events = make([]model.SessionEvent, 0)
 	s.start = time.Now().UTC()
 
 	return nil
 }
 
 // RecordEvent adds a transaction event to the session and logs its status
-func (s *MemorySessionStore) RecordEvent(event model.TransactionEvent) error {
+func (s *MemorySessionStore) RecordEvent(event model.SessionEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.events = append(s.events, event)
 
-	event.LogStatus(s.out)
+	te, ok := event.(*model.TransactionEvent)
+	if ok {
+		te.LogStatus(s.out)
+	}
 
 	return nil
 }
@@ -62,22 +65,15 @@ func (s *MemorySessionStore) EventsForResource(resourceType string, resourceName
 
 	var res []model.TransactionEvent
 	for _, e := range s.events {
-		if e.ResourceType == resourceType && e.Name == resourceName {
-			res = append(res, e)
+		te, ok := e.(*model.TransactionEvent)
+		if !ok {
+			continue
+		}
+
+		if te.ResourceType == resourceType && te.Name == resourceName {
+			res = append(res, *te)
 		}
 	}
 
 	return res, nil
-}
-
-// ResourceEvents returns all events for a given resource
-func (s *MemorySessionStore) ResourceEvents(resourceType string, resourceName string) []model.TransactionEvent {
-	var res []model.TransactionEvent
-	for _, e := range s.events {
-		if e.ResourceType == resourceType && e.Name == resourceName {
-			res = append(res, e)
-		}
-	}
-
-	return res
 }

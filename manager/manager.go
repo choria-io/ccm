@@ -74,10 +74,10 @@ func (m *CCM) Data() map[string]any {
 	return m.data
 }
 
-func (m *CCM) applyPackageResource(ctx context.Context, properties *model.PackageResourceProperties) (model.TransactionEvent, error) {
+func (m *CCM) applyPackageResource(ctx context.Context, properties *model.PackageResourceProperties) (*model.TransactionEvent, error) {
 	pkg, err := packageresource.New(ctx, m, *properties)
 	if err != nil {
-		return model.TransactionEvent{}, err
+		return nil, err
 	}
 
 	return pkg.Apply(ctx)
@@ -203,7 +203,7 @@ func (m *CCM) NewRunner() (model.CommandRunner, error) {
 	return cmdrunner.NewCommandRunner(log)
 }
 
-func (m *CCM) RecordEvent(event model.TransactionEvent) error {
+func (m *CCM) RecordEvent(event *model.TransactionEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

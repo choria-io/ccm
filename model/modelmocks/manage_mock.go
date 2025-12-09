@@ -233,7 +233,7 @@ func (mr *MockManagerMockRecorder) NewRunner() *gomock.Call {
 }
 
 // RecordEvent mocks base method.
-func (m *MockManager) RecordEvent(event model.TransactionEvent) error {
+func (m *MockManager) RecordEvent(event *model.TransactionEvent) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecordEvent", event)
 	ret0, _ := ret[0].(error)

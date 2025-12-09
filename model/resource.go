@@ -26,7 +26,7 @@ type Resource interface {
 	Name() string
 	Provider() string
 	Properties() any
-	Apply(context.Context) (TransactionEvent, error)
+	Apply(context.Context) (*TransactionEvent, error)
 	Info(context.Context) (any, error)
 }
 
