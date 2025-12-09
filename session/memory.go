@@ -22,6 +22,7 @@ type MemorySessionStore struct {
 
 // NewMemorySessionStore creates a new in-memory session store with the provided loggers
 func NewMemorySessionStore(logger model.Logger, writer model.Logger) (*MemorySessionStore, error) {
+	logger.Info("Creating new session store")
 	return &MemorySessionStore{
 		out:    writer,
 		log:    logger,
@@ -43,13 +44,15 @@ func (s *MemorySessionStore) StartSession(manifest model.Apply) error {
 }
 
 // RecordEvent adds a transaction event to the session and logs its status
-func (s *MemorySessionStore) RecordEvent(event model.TransactionEvent) {
+func (s *MemorySessionStore) RecordEvent(event model.TransactionEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.events = append(s.events, event)
 
 	event.LogStatus(s.out)
+
+	return nil
 }
 
 // EventsForResource returns all events for a given resource, the events are in time order with latest event at the end

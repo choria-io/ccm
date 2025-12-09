@@ -16,6 +16,7 @@ import (
 type applyCommand struct {
 	manifest   string
 	renderOnly bool
+	session    string
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
@@ -24,6 +25,8 @@ func registerApplyCommand(ccm *fisk.Application) {
 	apply := ccm.Command("apply", "Apply a manifest").Action(cmd.applyAction)
 	apply.Arg("manifest", "Path to manifest to apply").ExistingFileVar(&cmd.manifest)
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
+	apply.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").StringVar(&cmd.session)
+
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
@@ -32,7 +35,13 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	mgr, err := manager.NewManager(newLogger(), newOutputLogger())
+	var opts []manager.Option
+
+	if c.session != "" {
+		opts = append(opts, manager.WithSessionDirectory(c.session))
+	}
+
+	mgr, err := manager.NewManager(newLogger(), newOutputLogger(), opts...)
 	if err != nil {
 		return err
 	}

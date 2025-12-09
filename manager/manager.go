@@ -33,12 +33,16 @@ type CCM struct {
 	mu sync.Mutex
 }
 
-// Option is a functional option for configuring CCM
-type Option func(*CCM) error
-
 // NewManager creates a new CCM instance with the provided loggers
-func NewManager(log model.Logger, userLogger model.Logger) (*CCM, error) {
+func NewManager(log model.Logger, userLogger model.Logger, opts ...Option) (*CCM, error) {
 	mgr := &CCM{log: log, userLogger: userLogger}
+
+	for _, opt := range opts {
+		err := opt(mgr)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if mgr.session == nil {
 		sessionLog, err := mgr.Logger("session", "memory")
@@ -197,4 +201,15 @@ func (m *CCM) NewRunner() (model.CommandRunner, error) {
 	}
 
 	return cmdrunner.NewCommandRunner(log)
+}
+
+func (m *CCM) RecordEvent(event model.TransactionEvent) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.session == nil {
+		return fmt.Errorf("no session store available")
+	}
+
+	return m.session.RecordEvent(event)
 }

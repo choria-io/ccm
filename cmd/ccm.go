@@ -28,8 +28,9 @@ func main() {
 	app.Flag("info", "Enable info logging").UnNegatableBoolVar(&info)
 
 	registerApplyCommand(app)
+	registerEnsureCommand(app)
 	registerFactsCommand(app)
-	registerPackageCommand(app)
+	registerSessionCommand(app)
 
 	app.PreAction(func(_ *fisk.ParseContext) error {
 		ctx, _ = signal.NotifyContext(context.Background(), os.Interrupt)

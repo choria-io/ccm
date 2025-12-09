@@ -6,6 +6,8 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -17,6 +19,18 @@ func ExecutableInPath(file string) (string, bool, error) {
 	f, err := exec.LookPath(file)
 
 	return f, err == nil, err
+}
+
+func IsDirectory(path string) bool {
+	stat, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	if stat == nil {
+		return false
+	}
+
+	return stat.IsDir()
 }
 
 // VersionCmp compares two version strings.

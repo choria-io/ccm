@@ -33,6 +33,8 @@ func NewDirectorySessionStore(directory string, logger model.Logger, writer mode
 		return nil, fmt.Errorf("failed to resolve directory path: %w", err)
 	}
 
+	logger.Info("Creating new session store")
+
 	return &DirectorySessionStore{
 		out:       writer,
 		log:       logger,
@@ -94,7 +96,7 @@ func (d *DirectorySessionStore) EventsForResource(resourceType string, name stri
 	return events, nil
 }
 
-func (d *DirectorySessionStore) RecordEvent(event model.TransactionEvent) {
+func (d *DirectorySessionStore) RecordEvent(event model.TransactionEvent) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -102,32 +104,32 @@ func (d *DirectorySessionStore) RecordEvent(event model.TransactionEvent) {
 	// Valid ksuids contain only safe characters (base62) and no path separators
 	_, err := ksuid.Parse(event.EventID)
 	if err != nil {
-		d.log.Error("Invalid event ID, must be a valid ksuid", "event_id", event.EventID)
-		return
+		return fmt.Errorf("invalid event ID: %w", err)
 	}
 
 	// Create directory if it doesn't exist
 	err = os.MkdirAll(d.directory, 0755)
 	if err != nil {
-		d.log.Error("Failed to create session directory", "directory", d.directory, "error", err)
-		return
+		return err
 	}
 
 	// Marshal event to JSON
 	data, err := json.MarshalIndent(event, "", "  ")
 	if err != nil {
-		d.log.Error("Failed to marshal event", "event_id", event.EventID, "error", err)
-		return
+		return err
 	}
 
 	// Write to file named <eventid>.event
 	// Safe to use EventID directly since it's validated as a ksuid
 	filename := filepath.Join(d.directory, event.EventID+".event")
+	d.log.Info("Recording event", "filename", filename)
+
 	err = os.WriteFile(filename, data, 0644)
 	if err != nil {
-		d.log.Error("Failed to write event file", "filename", filename, "error", err)
-		return
+		return err
 	}
+
+	return nil
 }
 
 func (d *DirectorySessionStore) ResetSession(manifest model.Apply) {

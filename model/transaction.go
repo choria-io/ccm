@@ -18,7 +18,7 @@ type Apply interface {
 
 type SessionStore interface {
 	StartSession(Apply) error
-	RecordEvent(TransactionEvent)
+	RecordEvent(TransactionEvent) error
 	EventsForResource(resourceType string, resourceName string) ([]TransactionEvent, error)
 }
 
