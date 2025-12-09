@@ -231,3 +231,17 @@ func (mr *MockManagerMockRecorder) NewRunner() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRunner", reflect.TypeOf((*MockManager)(nil).NewRunner))
 }
+
+// RecordEvent mocks base method.
+func (m *MockManager) RecordEvent(event model.TransactionEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordEvent", event)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecordEvent indicates an expected call of RecordEvent.
+func (mr *MockManagerMockRecorder) RecordEvent(event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordEvent", reflect.TypeOf((*MockManager)(nil).RecordEvent), event)
+}

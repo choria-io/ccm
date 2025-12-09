@@ -23,4 +23,5 @@ type Manager interface {
 	Data() map[string]any
 	Logger(args ...any) (Logger, error)
 	NewRunner() (CommandRunner, error)
+	RecordEvent(event TransactionEvent) error
 }

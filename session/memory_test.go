@@ -34,6 +34,10 @@ var _ = Describe("MemorySessionStore", func() {
 		mockctl = gomock.NewController(GinkgoT())
 		logger = modelmocks.NewMockLogger(mockctl)
 		writer = modelmocks.NewMockLogger(mockctl)
+
+		logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+		logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+		logger.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
 	})
 
 	AfterEach(func() {
@@ -88,7 +92,7 @@ var _ = Describe("MemorySessionStore", func() {
 				ResourceType: "package",
 			}
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(event)
+			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
 			Expect(store.events).To(HaveLen(1))
 
 			// Reset should clear events
@@ -131,7 +135,7 @@ var _ = Describe("MemorySessionStore", func() {
 			}
 
 			writer.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(event)
+			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
 
 			Expect(store.events).To(HaveLen(1))
 			Expect(store.events[0].Name).To(Equal("vim"))
@@ -149,7 +153,7 @@ var _ = Describe("MemorySessionStore", func() {
 			writer.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 			for _, e := range events {
-				store.RecordEvent(e)
+				Expect(store.RecordEvent(e)).ToNot(HaveOccurred())
 			}
 
 			Expect(store.events).To(HaveLen(3))
@@ -158,9 +162,9 @@ var _ = Describe("MemorySessionStore", func() {
 		It("Should maintain event order", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 
-			store.RecordEvent(model.TransactionEvent{Name: "first", ResourceType: "package"})
-			store.RecordEvent(model.TransactionEvent{Name: "second", ResourceType: "package"})
-			store.RecordEvent(model.TransactionEvent{Name: "third", ResourceType: "package"})
+			Expect(store.RecordEvent(model.TransactionEvent{Name: "first", ResourceType: "package"})).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(model.TransactionEvent{Name: "second", ResourceType: "package"})).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(model.TransactionEvent{Name: "third", ResourceType: "package"})).ToNot(HaveOccurred())
 
 			Expect(store.events).To(HaveLen(3))
 			Expect(store.events[0].Name).To(Equal("first"))
@@ -263,7 +267,7 @@ var _ = Describe("MemorySessionStore", func() {
 						Name:         "concurrent",
 						ResourceType: "package",
 					}
-					store.RecordEvent(event)
+					Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
 					done <- true
 				}(i)
 			}
@@ -277,10 +281,10 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should handle concurrent ResourceEvents calls", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(model.TransactionEvent{
+			Expect(store.RecordEvent(model.TransactionEvent{
 				Name:         "test",
 				ResourceType: "package",
-			})
+			})).ToNot(HaveOccurred())
 
 			done := make(chan bool)
 
@@ -315,10 +319,10 @@ var _ = Describe("MemorySessionStore", func() {
 			go func() {
 				defer GinkgoRecover()
 				for i := 0; i < 5; i++ {
-					store.RecordEvent(model.TransactionEvent{
+					Expect(store.RecordEvent(model.TransactionEvent{
 						Name:         "concurrent",
 						ResourceType: "package",
-					})
+					})).ToNot(HaveOccurred())
 					time.Sleep(2 * time.Millisecond)
 				}
 				done <- true
@@ -399,7 +403,7 @@ var _ = Describe("MemorySessionStore", func() {
 			writer.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 			for _, e := range events {
-				store.RecordEvent(e)
+				Expect(store.RecordEvent(e)).ToNot(HaveOccurred())
 			}
 		})
 
@@ -476,10 +480,10 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should handle empty resourceName", func() {
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(model.TransactionEvent{
+			Expect(store.RecordEvent(model.TransactionEvent{
 				Name:         "",
 				ResourceType: "package",
-			})
+			})).ToNot(HaveOccurred())
 
 			events, err := store.EventsForResource("package", "")
 			Expect(err).ToNot(HaveOccurred())
