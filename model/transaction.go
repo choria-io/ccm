@@ -11,6 +11,10 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
+type SessionEvent interface {
+	SessionEventID() string
+}
+
 type Apply interface {
 	Resources() []map[string]ResourceProperties
 	Data() map[string]any
@@ -18,11 +22,12 @@ type Apply interface {
 
 type SessionStore interface {
 	StartSession(Apply) error
-	RecordEvent(TransactionEvent) error
+	RecordEvent(SessionEvent) error
 	EventsForResource(resourceType string, resourceName string) ([]TransactionEvent, error)
 }
 
 const TransactionEventProtocol = "io.choria.ccm.v1.transaction.event"
+const SessionStartEventProtocol = "io.choria.ccm.v1.session.start"
 
 // TransactionEvent represents a single event for a resource session
 type TransactionEvent struct {
@@ -43,6 +48,20 @@ type TransactionEvent struct {
 	Status       any           `json:"status" yaml:"status"`
 }
 
+type SessionStartEvent struct {
+	Protocol  string    `json:"protocol" yaml:"protocol"`
+	EventID   string    `json:"event_id" yaml:"event_id"`
+	TimeStamp time.Time `json:"timestamp" yaml:"timestamp"`
+}
+
+func NewSessionStartEvent() *SessionStartEvent {
+	return &SessionStartEvent{
+		Protocol:  SessionStartEventProtocol,
+		EventID:   ksuid.New().String(),
+		TimeStamp: time.Now().UTC(),
+	}
+}
+
 func NewTransactionEvent(typeName string, name string) *TransactionEvent {
 	return &TransactionEvent{
 		Protocol:     TransactionEventProtocol,
@@ -52,6 +71,9 @@ func NewTransactionEvent(typeName string, name string) *TransactionEvent {
 		Name:         name,
 	}
 }
+
+func (t *SessionStartEvent) SessionEventID() string { return t.EventID }
+func (t *TransactionEvent) SessionEventID() string  { return t.EventID }
 
 func (t *TransactionEvent) LogStatus(log Logger) {
 	switch {

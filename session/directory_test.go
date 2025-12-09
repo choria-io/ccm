@@ -65,7 +65,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			event := model.NewTransactionEvent("package", "test")
 			event.Changed = true
 
-			err := store.RecordEvent(*event)
+			err := store.RecordEvent(event)
 			Expect(err).ToNot(HaveOccurred())
 
 			expectedFile := filepath.Join(tempDir, event.EventID+".event")
@@ -83,7 +83,7 @@ var _ = Describe("DirectorySessionStore", func() {
 
 		Context("Security - Directory Traversal Prevention", func() {
 			It("Should reject invalid EventID with path traversal", func() {
-				event := model.TransactionEvent{
+				event := &model.TransactionEvent{
 					EventID:      "../../../etc/passwd",
 					Name:         "malicious",
 					ResourceType: "attack",
@@ -99,7 +99,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			})
 
 			It("Should reject invalid EventID with absolute path", func() {
-				event := model.TransactionEvent{
+				event := &model.TransactionEvent{
 					EventID:      "/tmp/malicious",
 					Name:         "malicious",
 					ResourceType: "attack",
@@ -113,7 +113,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			})
 
 			It("Should reject invalid EventID with path separators", func() {
-				event := model.TransactionEvent{
+				event := &model.TransactionEvent{
 					EventID:      "subdir/malicious",
 					Name:         "malicious",
 					ResourceType: "attack",
@@ -128,7 +128,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			})
 
 			It("Should reject . as EventID", func() {
-				event := model.TransactionEvent{
+				event := &model.TransactionEvent{
 					EventID:      ".",
 					Name:         "malicious",
 					ResourceType: "attack",
@@ -139,7 +139,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			})
 
 			It("Should reject .. as EventID", func() {
-				event := model.TransactionEvent{
+				event := &model.TransactionEvent{
 					EventID:      "..",
 					Name:         "malicious",
 					ResourceType: "attack",
@@ -150,7 +150,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			})
 
 			It("Should reject empty EventID", func() {
-				event := model.TransactionEvent{
+				event := &model.TransactionEvent{
 					EventID:      "",
 					Name:         "malicious",
 					ResourceType: "attack",
@@ -165,7 +165,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			It("Should accept valid ksuid EventIDs", func() {
 				event := model.NewTransactionEvent("package", "test")
 
-				err := store.RecordEvent(*event)
+				err := store.RecordEvent(event)
 				Expect(err).ToNot(HaveOccurred())
 
 				expectedFile := filepath.Join(tempDir, event.EventID+".event")
@@ -183,7 +183,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			event := model.NewTransactionEvent("package", "test")
-			err = badStore.RecordEvent(*event)
+			err = badStore.RecordEvent(event)
 			Expect(err).To(MatchError(ContainSubstring("permission denied")))
 
 			// Cleanup
@@ -196,14 +196,14 @@ var _ = Describe("DirectorySessionStore", func() {
 			// Create multiple events
 			event1 := model.NewTransactionEvent("package", "vim")
 			event1.Changed = true
-			Expect(store.RecordEvent(*event1)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(event1)).ToNot(HaveOccurred())
 
 			event2 := model.NewTransactionEvent("package", "vim")
 			event2.Changed = false
-			Expect(store.RecordEvent(*event2)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(event2)).ToNot(HaveOccurred())
 
 			event3 := model.NewTransactionEvent("package", "emacs")
-			Expect(store.RecordEvent(*event3)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(event3)).ToNot(HaveOccurred())
 
 			// Get events for vim
 			events, err := store.EventsForResource("package", "vim")
@@ -235,9 +235,9 @@ var _ = Describe("DirectorySessionStore", func() {
 			event3 := model.NewTransactionEvent("package", "test")
 
 			// Record in random order
-			Expect(store.RecordEvent(*event2)).ToNot(HaveOccurred())
-			Expect(store.RecordEvent(*event1)).ToNot(HaveOccurred())
-			Expect(store.RecordEvent(*event3)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(event2)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(event1)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(event3)).ToNot(HaveOccurred())
 
 			events, err := store.EventsForResource("package", "test")
 			Expect(err).ToNot(HaveOccurred())
@@ -252,13 +252,13 @@ var _ = Describe("DirectorySessionStore", func() {
 		It("Should filter by both resourceType and name", func() {
 			// Create events with different types and names
 			pkg1 := model.NewTransactionEvent("package", "vim")
-			Expect(store.RecordEvent(*pkg1)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(pkg1)).ToNot(HaveOccurred())
 
 			svc1 := model.NewTransactionEvent("service", "vim")
-			Expect(store.RecordEvent(*svc1)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(svc1)).ToNot(HaveOccurred())
 
 			pkg2 := model.NewTransactionEvent("package", "emacs")
-			Expect(store.RecordEvent(*pkg2)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(pkg2)).ToNot(HaveOccurred())
 
 			// Get package vim events
 			events, err := store.EventsForResource("package", "vim")
@@ -271,7 +271,7 @@ var _ = Describe("DirectorySessionStore", func() {
 		It("Should skip corrupted event files", func() {
 			// Write a valid event
 			event1 := model.NewTransactionEvent("package", "test")
-			Expect(store.RecordEvent(*event1)).ToNot(HaveOccurred())
+			Expect(store.RecordEvent(event1)).ToNot(HaveOccurred())
 
 			// Write a corrupted file
 			logger.EXPECT().Error("Failed to parse event file", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)

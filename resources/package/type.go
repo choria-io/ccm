@@ -75,7 +75,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 	return t, nil
 }
 
-func (t *Type) newTransactionEvent() model.TransactionEvent {
+func (t *Type) newTransactionEvent() *model.TransactionEvent {
 	event := model.NewTransactionEvent(model.PackageTypeName, t.prop.Name)
 	if t.prop != nil {
 		event.Properties = t.prop
@@ -83,11 +83,11 @@ func (t *Type) newTransactionEvent() model.TransactionEvent {
 		event.Ensure = t.prop.Ensure
 	}
 
-	return *event
+	return event
 }
 
 // Apply executes the package resource, ensuring it matches the desired state
-func (t *Type) Apply(ctx context.Context) (model.TransactionEvent, error) {
+func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
