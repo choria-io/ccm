@@ -21,6 +21,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	ens.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").StringVar(&cmd.session)
 
 	registerPackageCommand(ens, cmd)
+	registerServiceCommand(ens, cmd)
 }
 
 func (cmd *ensureCommand) manager() (model.Manager, error) {

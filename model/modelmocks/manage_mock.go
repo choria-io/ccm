@@ -245,3 +245,18 @@ func (mr *MockManagerMockRecorder) RecordEvent(event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordEvent", reflect.TypeOf((*MockManager)(nil).RecordEvent), event)
 }
+
+// ShouldRefresh mocks base method.
+func (m *MockManager) ShouldRefresh(resourceType, resourceName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShouldRefresh", resourceType, resourceName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ShouldRefresh indicates an expected call of ShouldRefresh.
+func (mr *MockManagerMockRecorder) ShouldRefresh(resourceType, resourceName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldRefresh", reflect.TypeOf((*MockManager)(nil).ShouldRefresh), resourceType, resourceName)
+}

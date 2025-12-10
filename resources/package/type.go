@@ -57,6 +57,11 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 		return nil, err
 	}
 
+	err = properties.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	t := &Type{
 		prop:  &properties,
 		mgr:   mgr,
@@ -145,7 +150,7 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 		refreshState = true
 
 	case properties.Ensure == EnsurePresent:
-		t.log.Info("Package already present", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
+		t.log.Debug("Package already present", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
 		refreshState = false
 
 	case properties.Ensure == EnsureLatest:
@@ -160,6 +165,11 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 			return nil, err
 		}
 		refreshState = true
+
+	case properties.Ensure == EnsureAbsent && initialStatus.Ensure == EnsureAbsent:
+		t.log.Debug("Package already absent", "provider", p.Name())
+
+		refreshState = false
 
 	case properties.Ensure == EnsureAbsent:
 		t.log.Info("Uninstalling package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
@@ -180,7 +190,7 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 	default:
 		switch iu.VersionCmp(initialStatus.Ensure, properties.Ensure, false) {
 		case 0:
-			t.log.Info("Package already present", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
+			t.log.Debug("Package already present", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
 			refreshState = false
 
 		case -1:
@@ -249,7 +259,12 @@ func (t *Type) Info(ctx context.Context) (any, error) {
 	return t.provider.(PackageProvider).Status(ctx, t.prop.Name)
 }
 
+// TODO: extract to model or something
 func (t *Type) selectProvider() error {
+	if t.provider != nil {
+		return nil
+	}
+
 	var selected model.ProviderFactory
 
 	if t.prop.Provider == "" {
@@ -296,7 +311,10 @@ func (t *Type) selectProvider() error {
 }
 
 func (t *Type) String() string {
-	return fmt.Sprintf("%s#%s", model.PackageTypeName, t.Name())
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.stringUnlocked()
 }
 
 func (t *Type) stringUnlocked() string {

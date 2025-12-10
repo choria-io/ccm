@@ -17,6 +17,7 @@ import (
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/resources/apply"
 	packageresource "github.com/choria-io/ccm/resources/package"
+	serviceresource "github.com/choria-io/ccm/resources/service"
 	"github.com/choria-io/ccm/session"
 	"github.com/choria-io/ccm/templates"
 	"github.com/choria-io/tinyhiera"
@@ -72,6 +73,15 @@ func (m *CCM) Data() map[string]any {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.data
+}
+
+func (m *CCM) applyServiceResource(ctx context.Context, properties *model.ServiceResourceProperties) (*model.TransactionEvent, error) {
+	pkg, err := serviceresource.New(ctx, m, *properties)
+	if err != nil {
+		return nil, err
+	}
+
+	return pkg.Apply(ctx)
 }
 
 func (m *CCM) applyPackageResource(ctx context.Context, properties *model.PackageResourceProperties) (*model.TransactionEvent, error) {
@@ -140,15 +150,33 @@ func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.Sessi
 
 	for _, r := range apply.Resources() {
 		for _, v := range r {
+			var event model.SessionEvent
+			var err error
+
+			// TODO: error here should rather create a TransactionEvent with an error status
+
 			switch resource := v.(type) {
 			case *model.PackageResourceProperties:
-				transaction, err := m.applyPackageResource(ctx, resource)
+				event, err = m.applyPackageResource(ctx, resource)
 				if err != nil {
 					return nil, err
 				}
 
-				m.session.RecordEvent(transaction)
+			case *model.ServiceResourceProperties:
+				event, err = m.applyServiceResource(ctx, resource)
+				if err != nil {
+					return nil, err
+				}
+
+			default:
+				return nil, fmt.Errorf("unsupported resource type %T", resource)
 			}
+
+			err = m.session.RecordEvent(event)
+			if err != nil {
+				m.log.Error("Could not save event", "event", event.String())
+			}
+
 		}
 	}
 
@@ -203,6 +231,7 @@ func (m *CCM) NewRunner() (model.CommandRunner, error) {
 	return cmdrunner.NewCommandRunner(log)
 }
 
+// RecordEvent records a transaction event in the session store
 func (m *CCM) RecordEvent(event *model.TransactionEvent) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -212,4 +241,41 @@ func (m *CCM) RecordEvent(event *model.TransactionEvent) error {
 	}
 
 	return m.session.RecordEvent(event)
+}
+
+// ShouldRefresh returns true if the last transaction event for the resource indicated by the type and name was changed
+func (m *CCM) ShouldRefresh(resourceType string, resourceName string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.session == nil {
+		return false, fmt.Errorf("no session store available")
+	}
+
+	events, err := m.session.EventsForResource(resourceType, resourceName)
+	if err != nil {
+		return false, fmt.Errorf("could not retrieve events for %s#%s: %w", resourceType, resourceName, err)
+	}
+
+	if len(events) == 0 {
+		return false, fmt.Errorf("no events found for %s#%s", resourceType, resourceName)
+	}
+
+	return events[len(events)-1].Changed, nil
+}
+
+func (m *CCM) SessionSummary() (*model.SessionSummary, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.session == nil {
+		return nil, fmt.Errorf("no session store available")
+	}
+
+	events, err := m.session.AllEvents()
+	if err != nil {
+		return nil, err
+	}
+
+	return model.BuildSessionSummary(events), nil
 }

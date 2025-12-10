@@ -24,4 +24,5 @@ type Manager interface {
 	Logger(args ...any) (Logger, error)
 	NewRunner() (CommandRunner, error)
 	RecordEvent(event *TransactionEvent) error
+	ShouldRefresh(resourceType string, resourceName string) (bool, error)
 }

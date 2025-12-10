@@ -56,8 +56,8 @@ func (a *Apply) Data() map[string]any {
 	return a.data
 }
 
-// ApplyManifest represents the raw structure of a manifest file
-type ApplyManifest struct {
+// Manifest represents the raw structure of a manifest file
+type Manifest struct {
 	Resources []map[string]yaml.RawMessage `json:"resources" yaml:"resources"`
 }
 

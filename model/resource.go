@@ -100,6 +100,7 @@ type CommonResourceState struct {
 	Name         string    `json:"name" yaml:"name"`
 	Ensure       string    `json:"ensure" yaml:"ensure"`
 	Changed      bool      `json:"changed" yaml:"changed"`
+	Refreshed    bool      `json:"refreshed" yaml:"refreshed"`
 }
 
 // NewResourcePropertiesFromYaml creates a new resource properties object from a yaml document, it validates the properties and expands any templates
@@ -108,8 +109,13 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 	var err error
 
 	switch typeName {
-	case "package":
+	case PackageTypeName:
 		prop, err = NewPackageResourcePropertiesFromYaml(rawProperties)
+		if err != nil {
+			return nil, err
+		}
+	case ServiceTypeName:
+		prop, err = NewServiceResourcePropertiesFromYaml(rawProperties)
 		if err != nil {
 			return nil, err
 		}
@@ -117,12 +123,12 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 		return nil, fmt.Errorf("%w: %s %s", ErrResourceInvalid, ErrUnknownType, typeName)
 	}
 
-	err = prop.Validate()
+	err = prop.ResolveTemplates(env)
 	if err != nil {
 		return nil, err
 	}
 
-	err = prop.ResolveTemplates(env)
+	err = prop.Validate()
 	if err != nil {
 		return nil, err
 	}

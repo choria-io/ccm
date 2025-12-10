@@ -1,0 +1,106 @@
+// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package model
+
+import (
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+func TestPackageResourceProperties(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Model")
+}
+
+var _ = Describe("PackageResourceProperties", func() {
+	Describe("Validate", func() {
+		DescribeTable("validation tests",
+			func(propName, ensure, errorText string) {
+				prop := &PackageResourceProperties{
+					CommonResourceProperties: CommonResourceProperties{
+						Name:   propName,
+						Ensure: ensure,
+					},
+				}
+
+				err := prop.Validate()
+
+				if errorText != "" {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(errorText))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+			},
+
+			Entry("valid package name", "nginx", "present", ""),
+			Entry("valid package name with dots", "python3.11", "present", ""),
+			Entry("valid package name with hyphens", "python3-pip", "present", ""),
+			Entry("valid package name with underscores", "lib_name", "present", ""),
+			Entry("valid package name with plus", "g++", "present", ""),
+			Entry("valid package name with colon (epoch)", "package:1.0", "present", ""),
+			Entry("valid package name with tilde", "package~test", "present", ""),
+			Entry("valid version string", "nginx", "1.2.3-4.el9", ""),
+			Entry("valid ensure absent", "nginx", "absent", ""),
+			Entry("valid ensure latest", "nginx", "latest", ""),
+			Entry("empty package name", "", "present", "name"),
+			Entry("empty ensure", "nginx", "", "ensure"),
+			Entry("package name with semicolon (command separator)", "nginx; rm -rf /", "present", "dangerous characters"),
+			Entry("package name with pipe (command pipe)", "nginx | cat", "present", "dangerous characters"),
+			Entry("package name with ampersand (background)", "nginx & whoami", "present", "dangerous characters"),
+			Entry("package name with dollar (variable expansion)", "nginx$PATH", "present", "dangerous characters"),
+			Entry("package name with backtick (command substitution)", "nginx`whoami`", "present", "dangerous characters"),
+			Entry("package name with single quote", "nginx'test", "present", "dangerous characters"),
+			Entry("package name with double quote", "nginx\"test", "present", "dangerous characters"),
+			Entry("package name with parentheses (subshell)", "nginx(whoami)", "present", "dangerous characters"),
+			Entry("package name with brackets", "nginx[test]", "present", "dangerous characters"),
+			Entry("package name with asterisk (wildcard)", "nginx*", "present", "dangerous characters"),
+			Entry("package name with question mark (wildcard)", "nginx?", "present", "dangerous characters"),
+			Entry("package name with redirect", "nginx > /tmp/file", "present", "dangerous characters"),
+			Entry("package name with backslash", "nginx\\test", "present", "dangerous characters"),
+			Entry("package name with newline", "nginx\nwhoami", "present", "dangerous characters"),
+			Entry("package name with tab", "nginx\twhoami", "present", "dangerous characters"),
+			Entry("package name with space", "nginx test", "present", "invalid characters"),
+			Entry("package name with leading space", " nginx", "present", "invalid characters"),
+			Entry("package name with trailing space", "nginx ", "present", "invalid characters"),
+			Entry("package name with invalid characters", "nginx@test", "present", "invalid characters"),
+			Entry("version with semicolon", "nginx", "1.2.3; rm -rf /", "dangerous characters"),
+			Entry("version with command substitution", "nginx", "1.2.3$(whoami)", "dangerous characters"),
+		)
+
+		DescribeTable("legitimate packages",
+			func(name, ensure string) {
+				prop := &PackageResourceProperties{
+					CommonResourceProperties: CommonResourceProperties{
+						Name:   name,
+						Ensure: ensure,
+					},
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			},
+
+			Entry("nginx present", "nginx", "present"),
+			Entry("python3.11 present", "python3.11", "present"),
+			Entry("python3-pip present", "python3-pip", "present"),
+			Entry("libssl1.1 present", "libssl1.1", "present"),
+			Entry("g++ present", "g++", "present"),
+			Entry("gcc-c++ present", "gcc-c++", "present"),
+			Entry("kernel-devel with version", "kernel-devel", "3.10.0-1160.el7"),
+			Entry("nginx with version", "nginx", "1.20.1-1.el8"),
+			Entry("nodejs with complex version", "nodejs", "16.14.2-1nodesource1"),
+			Entry("package_name with version", "package_name", "1.0.0"),
+			Entry("package.name with version", "package.name", "1.0.0"),
+			Entry("package-name with version", "package-name", "1.0.0"),
+			Entry("package+extra with version", "package+extra", "1.0.0"),
+			Entry("package~test with version", "package~test", "1.0.0"),
+			Entry("vim-enhanced latest", "vim-enhanced", "latest"),
+			Entry("httpd absent", "httpd", "absent"),
+		)
+	})
+})
