@@ -58,6 +58,19 @@ func (s *MemorySessionStore) RecordEvent(event model.SessionEvent) error {
 	return nil
 }
 
+func (s *MemorySessionStore) StopSession(destroy bool) (*model.SessionSummary, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	summary := model.BuildSessionSummary(s.events)
+
+	if destroy {
+		s.events = make([]model.SessionEvent, 0)
+	}
+
+	return summary, nil
+}
+
 // EventsForResource returns all events for a given resource, the events are in time order with latest event at the end
 func (s *MemorySessionStore) EventsForResource(resourceType string, resourceName string) ([]model.TransactionEvent, error) {
 	// Get all events from the session

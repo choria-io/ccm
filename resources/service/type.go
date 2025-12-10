@@ -135,6 +135,11 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		shouldRefreshViaSubscribe bool
 	)
 
+	initialStatus, err = p.Status(ctx, properties.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	if t.subscribeType != "" && t.subscribeName != "" {
 		shouldRefreshViaSubscribe, err = t.mgr.ShouldRefresh(t.subscribeType, t.subscribeName)
 		if err != nil {
@@ -144,11 +149,11 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		if properties.Ensure != model.ServiceEnsureRunning {
 			shouldRefreshViaSubscribe = false
 		}
-	}
 
-	initialStatus, err = p.Status(ctx, properties.Name)
-	if err != nil {
-		return nil, err
+		// its not running and we have ensure running, so we just make it run
+		if properties.Ensure == model.ServiceEnsureRunning && initialStatus.Ensure == model.ServiceEnsureStopped {
+			shouldRefreshViaSubscribe = false
+		}
 	}
 
 	switch {

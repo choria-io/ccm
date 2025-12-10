@@ -500,6 +500,12 @@ var _ = Describe("Service Type", func() {
 				})
 
 				It("Should fail if ShouldRefresh fails", func(ctx context.Context) {
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+
 					mgr.EXPECT().ShouldRefresh("package", "nginx").Return(false, fmt.Errorf("refresh check failed"))
 
 					event, err := svc.Apply(ctx)

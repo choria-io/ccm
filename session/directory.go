@@ -28,10 +28,21 @@ type DirectorySessionStore struct {
 
 // NewDirectorySessionStore creates a new directory of files based session store with the provided loggers
 func NewDirectorySessionStore(directory string, logger model.Logger, writer model.Logger) (*DirectorySessionStore, error) {
+	// Reject empty directory path early
+	if directory == "" {
+		return nil, fmt.Errorf("session directory path cannot be empty")
+	}
+
 	// Clean and make the directory path absolute to prevent path traversal
 	absDir, err := filepath.Abs(filepath.Clean(directory))
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve directory path: %w", err)
+	}
+
+	// Validate the directory path for safety
+	err = validateSessionDirectory(absDir)
+	if err != nil {
+		return nil, err
 	}
 
 	logger.Info("Creating new session store")
@@ -41,6 +52,16 @@ func NewDirectorySessionStore(directory string, logger model.Logger, writer mode
 		log:       logger,
 		directory: absDir,
 	}, nil
+}
+
+// validateSessionDirectory checks if a directory path is safe to use as a session store
+func validateSessionDirectory(absPath string) error {
+	// Reject empty paths
+	if absPath == "" {
+		return fmt.Errorf("session directory path cannot be empty")
+	}
+
+	return nil
 }
 
 func (s *DirectorySessionStore) StartSession(manifest model.Apply) error {
@@ -119,12 +140,36 @@ func (s *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {
 
 	return nil
 }
+func (s *DirectorySessionStore) StopSession(destroy bool) (*model.SessionSummary, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-// AllEvents returns all events in the session sorted by time order (oldest first)
+	events, err := s.allEventsUnlocked()
+	if err != nil {
+		return nil, err
+	}
+
+	summary := model.BuildSessionSummary(events)
+
+	if destroy && iu.IsDirectory(s.directory) {
+		err = os.RemoveAll(s.directory)
+		if err != nil {
+			s.log.Error("Failed to remove session directory", "error", err)
+		}
+	}
+
+	return summary, nil
+}
+
 func (s *DirectorySessionStore) AllEvents() ([]model.SessionEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	return s.allEventsUnlocked()
+}
+
+// AllEvents returns all events in the session sorted by time order (oldest first)
+func (s *DirectorySessionStore) allEventsUnlocked() ([]model.SessionEvent, error) {
 	var events []model.SessionEvent
 
 	// Read all files in the directory

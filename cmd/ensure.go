@@ -12,6 +12,7 @@ import (
 
 type ensureCommand struct {
 	session string
+	out     model.Logger
 }
 
 func registerEnsureCommand(ccm *fisk.Application) {
@@ -31,5 +32,7 @@ func (cmd *ensureCommand) manager() (model.Manager, error) {
 		opts = append(opts, manager.WithSessionDirectory(cmd.session))
 	}
 
-	return manager.NewManager(newLogger(), newOutputLogger(), opts...)
+	cmd.out = newOutputLogger()
+
+	return manager.NewManager(newLogger(), cmd.out, opts...)
 }

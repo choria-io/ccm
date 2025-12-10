@@ -23,6 +23,7 @@ type Apply interface {
 
 type SessionStore interface {
 	StartSession(Apply) error
+	StopSession(destroy bool) (*SessionSummary, error)
 	RecordEvent(SessionEvent) error
 	EventsForResource(resourceType string, resourceName string) ([]TransactionEvent, error)
 	AllEvents() ([]SessionEvent, error)
@@ -85,13 +86,15 @@ func (t *TransactionEvent) SessionEventID() string { return t.EventID }
 func (t *TransactionEvent) LogStatus(log Logger) {
 	switch {
 	case t.Failed:
-		log.Error(fmt.Sprintf("%s#%s failed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration, "error", t.Error, "provider", t.Provider)
+		log.Error(fmt.Sprintf("%s#%s failed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "error", t.Error, "provider", t.Provider)
 	case t.Skipped:
-		log.Warn(fmt.Sprintf("%s#%s skipped", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration, "provider", t.Provider)
+		log.Warn(fmt.Sprintf("%s#%s skipped", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
+	case t.Refreshed:
+		log.Warn(fmt.Sprintf("%s#%s refreshed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
 	case t.Changed:
-		log.Warn(fmt.Sprintf("%s#%s changed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration, "provider", t.Provider)
+		log.Warn(fmt.Sprintf("%s#%s changed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
 	default:
-		log.Info(fmt.Sprintf("%s#%s stable", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration, "provider", t.Provider)
+		log.Info(fmt.Sprintf("%s#%s stable", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
 	}
 }
 func (t *TransactionEvent) String() string {
