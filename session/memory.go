@@ -50,11 +50,6 @@ func (s *MemorySessionStore) RecordEvent(event model.SessionEvent) error {
 
 	s.events = append(s.events, event)
 
-	te, ok := event.(*model.TransactionEvent)
-	if ok {
-		te.LogStatus(s.out)
-	}
-
 	return nil
 }
 

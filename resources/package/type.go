@@ -41,11 +41,6 @@ var _ model.Resource = (*Type)(nil)
 
 // New creates a new package resource with the given properties
 func New(ctx context.Context, mgr model.Manager, properties model.PackageResourceProperties) (*Type, error) {
-	logger, err := mgr.Logger("type", model.PackageTypeName, "name", properties.Name)
-	if err != nil {
-		return nil, err
-	}
-
 	data := mgr.Data()
 	facts, err := mgr.Facts(ctx)
 	if err != nil {
@@ -58,6 +53,11 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 	}
 
 	err = properties.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	logger, err := mgr.Logger("type", model.PackageTypeName, "name", properties.Name)
 	if err != nil {
 		return nil, err
 	}
