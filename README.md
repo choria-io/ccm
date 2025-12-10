@@ -35,11 +35,13 @@ At a broad level this is what we hope to achieve
 
  * `apt` provider for the `package` type, improve the `dnf` provider
  * `file` type
- * `service` type that supports `systemd
  * `exec` type
- * Relationships allowing service to refresh if a file changes
- * Support relationships in a shell script
  * Choria Autonomous Agent integration
+ * Explore `hcl` as a manifest format
+ * ~~`service` type that supports `systemd~~
+ * ~~Relationships allowing service to refresh if a file changes~~
+ * ~~Support relationships in a shell script~~
+ * ~~Support hiera data in shell script via `.hiera`~~
 
 ## Facts
 

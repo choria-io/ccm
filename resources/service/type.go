@@ -34,11 +34,6 @@ var _ model.Resource = (*Type)(nil)
 
 // New creates a new service resource with the given properties
 func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourceProperties) (*Type, error) {
-	logger, err := mgr.Logger("type", model.ServiceTypeName, "name", properties.Name)
-	if err != nil {
-		return nil, err
-	}
-
 	data := mgr.Data()
 	facts, err := mgr.Facts(ctx)
 	if err != nil {
@@ -51,6 +46,11 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 	}
 
 	err = properties.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	logger, err := mgr.Logger("type", model.ServiceTypeName, "name", properties.Name)
 	if err != nil {
 		return nil, err
 	}

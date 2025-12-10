@@ -21,6 +21,11 @@ func ExecutableInPath(file string) (string, bool, error) {
 	return f, err == nil, err
 }
 
+func FileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func IsDirectory(path string) bool {
 	stat, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {

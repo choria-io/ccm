@@ -27,7 +27,6 @@ func registerApplyCommand(ccm *fisk.Application) {
 	apply.Arg("manifest", "Path to manifest to apply").ExistingFileVar(&cmd.manifest)
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
-
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
