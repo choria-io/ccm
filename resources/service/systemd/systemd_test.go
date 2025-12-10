@@ -53,221 +53,71 @@ var _ = Describe("Systemd Provider", func() {
 	})
 
 	Describe("isEnabled", func() {
-		It("Should parse 'enabled' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-enabled.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
+		DescribeTable("systemctl is-enabled output parsing",
+			func(fixtureFile, serviceName string, expectedEnabled bool, expectError bool) {
+				runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", serviceName).Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
+					if fixtureFile != "" {
+						stdout, err := os.ReadFile(fixtureFile)
+						Expect(err).ToNot(HaveOccurred())
+						return stdout, nil, 0, nil
+					}
+					return []byte("unknown-state\n"), nil, 0, nil
+				})
 
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeTrue())
-		})
-
-		It("Should parse 'enabled-runtime' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-enabled-runtime.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeTrue())
-		})
-
-		It("Should parse 'alias' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-alias.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeTrue())
-		})
-
-		It("Should parse 'static' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "dbus").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-static.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "dbus")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeTrue())
-		})
-
-		It("Should parse 'indirect' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-indirect.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeTrue())
-		})
-
-		It("Should parse 'generated' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-generated.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeTrue())
-		})
-
-		It("Should parse 'transient' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-transient.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeTrue())
-		})
-
-		It("Should parse 'disabled' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-disabled.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeFalse())
-		})
-
-		It("Should parse 'linked' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-linked.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeFalse())
-		})
-
-		It("Should parse 'linked-runtime' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-linked-runtime.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeFalse())
-		})
-
-		It("Should parse 'masked' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-masked.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeFalse())
-		})
-
-		It("Should parse 'masked-runtime' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-enabled-masked-runtime.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(enabled).To(BeFalse())
-		})
-
-		It("Should return error for invalid output", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-enabled", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				return []byte("unknown-state\n"), nil, 0, nil
-			})
-
-			enabled, err := provider.isEnabled(context.Background(), "nginx")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("invalid systemctl is-enabled output"))
-			Expect(enabled).To(BeFalse())
-		})
+				enabled, err := provider.isEnabled(context.Background(), serviceName)
+				if expectError {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid systemctl is-enabled output"))
+					Expect(enabled).To(BeFalse())
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(enabled).To(Equal(expectedEnabled))
+				}
+			},
+			Entry("enabled", "testdata/systemd/is-enabled-enabled.txt", "nginx", true, false),
+			Entry("enabled-runtime", "testdata/systemd/is-enabled-enabled-runtime.txt", "nginx", true, false),
+			Entry("alias", "testdata/systemd/is-enabled-alias.txt", "nginx", true, false),
+			Entry("static", "testdata/systemd/is-enabled-static.txt", "dbus", true, false),
+			Entry("indirect", "testdata/systemd/is-enabled-indirect.txt", "nginx", true, false),
+			Entry("generated", "testdata/systemd/is-enabled-generated.txt", "nginx", true, false),
+			Entry("transient", "testdata/systemd/is-enabled-transient.txt", "nginx", true, false),
+			Entry("disabled", "testdata/systemd/is-enabled-disabled.txt", "nginx", false, false),
+			Entry("linked", "testdata/systemd/is-enabled-linked.txt", "nginx", false, false),
+			Entry("linked-runtime", "testdata/systemd/is-enabled-linked-runtime.txt", "nginx", false, false),
+			Entry("masked", "testdata/systemd/is-enabled-masked.txt", "nginx", false, false),
+			Entry("masked-runtime", "testdata/systemd/is-enabled-masked-runtime.txt", "nginx", false, false),
+			Entry("invalid output", "", "nginx", false, true),
+		)
 	})
 
 	Describe("isActive", func() {
-		It("Should parse 'active' as true", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-active", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-active-active.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
+		DescribeTable("systemctl is-active output parsing",
+			func(fixtureFile string, expectedActive bool, expectError bool) {
+				runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-active", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
+					if fixtureFile != "" {
+						stdout, err := os.ReadFile(fixtureFile)
+						Expect(err).ToNot(HaveOccurred())
+						return stdout, nil, 0, nil
+					}
+					return []byte("unknown-state\n"), nil, 0, nil
+				})
 
-			active, err := provider.isActive(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(active).To(BeTrue())
-		})
-
-		It("Should parse 'inactive' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-active", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-active-inactive.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			active, err := provider.isActive(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(active).To(BeFalse())
-		})
-
-		It("Should parse 'failed' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-active", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-active-failed.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			active, err := provider.isActive(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(active).To(BeFalse())
-		})
-
-		It("Should parse 'activating' as false", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-active", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/systemd/is-active-activating.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			active, err := provider.isActive(context.Background(), "nginx")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(active).To(BeFalse())
-		})
-
-		It("Should return error for invalid output", func() {
-			runner.EXPECT().Execute(gomock.Any(), "systemctl", "is-active", "--system", "nginx").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				return []byte("unknown-state\n"), nil, 0, nil
-			})
-
-			active, err := provider.isActive(context.Background(), "nginx")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("invalid systemctl is-active output"))
-			Expect(active).To(BeFalse())
-		})
+				active, err := provider.isActive(context.Background(), "nginx")
+				if expectError {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("invalid systemctl is-active output"))
+					Expect(active).To(BeFalse())
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(active).To(Equal(expectedActive))
+				}
+			},
+			Entry("active", "testdata/systemd/is-active-active.txt", true, false),
+			Entry("inactive", "testdata/systemd/is-active-inactive.txt", false, false),
+			Entry("failed", "testdata/systemd/is-active-failed.txt", false, false),
+			Entry("activating", "testdata/systemd/is-active-activating.txt", false, false),
+			Entry("invalid output", "", false, true),
+		)
 	})
 
 	Describe("Status", func() {

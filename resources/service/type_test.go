@@ -22,6 +22,11 @@ func TestServiceResource(t *testing.T) {
 	RunSpecs(t, "Types/Service")
 }
 
+// Helper function to create bool pointers for table tests
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 var _ = Describe("Service Type", func() {
 	var (
 		facts    = make(map[string]any)
@@ -59,104 +64,41 @@ var _ = Describe("Service Type", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Context("when ensure is running", func() {
-			It("Should return true when service is running", func() {
-				props := &model.ServiceResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureRunning}}
-				state := &model.ServiceState{CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning}}
-				Expect(svc.isDesiredState(props, state)).To(BeTrue())
-			})
+		DescribeTable("ensure state matching",
+			func(propsEnsure, stateEnsure string, expected bool) {
+				props := &model.ServiceResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{Ensure: propsEnsure},
+				}
+				state := &model.ServiceState{
+					CommonResourceState: model.CommonResourceState{Ensure: stateEnsure},
+				}
+				Expect(svc.isDesiredState(props, state)).To(Equal(expected))
+			},
+			Entry("running matches running", model.ServiceEnsureRunning, model.ServiceEnsureRunning, true),
+			Entry("running does not match stopped", model.ServiceEnsureRunning, model.ServiceEnsureStopped, false),
+			Entry("stopped matches stopped", model.ServiceEnsureStopped, model.ServiceEnsureStopped, true),
+			Entry("stopped does not match running", model.ServiceEnsureStopped, model.ServiceEnsureRunning, false),
+		)
 
-			It("Should return false when service is stopped", func() {
-				props := &model.ServiceResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureRunning}}
-				state := &model.ServiceState{CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureStopped}}
-				Expect(svc.isDesiredState(props, state)).To(BeFalse())
-			})
-		})
-
-		Context("when ensure is stopped", func() {
-			It("Should return true when service is stopped", func() {
-				props := &model.ServiceResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureStopped}}
-				state := &model.ServiceState{CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureStopped}}
-				Expect(svc.isDesiredState(props, state)).To(BeTrue())
-			})
-
-			It("Should return false when service is running", func() {
-				props := &model.ServiceResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureStopped}}
-				state := &model.ServiceState{CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning}}
-				Expect(svc.isDesiredState(props, state)).To(BeFalse())
-			})
-		})
-
-		Context("when enable is set", func() {
-			It("Should return true when enable matches and is enabled", func() {
-				enable := true
+		DescribeTable("enable flag matching",
+			func(enablePtr *bool, stateEnabled bool, expected bool) {
 				props := &model.ServiceResourceProperties{
 					CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureRunning},
-					Enable:                   &enable,
+					Enable:                   enablePtr,
 				}
 				state := &model.ServiceState{
 					CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning},
-					Metadata:            &model.ServiceMetadata{Enabled: true},
+					Metadata:            &model.ServiceMetadata{Enabled: stateEnabled},
 				}
-				Expect(svc.isDesiredState(props, state)).To(BeTrue())
-			})
-
-			It("Should return false when enable is true but service is disabled", func() {
-				enable := true
-				props := &model.ServiceResourceProperties{
-					CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureRunning},
-					Enable:                   &enable,
-				}
-				state := &model.ServiceState{
-					CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning},
-					Metadata:            &model.ServiceMetadata{Enabled: false},
-				}
-				Expect(svc.isDesiredState(props, state)).To(BeFalse())
-			})
-
-			It("Should return false when enable is false but service is enabled", func() {
-				enable := false
-				props := &model.ServiceResourceProperties{
-					CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureRunning},
-					Enable:                   &enable,
-				}
-				state := &model.ServiceState{
-					CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning},
-					Metadata:            &model.ServiceMetadata{Enabled: true},
-				}
-				Expect(svc.isDesiredState(props, state)).To(BeFalse())
-			})
-
-			It("Should return true when enable matches and is disabled", func() {
-				enable := false
-				props := &model.ServiceResourceProperties{
-					CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureRunning},
-					Enable:                   &enable,
-				}
-				state := &model.ServiceState{
-					CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning},
-					Metadata:            &model.ServiceMetadata{Enabled: false},
-				}
-				Expect(svc.isDesiredState(props, state)).To(BeTrue())
-			})
-		})
-
-		Context("when enable is nil", func() {
-			It("Should ignore enabled state", func() {
-				props := &model.ServiceResourceProperties{
-					CommonResourceProperties: model.CommonResourceProperties{Ensure: model.ServiceEnsureRunning},
-					Enable:                   nil,
-				}
-				state := &model.ServiceState{
-					CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning},
-					Metadata:            &model.ServiceMetadata{Enabled: true},
-				}
-				Expect(svc.isDesiredState(props, state)).To(BeTrue())
-
-				state.Metadata.Enabled = false
-				Expect(svc.isDesiredState(props, state)).To(BeTrue())
-			})
-		})
+				Expect(svc.isDesiredState(props, state)).To(Equal(expected))
+			},
+			Entry("enable true matches enabled", boolPtr(true), true, true),
+			Entry("enable true does not match disabled", boolPtr(true), false, false),
+			Entry("enable false matches disabled", boolPtr(false), false, true),
+			Entry("enable false does not match enabled", boolPtr(false), true, false),
+			Entry("enable nil ignores enabled state (enabled)", nil, true, true),
+			Entry("enable nil ignores enabled state (disabled)", nil, false, true),
+		)
 	})
 
 	Describe("New", func() {
