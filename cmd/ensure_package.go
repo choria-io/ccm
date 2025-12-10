@@ -5,9 +5,6 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/choria-io/ccm/model"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	"github.com/choria-io/fisk"
@@ -25,7 +22,7 @@ func registerPackageCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 
 	pkg := ccm.Command("package", "Package management").Alias("pkg").Action(cmd.packageAction)
 	pkg.Arg("name", "Package name to manage").Required().StringVar(&cmd.name)
-	pkg.Arg("ensure", "Ensure value").Default("present").StringVar(&cmd.ensure)
+	pkg.Arg("ensure", "Ensure value").Default(model.EnsurePresent).StringVar(&cmd.ensure)
 	pkg.Flag("provider", "Package provider").StringVar(&cmd.provider)
 }
 
@@ -56,12 +53,7 @@ func (c *packageCommand) packageAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	j, err := json.MarshalIndent(status, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(string(j))
+	status.LogStatus(c.parent.out)
 
 	return nil
 }

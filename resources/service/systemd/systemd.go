@@ -98,6 +98,8 @@ func (p *Provider) isEnabled(ctx context.Context, service string) (bool, error) 
 		return true, nil
 	case "linked", "linked-runtime", "masked", "masked-runtime", "disabled":
 		return false, nil
+	case "not-found":
+		return false, fmt.Errorf("service %s not found", service)
 	default:
 		return false, fmt.Errorf("invalid systemctl is-enabled output: %s", string(stdout))
 	}

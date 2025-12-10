@@ -58,6 +58,14 @@ var _ = Describe("DirectorySessionStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dirtyStore.directory).To(Equal("/some/clean/path"))
 		})
+
+		Context("Path Safety Validation", func() {
+			It("Should reject empty path", func() {
+				_, err := NewDirectorySessionStore("", logger, writer)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("cannot be empty"))
+			})
+		})
 	})
 
 	Describe("StartSession", func() {
