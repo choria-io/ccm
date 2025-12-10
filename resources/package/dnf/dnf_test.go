@@ -81,68 +81,30 @@ var _ = Describe("DNF Provider", func() {
 		})
 	})
 
-	Describe("Install", func() {
-		It("Should support installing", func() {
-			runner.EXPECT().Execute(gomock.Any(), "dnf", "install", "-y", "zsh-5.8").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/dnf/dnf_install_zsh.txt")
+	DescribeTable("Package operations",
+		func(operation string, packageName string, version string, expectedCmd string, expectedArgs []string, fixtureFile string) {
+			runner.EXPECT().Execute(gomock.Any(), expectedCmd, expectedArgs[0], expectedArgs[1], expectedArgs[2]).Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
+				stdout, err := os.ReadFile(fixtureFile)
 				Expect(err).ToNot(HaveOccurred())
 				return stdout, nil, 0, nil
 			})
 
-			err := provider.Install(context.Background(), "zsh", "5.8")
+			var err error
+			switch operation {
+			case "install":
+				err = provider.Install(context.Background(), packageName, version)
+			case "uninstall":
+				err = provider.Uninstall(context.Background(), packageName)
+			case "upgrade":
+				err = provider.Upgrade(context.Background(), packageName, version)
+			case "downgrade":
+				err = provider.Downgrade(context.Background(), packageName, version)
+			}
 			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("Uninstall", func() {
-		It("Should support Uninstall", func() {
-			runner.EXPECT().Execute(gomock.Any(), "dnf", "remove", "-y", "zsh").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/dnf/dnf_remove.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			err := provider.Uninstall(context.Background(), "zsh")
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("Upgrade", func() {
-		It("Should support upgrading", func() {
-			runner.EXPECT().Execute(gomock.Any(), "dnf", "install", "-y", "zsh-6.2.3").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/dnf/dnf_install_zsh.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			err := provider.Upgrade(context.Background(), "zsh", "6.2.3")
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("Downgrade", func() {
-		It("Should support downgrades", func() {
-			runner.EXPECT().Execute(gomock.Any(), "dnf", "downgrade", "-y", "zsh-0.0.1").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/dnf/rpm_q.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			err := provider.Downgrade(context.Background(), "zsh", "0.0.1")
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("Uninstall", func() {
-		It("Should support uninstalling", func() {
-			runner.EXPECT().Execute(gomock.Any(), "dnf", "remove", "-y", "zsh").Times(1).DoAndReturn(func(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error) {
-				stdout, err := os.ReadFile("testdata/dnf/dnf_remove.txt")
-				Expect(err).ToNot(HaveOccurred())
-				return stdout, nil, 0, nil
-			})
-
-			err := provider.Uninstall(context.Background(), "zsh")
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
+		},
+		Entry("install", "install", "zsh", "5.8", "dnf", []string{"install", "-y", "zsh-5.8"}, "testdata/dnf/dnf_install_zsh.txt"),
+		Entry("uninstall", "uninstall", "zsh", "", "dnf", []string{"remove", "-y", "zsh"}, "testdata/dnf/dnf_remove.txt"),
+		Entry("upgrade", "upgrade", "zsh", "6.2.3", "dnf", []string{"install", "-y", "zsh-6.2.3"}, "testdata/dnf/dnf_install_zsh.txt"),
+		Entry("downgrade", "downgrade", "zsh", "0.0.1", "dnf", []string{"downgrade", "-y", "zsh-0.0.1"}, "testdata/dnf/rpm_q.txt"),
+	)
 })

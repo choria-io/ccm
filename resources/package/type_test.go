@@ -59,67 +59,26 @@ var _ = Describe("Package Type", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Context("when ensure is present", func() {
-			It("Should return true when package is not absent", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: EnsurePresent}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: "1.2.3"}}
-				Expect(pkg.isDesiredState(props, state)).To(BeTrue())
-			})
-
-			It("Should return false when package is absent", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: EnsurePresent}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: EnsureAbsent}}
-				Expect(pkg.isDesiredState(props, state)).To(BeFalse())
-			})
-		})
-
-		Context("when ensure is absent", func() {
-			It("Should return true when package is absent", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: EnsureAbsent}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: EnsureAbsent}}
-				Expect(pkg.isDesiredState(props, state)).To(BeTrue())
-			})
-
-			It("Should return false when package is present", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: EnsureAbsent}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: "1.2.3"}}
-				Expect(pkg.isDesiredState(props, state)).To(BeFalse())
-			})
-		})
-
-		Context("when ensure is latest", func() {
-			It("Should return true when package is not absent", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: EnsureLatest}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: "1.2.3"}}
-				Expect(pkg.isDesiredState(props, state)).To(BeTrue())
-			})
-
-			It("Should return false when package is absent", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: EnsureLatest}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: EnsureAbsent}}
-				Expect(pkg.isDesiredState(props, state)).To(BeFalse())
-			})
-		})
-
-		Context("when ensure is a specific version", func() {
-			It("Should return true when versions match", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: "1.2.3"}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: "1.2.3"}}
-				Expect(pkg.isDesiredState(props, state)).To(BeTrue())
-			})
-
-			It("Should return false when versions do not match", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: "1.2.3"}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: "1.2.4"}}
-				Expect(pkg.isDesiredState(props, state)).To(BeFalse())
-			})
-
-			It("Should return false when package is absent", func() {
-				props := &model.PackageResourceProperties{CommonResourceProperties: model.CommonResourceProperties{Ensure: "1.2.3"}}
-				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Ensure: EnsureAbsent}}
-				Expect(pkg.isDesiredState(props, state)).To(BeFalse())
-			})
-		})
+		DescribeTable("ensure state matching",
+			func(propsEnsure, stateEnsure string, expected bool) {
+				props := &model.PackageResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{Ensure: propsEnsure},
+				}
+				state := &model.PackageState{
+					CommonResourceState: model.CommonResourceState{Ensure: stateEnsure},
+				}
+				Expect(pkg.isDesiredState(props, state)).To(Equal(expected))
+			},
+			Entry("present matches any version", EnsurePresent, "1.2.3", true),
+			Entry("present does not match absent", EnsurePresent, EnsureAbsent, false),
+			Entry("absent matches absent", EnsureAbsent, EnsureAbsent, true),
+			Entry("absent does not match present", EnsureAbsent, "1.2.3", false),
+			Entry("latest matches any version", EnsureLatest, "1.2.3", true),
+			Entry("latest does not match absent", EnsureLatest, EnsureAbsent, false),
+			Entry("specific version matches same version", "1.2.3", "1.2.3", true),
+			Entry("specific version does not match different version", "1.2.3", "1.2.4", false),
+			Entry("specific version does not match absent", "1.2.3", EnsureAbsent, false),
+		)
 	})
 
 	Describe("New", func() {

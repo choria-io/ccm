@@ -98,43 +98,22 @@ var _ = Describe("ServiceResourceProperties", func() {
 			Entry("firewalld stopped", "firewalld", "stopped"),
 		)
 
-		It("should default empty ensure to running", func() {
-			prop := &ServiceResourceProperties{
-				CommonResourceProperties: CommonResourceProperties{
-					Name:   "nginx",
-					Ensure: "",
-				},
-			}
+		DescribeTable("ensure value handling",
+			func(inputEnsure, expectedEnsure string) {
+				prop := &ServiceResourceProperties{
+					CommonResourceProperties: CommonResourceProperties{
+						Name:   "nginx",
+						Ensure: inputEnsure,
+					},
+				}
 
-			err := prop.Validate()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(prop.Ensure).To(Equal(ServiceEnsureRunning))
-		})
-
-		It("should not modify ensure when running is explicitly set", func() {
-			prop := &ServiceResourceProperties{
-				CommonResourceProperties: CommonResourceProperties{
-					Name:   "nginx",
-					Ensure: ServiceEnsureRunning,
-				},
-			}
-
-			err := prop.Validate()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(prop.Ensure).To(Equal(ServiceEnsureRunning))
-		})
-
-		It("should not modify ensure when stopped is set", func() {
-			prop := &ServiceResourceProperties{
-				CommonResourceProperties: CommonResourceProperties{
-					Name:   "nginx",
-					Ensure: ServiceEnsureStopped,
-				},
-			}
-
-			err := prop.Validate()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(prop.Ensure).To(Equal(ServiceEnsureStopped))
-		})
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(prop.Ensure).To(Equal(expectedEnsure))
+			},
+			Entry("empty ensure defaults to running", "", ServiceEnsureRunning),
+			Entry("explicit running is preserved", ServiceEnsureRunning, ServiceEnsureRunning),
+			Entry("explicit stopped is preserved", ServiceEnsureStopped, ServiceEnsureStopped),
+		)
 	})
 })
