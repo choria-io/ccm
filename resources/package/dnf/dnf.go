@@ -21,25 +21,32 @@ var (
 	dnfNevraRe = regexp.MustCompile(dnfNevraRegex)
 )
 
-// DnfProvider manages packages using the DNF package manager
-type DnfProvider struct {
+const ProviderName = "dnf"
+
+// Provider manages packages using the DNF package manager
+type Provider struct {
 	log    model.Logger
 	runner model.CommandRunner
 }
 
 // NewDnfProvider creates a new DNF package provider
-func NewDnfProvider(log model.Logger, runner model.CommandRunner) (*DnfProvider, error) {
-	return &DnfProvider{log: log, runner: runner}, nil
+func NewDnfProvider(log model.Logger, runner model.CommandRunner) (*Provider, error) {
+	return &Provider{log: log, runner: runner}, nil
+}
+
+// Name returns the provider name
+func (p *Provider) Name() string {
+	return ProviderName
 }
 
 // Install installs a package using DNF
-func (p *DnfProvider) Install(ctx context.Context, pkg string, version string) error {
+func (p *Provider) Install(ctx context.Context, pkg string, version string) error {
 	var err error
 
 	pkgVersion := ""
 
 	switch version {
-	case "latest", "present":
+	case model.PackageEnsureLatest, model.EnsurePresent:
 		pkgVersion = pkg
 	default:
 		pkgVersion = fmt.Sprintf("%s-%s", pkg, version)
@@ -51,26 +58,26 @@ func (p *DnfProvider) Install(ctx context.Context, pkg string, version string) e
 	}
 
 	if exitcode != 0 {
-		return fmt.Errorf("failed to Install package %q", pkg)
+		return fmt.Errorf("failed to Install package %q, dnf exited %d", pkg, exitcode)
 	}
 
 	return nil
 }
 
 // Upgrade upgrades a package to a specific version or latest using DNF
-func (p *DnfProvider) Upgrade(ctx context.Context, pkg string, version string) error {
+func (p *Provider) Upgrade(ctx context.Context, pkg string, version string) error {
 	return p.Install(ctx, pkg, version)
 }
 
 // Downgrade downgrades a package to a specific version using DNF
-func (p *DnfProvider) Downgrade(ctx context.Context, pkg string, version string) error {
+func (p *Provider) Downgrade(ctx context.Context, pkg string, version string) error {
 	_, _, exitcode, err := p.runner.Execute(ctx, "dnf", "downgrade", "-y", fmt.Sprintf("%s-%s", pkg, version))
 	if err != nil {
 		return err
 	}
 
 	if exitcode != 0 {
-		return fmt.Errorf("failed to Downgrade %s", pkg)
+		return fmt.Errorf("failed to Downgrade %s, dnf exited %d", pkg, exitcode)
 	}
 
 	return nil
@@ -78,21 +85,21 @@ func (p *DnfProvider) Downgrade(ctx context.Context, pkg string, version string)
 }
 
 // Uninstall removes a package using DNF
-func (p *DnfProvider) Uninstall(ctx context.Context, pkg string) error {
+func (p *Provider) Uninstall(ctx context.Context, pkg string) error {
 	_, _, exitcode, err := p.runner.Execute(ctx, "dnf", "remove", "-y", pkg)
 	if err != nil {
 		return err
 	}
 
 	if exitcode != 0 {
-		return fmt.Errorf("failed to Uninstall %s", pkg)
+		return fmt.Errorf("failed to Uninstall %s, dnf exited %d", pkg, exitcode)
 	}
 
 	return nil
 }
 
 // Status returns the current installation status of a package
-func (p *DnfProvider) Status(ctx context.Context, pkg string) (*model.PackageState, error) {
+func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState, error) {
 	stdout, _, exitcode, err := p.runner.Execute(ctx, "rpm", "-q", pkg, "--queryformat", dnfNevraQueryFormat)
 	if err != nil {
 		return nil, err
@@ -101,6 +108,9 @@ func (p *DnfProvider) Status(ctx context.Context, pkg string) (*model.PackageSta
 	switch {
 	case exitcode == 0:
 		matches := dnfNevraRe.FindStringSubmatch(string(stdout))
+		if len(matches) != 6 {
+			return nil, fmt.Errorf("failed to parse rpm -q output for %s", pkg)
+		}
 
 		state := &model.PackageState{
 			CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, matches[3]),
@@ -108,7 +118,7 @@ func (p *DnfProvider) Status(ctx context.Context, pkg string) (*model.PackageSta
 				Name:     matches[1],
 				Version:  fmt.Sprintf("%s-%s", matches[3], matches[4]),
 				Arch:     matches[5],
-				Provider: "dnf",
+				Provider: ProviderName,
 				Extended: map[string]any{
 					"epoch":   matches[2],
 					"release": matches[4],
@@ -117,17 +127,15 @@ func (p *DnfProvider) Status(ctx context.Context, pkg string) (*model.PackageSta
 		}
 
 		return state, nil
-	case exitcode > 0:
+	default:
 		return &model.PackageState{
 			CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, model.EnsureAbsent),
 			Metadata: &model.PackageMetadata{
 				Name:     pkg,
-				Provider: "dnf",
+				Provider: ProviderName,
 				Version:  "absent",
 				Extended: map[string]any{},
 			},
 		}, nil
 	}
-
-	return nil, nil
 }

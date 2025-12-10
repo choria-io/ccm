@@ -33,14 +33,14 @@ func NewMemorySessionStore(logger model.Logger, writer model.Logger) (*MemorySes
 // StartSession clears the event log and starts a new session for the given manifest
 func (s *MemorySessionStore) StartSession(manifest model.Apply) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	s.out.Info("Creating new session record", "resources", len(manifest.Resources()))
-
 	s.events = make([]model.SessionEvent, 0)
-	s.start = time.Now().UTC()
+	s.mu.Unlock()
 
-	return nil
+	start := model.NewSessionStartEvent()
+	s.start = start.TimeStamp
+
+	return s.RecordEvent(start)
 }
 
 // RecordEvent adds a transaction event to the session and logs its status
@@ -60,20 +60,38 @@ func (s *MemorySessionStore) RecordEvent(event model.SessionEvent) error {
 
 // EventsForResource returns all events for a given resource, the events are in time order with latest event at the end
 func (s *MemorySessionStore) EventsForResource(resourceType string, resourceName string) ([]model.TransactionEvent, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	// Get all events from the session
+	allEvents, err := s.AllEvents()
+	if err != nil {
+		return nil, err
+	}
 
-	var res []model.TransactionEvent
-	for _, e := range s.events {
-		te, ok := e.(*model.TransactionEvent)
+	// Filter for the specific resource
+	var filtered []model.TransactionEvent
+	for _, event := range allEvents {
+		// Only include TransactionEvents (skip SessionStartEvent)
+		txEvent, ok := event.(*model.TransactionEvent)
 		if !ok {
 			continue
 		}
 
-		if te.ResourceType == resourceType && te.Name == resourceName {
-			res = append(res, *te)
+		// Filter by resourceType and name
+		if txEvent.ResourceType == resourceType && txEvent.Name == resourceName {
+			filtered = append(filtered, *txEvent)
 		}
 	}
 
-	return res, nil
+	return filtered, nil
+}
+
+// AllEvents returns all events in the session in time order
+func (s *MemorySessionStore) AllEvents() ([]model.SessionEvent, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Return a copy of the events slice to avoid external modifications
+	eventsCopy := make([]model.SessionEvent, len(s.events))
+	copy(eventsCopy, s.events)
+
+	return eventsCopy, nil
 }

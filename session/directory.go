@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
 	"github.com/segmentio/ksuid"
 )
@@ -42,17 +43,92 @@ func NewDirectorySessionStore(directory string, logger model.Logger, writer mode
 	}, nil
 }
 
-func (s *DirectorySessionStore) StartSession(manifest model.Apply) error { return nil }
+func (s *DirectorySessionStore) StartSession(manifest model.Apply) error {
+	s.mu.Lock()
+
+	s.out.Info("Creating new session record", "resources", len(manifest.Resources()))
+
+	// Create a directory if it doesn't exist
+	err := os.MkdirAll(s.directory, 0755)
+	s.mu.Unlock()
+	if err != nil {
+		return err
+	}
+
+	start := model.NewSessionStartEvent()
+
+	return s.RecordEvent(start)
+}
 
 // EventsForResource returns all events for a given resource, the events are sorted in time order with latest event at the end
-func (d *DirectorySessionStore) EventsForResource(resourceType string, name string) ([]model.TransactionEvent, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+func (s *DirectorySessionStore) EventsForResource(resourceType string, name string) ([]model.TransactionEvent, error) {
+	// Get all events from the session
+	allEvents, err := s.AllEvents()
+	if err != nil {
+		return nil, err
+	}
 
-	var events []model.TransactionEvent
+	// Filter for the specific resource
+	var filtered []model.TransactionEvent
+	for _, event := range allEvents {
+		// Only include TransactionEvents (skip SessionStartEvent)
+		txEvent, ok := event.(*model.TransactionEvent)
+		if !ok {
+			continue
+		}
+
+		// Filter by resourceType and name
+		if txEvent.ResourceType == resourceType && txEvent.Name == name {
+			filtered = append(filtered, *txEvent)
+		}
+	}
+
+	return filtered, nil
+}
+
+func (s *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Validate EventID is a valid ksuid to prevent directory traversal
+	// Valid ksuids contain only safe characters (base62) and no path separators
+	_, err := ksuid.Parse(event.SessionEventID())
+	if err != nil {
+		return fmt.Errorf("invalid event ID: %w", err)
+	}
+
+	if !iu.IsDirectory(s.directory) {
+		return fmt.Errorf("session store %s does not exist", s.directory)
+	}
+
+	// Marshal event to JSON
+	data, err := json.MarshalIndent(event, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	// Write to file named <eventid>.event
+	// Safe to use EventID directly since it's validated as a ksuid
+	filename := filepath.Join(s.directory, event.SessionEventID()+".event")
+	s.log.Info("Recording event", "filename", filename)
+
+	err = os.WriteFile(filename, data, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AllEvents returns all events in the session sorted by time order (oldest first)
+func (s *DirectorySessionStore) AllEvents() ([]model.SessionEvent, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var events []model.SessionEvent
 
 	// Read all files in the directory
-	entries, err := os.ReadDir(d.directory)
+	entries, err := os.ReadDir(s.directory)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Directory doesn't exist yet, return empty slice
@@ -67,70 +143,57 @@ func (d *DirectorySessionStore) EventsForResource(resourceType string, name stri
 			continue
 		}
 
-		// Read and parse the event file
-		filename := filepath.Join(d.directory, entry.Name())
+		// Read the event file
+		filename := filepath.Join(s.directory, entry.Name())
 		data, err := os.ReadFile(filename)
 		if err != nil {
-			d.log.Error("Failed to read event file", "filename", filename, "error", err)
+			s.log.Error("Failed to read event file", "filename", filename, "error", err)
 			continue
 		}
 
-		var event model.TransactionEvent
-		err = json.Unmarshal(data, &event)
+		// Try to determine event type by examining the protocol field
+		var eventType struct {
+			Protocol string `json:"protocol"`
+		}
+		err = json.Unmarshal(data, &eventType)
 		if err != nil {
-			d.log.Error("Failed to parse event file", "filename", filename, "error", err)
+			s.log.Error("Failed to parse event type", "filename", filename, "error", err)
 			continue
 		}
 
-		// Filter by resourceType and name
-		if event.ResourceType == resourceType && event.Name == name {
-			events = append(events, event)
+		// Parse based on protocol
+		var event model.SessionEvent
+		switch eventType.Protocol {
+		case model.SessionStartEventProtocol:
+			var startEvent model.SessionStartEvent
+			err = json.Unmarshal(data, &startEvent)
+			if err != nil {
+				s.log.Error("Failed to parse session start event", "filename", filename, "error", err)
+				continue
+			}
+			event = &startEvent
+
+		case model.TransactionEventProtocol:
+			var txEvent model.TransactionEvent
+			err = json.Unmarshal(data, &txEvent)
+			if err != nil {
+				s.log.Error("Failed to parse transaction event", "filename", filename, "error", err)
+				continue
+			}
+			event = &txEvent
+
+		default:
+			s.log.Warn("Unknown event protocol", "filename", filename, "protocol", eventType.Protocol)
+			continue
 		}
+
+		events = append(events, event)
 	}
 
 	// Sort by EventID (ksuids are k-sortable, so this gives us time order)
 	sort.Slice(events, func(i, j int) bool {
-		return events[i].EventID < events[j].EventID
+		return events[i].SessionEventID() < events[j].SessionEventID()
 	})
 
 	return events, nil
-}
-
-func (d *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	// Validate EventID is a valid ksuid to prevent directory traversal
-	// Valid ksuids contain only safe characters (base62) and no path separators
-	_, err := ksuid.Parse(event.SessionEventID())
-	if err != nil {
-		return fmt.Errorf("invalid event ID: %w", err)
-	}
-
-	// Create directory if it doesn't exist
-	err = os.MkdirAll(d.directory, 0755)
-	if err != nil {
-		return err
-	}
-
-	// Marshal event to JSON
-	data, err := json.MarshalIndent(event, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	// Write to file named <eventid>.event
-	// Safe to use EventID directly since it's validated as a ksuid
-	filename := filepath.Join(d.directory, event.SessionEventID()+".event")
-	d.log.Info("Recording event", "filename", filename)
-
-	err = os.WriteFile(filename, data, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (d *DirectorySessionStore) ResetSession(manifest model.Apply) {
 }

@@ -60,6 +60,28 @@ var _ = Describe("DirectorySessionStore", func() {
 		})
 	})
 
+	Describe("StartSession", func() {
+		It("Should create the directory if it doesn't exist", func() {
+			newDir := filepath.Join(tempDir, "newsession")
+			newStore, err := NewDirectorySessionStore(newDir, logger, writer)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Directory should not exist yet
+			Expect(newDir).ToNot(BeADirectory())
+
+			writer.EXPECT().Info("Creating new session record", gomock.Any(), gomock.Any()).Times(1)
+
+			// StartSession should create it
+			mockApply := modelmocks.NewMockApply(mockCtrl)
+			mockApply.EXPECT().Resources().Return([]map[string]model.ResourceProperties{}).Times(1)
+			err = newStore.StartSession(mockApply)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Directory should now exist
+			Expect(newDir).To(BeADirectory())
+		})
+	})
+
 	Describe("RecordEvent", func() {
 		It("Should write valid events to files", func() {
 			event := model.NewTransactionEvent("package", "test")
@@ -79,6 +101,16 @@ var _ = Describe("DirectorySessionStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(readEvent.Name).To(Equal("test"))
 			Expect(readEvent.Changed).To(BeTrue())
+		})
+
+		It("Should fail when directory doesn't exist", func() {
+			newDir := filepath.Join(tempDir, "nonexistent")
+			newStore, err := NewDirectorySessionStore(newDir, logger, writer)
+			Expect(err).ToNot(HaveOccurred())
+
+			event := model.NewTransactionEvent("package", "test")
+			err = newStore.RecordEvent(event)
+			Expect(err).To(MatchError(ContainSubstring("does not exist")))
 		})
 
 		Context("Security - Directory Traversal Prevention", func() {
@@ -173,13 +205,17 @@ var _ = Describe("DirectorySessionStore", func() {
 			})
 		})
 
-		It("Should handle directory creation errors gracefully", func() {
-			// Create a read-only directory
+		It("Should handle write errors gracefully", func() {
+			// Create a writable directory first
 			readOnlyDir := filepath.Join(tempDir, "readonly")
-			err := os.Mkdir(readOnlyDir, 0444)
+			err := os.Mkdir(readOnlyDir, 0755)
 			Expect(err).ToNot(HaveOccurred())
 
-			badStore, err := NewDirectorySessionStore(filepath.Join(readOnlyDir, "subdir"), logger, writer)
+			// Now make it read-only
+			err = os.Chmod(readOnlyDir, 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			badStore, err := NewDirectorySessionStore(readOnlyDir, logger, writer)
 			Expect(err).ToNot(HaveOccurred())
 
 			event := model.NewTransactionEvent("package", "test")
@@ -274,7 +310,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			Expect(store.RecordEvent(event1)).ToNot(HaveOccurred())
 
 			// Write a corrupted file
-			logger.EXPECT().Error("Failed to parse event file", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+			logger.EXPECT().Error("Failed to parse event type", gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 			corruptedFile := filepath.Join(tempDir, "corrupted.event")
 			err := os.WriteFile(corruptedFile, []byte("invalid json"), 0644)
 			Expect(err).ToNot(HaveOccurred())

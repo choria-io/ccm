@@ -29,7 +29,7 @@ var _ = Describe("DNF Provider", func() {
 		logger   *modelmocks.MockLogger
 		runner   *modelmocks.MockCommandRunner
 		err      error
-		provider *DnfProvider
+		provider *Provider
 	)
 
 	BeforeEach(func() {

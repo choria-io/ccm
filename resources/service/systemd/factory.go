@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package dnf
+package systemd
 
 import (
 	"github.com/choria-io/ccm/internal/registry"
@@ -17,20 +17,18 @@ func Register() {
 
 type factory struct{}
 
-func (p *factory) TypeName() string { return "package" }
+func (p *factory) TypeName() string { return "service" }
 func (p *factory) Name() string     { return ProviderName }
 func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
-	return NewDnfProvider(log, runner)
+	return NewSystemdProvider(log, runner)
 }
 func (p *factory) IsManageable(_ map[string]any) (bool, error) {
-	for _, path := range []string{"dnf", "rpm"} {
-		_, found, err := iu.ExecutableInPath(path)
-		if err != nil {
-			return false, err
-		}
-		if !found {
-			return false, nil
-		}
+	_, found, err := iu.ExecutableInPath("systemctl")
+	if err != nil {
+		return false, err
+	}
+	if !found {
+		return false, nil
 	}
 
 	return true, nil

@@ -5,15 +5,31 @@
 package model
 
 import (
+	"fmt"
+	"regexp"
+
 	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
 )
 
-// ResourceStatusPackageProtocol is the protocol identifier for package resource state
-const ResourceStatusPackageProtocol = "io.choria.ccm.v1.resource.package.state"
+const (
+	// ResourceStatusPackageProtocol is the protocol identifier for package resource state
+	ResourceStatusPackageProtocol = "io.choria.ccm.v1.resource.package.state"
 
-// PackageTypeName is the type name for package resources
-const PackageTypeName = "package"
+	// PackageTypeName is the type name for package resources
+	PackageTypeName = "package"
+
+	PackageEnsureLatest = "latest"
+)
+
+var (
+	// commonNameRegex allows alphanumeric, hyphens, underscores, dots, plus signs, colons, and tildes
+	// which are common in package and service names across different package managers
+	commonNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._+:~-]+$`)
+
+	// dangerousCharsRegex detects shell metacharacters that could be used for injection
+	dangerousCharsRegex = regexp.MustCompile(`[;&|$` + "`" + `()\[\]{}<>*?'"\\!\n\t\r]`)
+)
 
 // PackageResourceProperties defines the properties for a package resource
 type PackageResourceProperties struct {
@@ -42,7 +58,30 @@ type PackageState struct {
 
 // Validate validates the package resource properties
 func (p *PackageResourceProperties) Validate() error {
-	return p.CommonResourceProperties.Validate()
+	// First run common validation
+	err := p.CommonResourceProperties.Validate()
+	if err != nil {
+		return err
+	}
+
+	// Validate package name to prevent shell injection
+	if dangerousCharsRegex.MatchString(p.Name) {
+		return fmt.Errorf("package name contains dangerous characters: %q", p.Name)
+	}
+
+	if !commonNameRegex.MatchString(p.Name) {
+		return fmt.Errorf("package name contains invalid characters: %q (allowed: alphanumeric, ._+:~-)", p.Name)
+	}
+
+	// Validate ensure value if it's a version string
+	if p.Ensure != "" && p.Ensure != EnsurePresent && p.Ensure != EnsureAbsent && p.Ensure != PackageEnsureLatest {
+		// It's a version string, validate it
+		if dangerousCharsRegex.MatchString(p.Ensure) {
+			return fmt.Errorf("package version/ensure contains dangerous characters: %q", p.Ensure)
+		}
+	}
+
+	return nil
 }
 
 // ResolveTemplates resolves template expressions in the package resource properties
@@ -63,7 +102,7 @@ func NewPackageResourcePropertiesFromYaml(raw yaml.RawMessage) (*PackageResource
 		return nil, err
 	}
 
-	prop.Type = "package"
+	prop.Type = PackageTypeName
 
 	return prop, nil
 }

@@ -67,7 +67,7 @@ var _ = Describe("MemorySessionStore", func() {
 
 			store.StartSession(manifest)
 
-			Expect(store.events).To(BeEmpty())
+			Expect(store.events).To(HaveLen(1))
 			Expect(store.start).ToNot(BeZero())
 		})
 
@@ -78,7 +78,7 @@ var _ = Describe("MemorySessionStore", func() {
 
 			store.StartSession(manifest)
 
-			Expect(store.events).To(BeEmpty())
+			Expect(store.events).To(HaveLen(1))
 		})
 
 		It("Should clear existing events", func() {
@@ -93,11 +93,11 @@ var _ = Describe("MemorySessionStore", func() {
 			}
 			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
-			Expect(store.events).To(HaveLen(1))
+			Expect(store.events).To(HaveLen(2))
 
-			// Reset should clear events
+			// Reset should clear events and add start event
 			store.StartSession(manifest)
-			Expect(store.events).To(BeEmpty())
+			Expect(store.events).To(HaveLen(1))
 		})
 
 		It("Should update the start time", func() {
@@ -137,9 +137,9 @@ var _ = Describe("MemorySessionStore", func() {
 			writer.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
 			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
 
-			Expect(store.events).To(HaveLen(1))
-			Expect(store.events[0]).To(BeAssignableToTypeOf(&model.TransactionEvent{}))
-			te := store.events[0].(*model.TransactionEvent)
+			Expect(store.events).To(HaveLen(2))
+			Expect(store.events[1]).To(BeAssignableToTypeOf(&model.TransactionEvent{}))
+			te := store.events[1].(*model.TransactionEvent)
 			Expect(te.Name).To(Equal("vim"))
 			Expect(te.ResourceType).To(Equal("package"))
 			Expect(te.Changed).To(BeTrue())
@@ -158,7 +158,7 @@ var _ = Describe("MemorySessionStore", func() {
 				Expect(store.RecordEvent(e)).ToNot(HaveOccurred())
 			}
 
-			Expect(store.events).To(HaveLen(3))
+			Expect(store.events).To(HaveLen(4))
 		})
 
 		It("Should maintain event order", func() {
@@ -168,11 +168,11 @@ var _ = Describe("MemorySessionStore", func() {
 			Expect(store.RecordEvent(&model.TransactionEvent{Name: "second", ResourceType: "package"})).ToNot(HaveOccurred())
 			Expect(store.RecordEvent(&model.TransactionEvent{Name: "third", ResourceType: "package"})).ToNot(HaveOccurred())
 
-			Expect(store.events).To(HaveLen(3))
-			Expect(store.events[0]).To(BeAssignableToTypeOf(&model.TransactionEvent{}))
-			Expect(store.events[0].(*model.TransactionEvent).Name).To(Equal("first"))
-			Expect(store.events[1].(*model.TransactionEvent).Name).To(Equal("second"))
-			Expect(store.events[2].(*model.TransactionEvent).Name).To(Equal("third"))
+			Expect(store.events).To(HaveLen(4))
+			Expect(store.events[1]).To(BeAssignableToTypeOf(&model.TransactionEvent{}))
+			Expect(store.events[1].(*model.TransactionEvent).Name).To(Equal("first"))
+			Expect(store.events[2].(*model.TransactionEvent).Name).To(Equal("second"))
+			Expect(store.events[3].(*model.TransactionEvent).Name).To(Equal("third"))
 		})
 	})
 
@@ -285,7 +285,7 @@ var _ = Describe("MemorySessionStore", func() {
 				<-done
 			}
 
-			Expect(store.events).To(HaveLen(10))
+			Expect(store.events).To(HaveLen(11))
 		})
 
 		It("Should handle concurrent ResourceEvents calls", func() {
@@ -390,7 +390,7 @@ var _ = Describe("MemorySessionStore", func() {
 			store.StartSession(manifest)
 			store.StartSession(manifest)
 
-			Expect(store.events).To(BeEmpty())
+			Expect(store.events).To(HaveLen(1))
 		})
 	})
 

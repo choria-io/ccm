@@ -17,6 +17,7 @@ type applyCommand struct {
 	manifest   string
 	renderOnly bool
 	session    string
+	report     bool
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
@@ -26,6 +27,7 @@ func registerApplyCommand(ccm *fisk.Application) {
 	apply.Arg("manifest", "Path to manifest to apply").ExistingFileVar(&cmd.manifest)
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").StringVar(&cmd.session)
+	apply.Flag("report", "Generate a report").BoolVar(&cmd.report)
 
 }
 
@@ -65,6 +67,25 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 	_, err = mgr.ApplyManifest(ctx, apply)
 	if err != nil {
 		return err
+	}
+
+	if c.report {
+		summary, err := mgr.SessionSummary()
+		if err != nil {
+			return err
+		}
+
+		fmt.Println()
+		fmt.Println("Manifest Run Summary")
+		fmt.Println()
+		fmt.Printf("             Run Time: %v\n", summary.TotalDuration)
+		fmt.Printf("      Total Resources: %d\n", summary.TotalResources)
+		fmt.Printf("     Stable Resources: %d\n", summary.StableResources)
+		fmt.Printf("    Changed Resources: %d\n", summary.ChangedResources)
+		fmt.Printf("     Failed Resources: %d\n", summary.FailedResources)
+		fmt.Printf("    Skipped Resources: %d\n", summary.SkippedResources)
+		fmt.Printf("  Refreshed Resources: %d\n", summary.RefreshedCount)
+		fmt.Printf("         Total Errors: %d\n", summary.TotalErrors)
 	}
 
 	return nil
