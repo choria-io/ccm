@@ -26,10 +26,12 @@ import (
 
 // CCM is the main configuration and change management orchestrator
 type CCM struct {
-	session    model.SessionStore
-	log        model.Logger
-	userLogger model.Logger
-	data       map[string]any
+	session      model.SessionStore
+	log          model.Logger
+	userLogger   model.Logger
+	data         map[string]any
+	extraDataKey string
+	extraData    map[string]any
 
 	mu sync.Mutex
 }
@@ -72,7 +74,16 @@ func (m *CCM) SetData(data map[string]any) {
 func (m *CCM) Data() map[string]any {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.data
+
+	ret := make(map[string]any)
+	if m.extraDataKey != "" {
+		ret[m.extraDataKey] = m.extraData
+	}
+	for k, v := range m.data {
+		ret[k] = v
+	}
+
+	return ret
 }
 
 func (m *CCM) applyServiceResource(ctx context.Context, properties *model.ServiceResourceProperties) (*model.TransactionEvent, error) {
