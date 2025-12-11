@@ -116,6 +116,7 @@ type SessionSummary struct {
 	EndTime          time.Time     `json:"end_time" yaml:"end_time"`
 	TotalDuration    time.Duration `json:"total_duration" yaml:"total_duration"`
 	TotalResources   int           `json:"total_resources" yaml:"total_resources"`
+	UniqueResources  int           `json:"unique_resources" yaml:"unique_resources"`
 	ChangedResources int           `json:"changed_resources" yaml:"changed_resources"`
 	FailedResources  int           `json:"failed_resources" yaml:"failed_resources"`
 	SkippedResources int           `json:"skipped_resources" yaml:"skipped_resources"`
@@ -127,6 +128,8 @@ type SessionSummary struct {
 // BuildSessionSummary creates a summary report from all events in a session
 func BuildSessionSummary(events []SessionEvent) *SessionSummary {
 	summary := &SessionSummary{}
+	var totalTime time.Duration
+	var uniques = map[string]struct{}{}
 
 	for _, event := range events {
 		// Handle session start event
@@ -141,7 +144,9 @@ func BuildSessionSummary(events []SessionEvent) *SessionSummary {
 			continue
 		}
 
+		totalTime += txEvent.Duration
 		summary.TotalResources++
+		uniques[txEvent.ResourceType+"#"+txEvent.Name] = struct{}{}
 
 		// Track the latest timestamp as end time
 		if txEvent.TimeStamp.After(summary.EndTime) {
@@ -167,9 +172,13 @@ func BuildSessionSummary(events []SessionEvent) *SessionSummary {
 		}
 	}
 
+	summary.UniqueResources = len(uniques)
+
 	// Calculate total duration
 	if !summary.StartTime.IsZero() && !summary.EndTime.IsZero() {
 		summary.TotalDuration = summary.EndTime.Sub(summary.StartTime)
+	} else {
+		summary.TotalDuration = totalTime
 	}
 
 	return summary

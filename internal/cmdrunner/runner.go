@@ -28,6 +28,12 @@ func (c *CommandRunner) Execute(ctx context.Context, command string, args ...str
 	c.logger.Debug("Running command", "command", command, "args", args)
 	cmd := exec.CommandContext(ctx, command, args...)
 
+	cmd.Env = []string{
+		"PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin",
+		"LANG=C",
+		"LC_ALL=C",
+	}
+
 	stdout := bytes.NewBuffer([]byte{})
 	stderr := bytes.NewBuffer([]byte{})
 
@@ -35,13 +41,21 @@ func (c *CommandRunner) Execute(ctx context.Context, command string, args ...str
 	cmd.Stderr = stderr
 	cmd.Dir = "/"
 
-	var exitCode int
-
 	err := cmd.Run()
-	if errors.Is(err, &exec.ExitError{}) {
-		return stdout.Bytes(), stderr.Bytes(), cmd.ProcessState.ExitCode(), err
-	} else if err != nil {
-		exitCode = cmd.ProcessState.ExitCode()
+	exitCode := cmd.ProcessState.ExitCode()
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		// we specifically dont want to error when exit codes are >0 but we do want to return the exit code instead
+		if exitCode > 0 {
+			return stdout.Bytes(), stderr.Bytes(), exitCode, nil
+		} else {
+			return stdout.Bytes(), stderr.Bytes(), exitCode, err
+		}
+	}
+
+	if err != nil {
+		return stdout.Bytes(), stderr.Bytes(), exitCode, err
 	}
 
 	return stdout.Bytes(), stderr.Bytes(), exitCode, nil

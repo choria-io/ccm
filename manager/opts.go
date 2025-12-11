@@ -5,8 +5,6 @@
 package manager
 
 import (
-	"fmt"
-
 	"github.com/choria-io/ccm/session"
 )
 
@@ -32,19 +30,14 @@ func WithSessionDirectory(path string) Option {
 	}
 }
 
-// WithExtraData sets extra data to be added to data set by user
-func WithExtraData(key string, facts map[string]any) Option {
+// WithEnvironmentData sets environment data
+func WithEnvironmentData(data map[string]string) Option {
 	return func(c *CCM) error {
-		if key == "" {
-			return fmt.Errorf("extra data key is required")
+		if data == nil {
+			data = make(map[string]string)
 		}
 
-		if facts == nil {
-			facts = make(map[string]any)
-		}
-
-		c.extraData = facts
-		c.extraDataKey = key
+		c.SetEnviron(data)
 
 		return nil
 	}

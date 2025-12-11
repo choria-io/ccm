@@ -105,29 +105,7 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 		return nil, err
 	}
 
-	switch {
-	case exitcode == 0:
-		matches := dnfNevraRe.FindStringSubmatch(string(stdout))
-		if len(matches) != 6 {
-			return nil, fmt.Errorf("failed to parse rpm -q output for %s", pkg)
-		}
-
-		state := &model.PackageState{
-			CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, matches[3]),
-			Metadata: &model.PackageMetadata{
-				Name:     matches[1],
-				Version:  fmt.Sprintf("%s-%s", matches[3], matches[4]),
-				Arch:     matches[5],
-				Provider: ProviderName,
-				Extended: map[string]any{
-					"epoch":   matches[2],
-					"release": matches[4],
-				},
-			},
-		}
-
-		return state, nil
-	default:
+	if exitcode != 0 {
 		return &model.PackageState{
 			CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, model.EnsureAbsent),
 			Metadata: &model.PackageMetadata{
@@ -138,4 +116,25 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 			},
 		}, nil
 	}
+
+	matches := dnfNevraRe.FindStringSubmatch(string(stdout))
+	if len(matches) != 6 {
+		return nil, fmt.Errorf("failed to parse rpm -q output for %s", pkg)
+	}
+
+	state := &model.PackageState{
+		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, matches[3]),
+		Metadata: &model.PackageMetadata{
+			Name:     matches[1],
+			Version:  fmt.Sprintf("%s-%s", matches[3], matches[4]),
+			Arch:     matches[5],
+			Provider: ProviderName,
+			Extended: map[string]any{
+				"epoch":   matches[2],
+				"release": matches[4],
+			},
+		},
+	}
+
+	return state, nil
 }

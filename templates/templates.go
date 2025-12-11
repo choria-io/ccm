@@ -18,8 +18,9 @@ import (
 
 // Env represents the template execution environment containing facts and data
 type Env struct {
-	Facts map[string]any `json:"facts" yaml:"facts"`
-	Data  map[string]any `json:"data" yaml:"data"`
+	Facts   map[string]any    `json:"facts" yaml:"facts"`
+	Data    map[string]any    `json:"data" yaml:"data"`
+	Environ map[string]string `json:"environ" yaml:"environ"`
 
 	envJson json.RawMessage
 	mu      sync.Mutex

@@ -13,7 +13,6 @@ import (
 
 	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/templates"
 )
 
 type Type struct {
@@ -34,13 +33,12 @@ var _ model.Resource = (*Type)(nil)
 
 // New creates a new service resource with the given properties
 func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourceProperties) (*Type, error) {
-	data := mgr.Data()
-	facts, err := mgr.Facts(ctx)
+	env, err := mgr.TemplateEnvironment(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = properties.ResolveTemplates(&templates.Env{Facts: facts, Data: data})
+	err = properties.ResolveTemplates(env)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +57,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 		prop:  &properties,
 		mgr:   mgr,
 		log:   logger,
-		facts: facts,
-		data:  data,
+		facts: env.Facts,
+		data:  env.Data,
 	}
 
 	if properties.Subscribe != "" {

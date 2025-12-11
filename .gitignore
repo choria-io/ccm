@@ -2,3 +2,4 @@
 dist
 ccm
 .claude
+.hugo_build.lock
