@@ -1,0 +1,57 @@
+baseURL = "https://choria-io.github.io/ccm/"
+languageCode = "en-us"
+title = "Choria Configuration Manager"
+theme = "hugo-theme-relearn"
+canonifyURLs = true
+
+[outputs]
+home = [ "HTML", "RSS", "JSON"]
+
+[author]
+name = "Choria Project"
+
+[params]
+showVisitedLinks = false
+disableLanguageSwitchingButton = true
+#themeVariant = "ccm"
+disableInlineCopyToClipBoard = true
+alwaysopen = true
+externalLinkTargetc= "_self"
+[[params.themeVariant]]
+    auto = ['zen-light', 'ccm']
+    identifier = 'zen-auto'
+    name = 'Auto Theme'
+
+  [[params.themeVariant]]
+    identifier = 'zen-light'
+    name = 'Light'
+
+  [[params.themeVariant]]
+    identifier = 'ccm'
+    name = 'Dark'
+
+[[menu.shortcuts]]
+name = "<i class='fab fa-fw fa-github'></i> GitHub"
+identifier = "ds"
+url = "https://github.com/choria-io/ccm"
+weight = 10
+
+[[menu.shortcuts]]
+name = "<i class='far fa-save'></i> Download"
+url = "https://github.com/choria-io/ccm/releases"
+weight = 11
+
+[[menu.shortcuts]]
+name = "<i class='far fa-comments'></i> Discussions"
+url = "https://github.com/choria-io/ccm/discussions"
+weight = 12
+
+[[menu.shortcuts]]
+name = "<i class='far fa-life-ring'></i> Issues"
+url = "https://github.com/choria-io/ccm/issues"
+weight = 13
+
+[[menu.shortcuts]]
+name = "<i class='fab fa-slack'></i> #choria"
+url = "https://short.voxpupu.li/puppetcommunity_slack_signup"
+weight = 14

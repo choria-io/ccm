@@ -23,7 +23,7 @@ func registerSessionCommand(app *fisk.Application) {
 
 	sess := app.Command("session", "Manage session stores")
 
-	newAction := sess.Command("new", "Creates a new session store").Action(cmd.newAction)
+	newAction := sess.Command("new", "Creates a new session store").Alias("start").Action(cmd.newAction)
 	newAction.Flag("directory", "Directory to store the session in").StringVar(&cmd.sessionStore)
 
 	reportAction := sess.Command("report", "Report on the active session").Action(cmd.reportAction)
@@ -53,6 +53,7 @@ func (c *sessionCmd) reportAction(_ *fisk.ParseContext) error {
 		fmt.Printf("             Run Time: %v\n", summary.TotalDuration.Round(time.Millisecond))
 	}
 	fmt.Printf("      Total Resources: %d\n", summary.TotalResources)
+	fmt.Printf("     Unique Resources: %d\n", summary.UniqueResources)
 	fmt.Printf("     Stable Resources: %d\n", summary.StableResources)
 	fmt.Printf("    Changed Resources: %d\n", summary.ChangedResources)
 	fmt.Printf("     Failed Resources: %d\n", summary.FailedResources)

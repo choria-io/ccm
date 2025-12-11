@@ -7,6 +7,9 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"io"
+
+	"github.com/choria-io/ccm/templates"
 )
 
 type Logger interface {
@@ -25,4 +28,11 @@ type Manager interface {
 	NewRunner() (CommandRunner, error)
 	RecordEvent(event *TransactionEvent) error
 	ShouldRefresh(resourceType string, resourceName string) (bool, error)
+	TemplateEnvironment(ctx context.Context) (*templates.Env, error)
+
+	// apply related
+
+	ResolveManifestReader(ctx context.Context, manifest io.ReadCloser) (map[string]any, Apply, error)
+	ApplyManifest(ctx context.Context, apply Apply) (SessionStore, error)
+	SessionSummary() (*SessionSummary, error)
 }

@@ -12,9 +12,11 @@ package modelmocks
 import (
 	context "context"
 	json "encoding/json"
+	io "io"
 	reflect "reflect"
 
 	model "github.com/choria-io/ccm/model"
+	templates "github.com/choria-io/ccm/templates"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -154,6 +156,21 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
+// ApplyManifest mocks base method.
+func (m *MockManager) ApplyManifest(ctx context.Context, apply model.Apply) (model.SessionStore, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyManifest", ctx, apply)
+	ret0, _ := ret[0].(model.SessionStore)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplyManifest indicates an expected call of ApplyManifest.
+func (mr *MockManagerMockRecorder) ApplyManifest(ctx, apply any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyManifest", reflect.TypeOf((*MockManager)(nil).ApplyManifest), ctx, apply)
+}
+
 // Data mocks base method.
 func (m *MockManager) Data() map[string]any {
 	m.ctrl.T.Helper()
@@ -246,6 +263,37 @@ func (mr *MockManagerMockRecorder) RecordEvent(event any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordEvent", reflect.TypeOf((*MockManager)(nil).RecordEvent), event)
 }
 
+// ResolveManifestReader mocks base method.
+func (m *MockManager) ResolveManifestReader(ctx context.Context, manifest io.ReadCloser) (map[string]any, model.Apply, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveManifestReader", ctx, manifest)
+	ret0, _ := ret[0].(map[string]any)
+	ret1, _ := ret[1].(model.Apply)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ResolveManifestReader indicates an expected call of ResolveManifestReader.
+func (mr *MockManagerMockRecorder) ResolveManifestReader(ctx, manifest any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveManifestReader", reflect.TypeOf((*MockManager)(nil).ResolveManifestReader), ctx, manifest)
+}
+
+// SessionSummary mocks base method.
+func (m *MockManager) SessionSummary() (*model.SessionSummary, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SessionSummary")
+	ret0, _ := ret[0].(*model.SessionSummary)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SessionSummary indicates an expected call of SessionSummary.
+func (mr *MockManagerMockRecorder) SessionSummary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SessionSummary", reflect.TypeOf((*MockManager)(nil).SessionSummary))
+}
+
 // ShouldRefresh mocks base method.
 func (m *MockManager) ShouldRefresh(resourceType, resourceName string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -259,4 +307,19 @@ func (m *MockManager) ShouldRefresh(resourceType, resourceName string) (bool, er
 func (mr *MockManagerMockRecorder) ShouldRefresh(resourceType, resourceName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldRefresh", reflect.TypeOf((*MockManager)(nil).ShouldRefresh), resourceType, resourceName)
+}
+
+// TemplateEnvironment mocks base method.
+func (m *MockManager) TemplateEnvironment(ctx context.Context) (*templates.Env, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TemplateEnvironment", ctx)
+	ret0, _ := ret[0].(*templates.Env)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TemplateEnvironment indicates an expected call of TemplateEnvironment.
+func (mr *MockManagerMockRecorder) TemplateEnvironment(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TemplateEnvironment", reflect.TypeOf((*MockManager)(nil).TemplateEnvironment), ctx)
 }

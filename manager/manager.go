@@ -26,12 +26,11 @@ import (
 
 // CCM is the main configuration and change management orchestrator
 type CCM struct {
-	session      model.SessionStore
-	log          model.Logger
-	userLogger   model.Logger
-	data         map[string]any
-	extraDataKey string
-	extraData    map[string]any
+	session    model.SessionStore
+	log        model.Logger
+	userLogger model.Logger
+	data       map[string]any
+	env        map[string]string
 
 	mu sync.Mutex
 }
@@ -70,15 +69,20 @@ func (m *CCM) SetData(data map[string]any) {
 	m.data = data
 }
 
+// SetEnviron sets the environment data for the manager
+func (m *CCM) SetEnviron(data map[string]string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.env = data
+}
+
 // Data returns the resolved Hiera data
 func (m *CCM) Data() map[string]any {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	ret := make(map[string]any)
-	if m.extraDataKey != "" {
-		ret[m.extraDataKey] = m.extraData
-	}
 	for k, v := range m.data {
 		ret[k] = v
 	}
@@ -161,7 +165,7 @@ func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.Sessi
 
 	for _, r := range apply.Resources() {
 		for _, v := range r {
-			var event model.SessionEvent
+			var event *model.TransactionEvent
 			var err error
 
 			// TODO: error here should rather create a TransactionEvent with an error status
@@ -182,6 +186,8 @@ func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.Sessi
 			default:
 				return nil, fmt.Errorf("unsupported resource type %T", resource)
 			}
+
+			event.LogStatus(m.userLogger)
 
 			err = m.session.RecordEvent(event)
 			if err != nil {
@@ -289,4 +295,16 @@ func (m *CCM) SessionSummary() (*model.SessionSummary, error) {
 	}
 
 	return model.BuildSessionSummary(events), nil
+}
+
+func (m *CCM) TemplateEnvironment(ctx context.Context) (*templates.Env, error) {
+	f, err := m.Facts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return &templates.Env{Facts: f, Data: m.data, Environ: m.env}, nil
 }

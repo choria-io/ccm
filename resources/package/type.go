@@ -13,7 +13,6 @@ import (
 	"github.com/choria-io/ccm/internal/registry"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/templates"
 )
 
 // Type represents a package resource that manages software package installation
@@ -41,13 +40,12 @@ var _ model.Resource = (*Type)(nil)
 
 // New creates a new package resource with the given properties
 func New(ctx context.Context, mgr model.Manager, properties model.PackageResourceProperties) (*Type, error) {
-	data := mgr.Data()
-	facts, err := mgr.Facts(ctx)
+	env, err := mgr.TemplateEnvironment(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = properties.ResolveTemplates(&templates.Env{Facts: facts, Data: data})
+	err = properties.ResolveTemplates(env)
 	if err != nil {
 		return nil, err
 	}
@@ -66,8 +64,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 		prop:  &properties,
 		mgr:   mgr,
 		log:   logger,
-		facts: facts,
-		data:  data,
+		facts: env.Facts,
+		data:  env.Data,
 	}
 
 	err = t.validate()

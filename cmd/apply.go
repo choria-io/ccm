@@ -9,7 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/choria-io/ccm/manager"
 	"github.com/choria-io/fisk"
 	"github.com/goccy/go-yaml"
 )
@@ -18,6 +17,8 @@ type applyCommand struct {
 	manifest   string
 	renderOnly bool
 	report     bool
+	hieraFile  string
+	readEnv    bool
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
@@ -27,6 +28,7 @@ func registerApplyCommand(ccm *fisk.Application) {
 	apply.Arg("manifest", "Path to manifest to apply").ExistingFileVar(&cmd.manifest)
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
+	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
@@ -35,7 +37,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	mgr, err := manager.NewManager(newLogger(), newOutputLogger())
+	mgr, _, err := newManager("", c.hieraFile, c.readEnv)
 	if err != nil {
 		return err
 	}
