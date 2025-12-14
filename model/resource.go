@@ -39,10 +39,11 @@ type ResourceProperties interface {
 
 // CommonResourceProperties contains properties shared by all resource types
 type CommonResourceProperties struct {
-	Type     string `json:"-" yaml:"-"`
-	Name     string `json:"name" yaml:"name"`
-	Ensure   string `json:"ensure,omitempty" yaml:"ensure"`
-	Provider string `json:"provider,omitempty" yaml:"provider"`
+	Type        string             `json:"-" yaml:"-"`
+	Name        string             `json:"name" yaml:"name"`
+	Ensure      string             `json:"ensure,omitempty" yaml:"ensure"`
+	Provider    string             `json:"provider,omitempty" yaml:"provider"`
+	HealthCheck *CommonHealthCheck `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 }
 
 // ResolveTemplates resolves template expressions in common resource properties
@@ -94,13 +95,14 @@ func NewCommonResourceState(protocol string, resourceType string, name string, e
 
 // CommonResourceState contains state information shared by all resource types
 type CommonResourceState struct {
-	TimeStamp    time.Time `json:"timestamp" yaml:"timestamp"`
-	Protocol     string    `json:"protocol" yaml:"protocol"`
-	ResourceType string    `json:"type" yaml:"type"`
-	Name         string    `json:"name" yaml:"name"`
-	Ensure       string    `json:"ensure" yaml:"ensure"`
-	Changed      bool      `json:"changed" yaml:"changed"`
-	Refreshed    bool      `json:"refreshed" yaml:"refreshed"`
+	TimeStamp    time.Time          `json:"timestamp" yaml:"timestamp"`
+	Protocol     string             `json:"protocol" yaml:"protocol"`
+	ResourceType string             `json:"type" yaml:"type"`
+	Name         string             `json:"name" yaml:"name"`
+	Ensure       string             `json:"ensure" yaml:"ensure"`
+	Changed      bool               `json:"changed" yaml:"changed"`
+	Refreshed    bool               `json:"refreshed" yaml:"refreshed"`
+	HealthCheck  *HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 }
 
 // NewResourcePropertiesFromYaml creates a new resource properties object from a yaml document, it validates the properties and expands any templates

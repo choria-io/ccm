@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/healthcheck"
 	"github.com/choria-io/ccm/internal/registry"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
@@ -86,6 +87,7 @@ func (t *Type) newTransactionEvent() *model.TransactionEvent {
 		event.Ensure = t.prop.Ensure
 	}
 
+	event.Provider = t.providerUnlocked()
 	return event
 }
 
@@ -104,13 +106,25 @@ func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
 		event.Error = err.Error()
 	}
 
+	if t.prop.HealthCheck != nil {
+		res, err := healthcheck.Execute(ctx, t.mgr, t.prop.HealthCheck, t.log)
+		event.HealthCheck = res
+		if err != nil {
+			event.Failed = true
+			event.Error = err.Error()
+		} else {
+			if res.Status != model.HealthCheckOK {
+				event.Failed = true
+				event.Error = fmt.Sprintf("health check status %q", res.Status.String())
+			}
+		}
+	}
+
 	if state != nil {
 		event.Status = *state
 		event.Changed = state.Changed
 		event.ActualEnsure = state.Ensure
 	}
-
-	event.Provider = t.providerUnlocked()
 
 	return event, nil
 }
@@ -139,18 +153,6 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 	case properties.Ensure == "":
 		return nil, fmt.Errorf("invalid value for ensure")
 
-	case properties.Ensure == EnsurePresent && initialStatus.Ensure == EnsureAbsent:
-		t.log.Info("Installing package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
-		err := p.Install(ctx, properties.Name, properties.Ensure)
-		if err != nil {
-			return nil, err
-		}
-		refreshState = true
-
-	case properties.Ensure == EnsurePresent:
-		t.log.Debug("Package already present", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
-		refreshState = false
-
 	case properties.Ensure == EnsureLatest:
 		if initialStatus.Ensure == EnsureAbsent {
 			t.log.Info("Installing package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
@@ -164,10 +166,8 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 		}
 		refreshState = true
 
-	case properties.Ensure == EnsureAbsent && initialStatus.Ensure == EnsureAbsent:
-		t.log.Debug("Package already absent", "provider", p.Name())
-
-		refreshState = false
+	case t.isDesiredState(properties, initialStatus):
+		// nothing to do
 
 	case properties.Ensure == EnsureAbsent:
 		t.log.Info("Uninstalling package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
