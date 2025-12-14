@@ -35,7 +35,7 @@ var _ = Describe("Package Type", func() {
 
 	BeforeEach(func() {
 		mockctl = gomock.NewController(GinkgoT())
-		mgr, logger = modelmocks.NewManager(facts, data, mockctl)
+		mgr, logger = modelmocks.NewManager(facts, data, false, mockctl)
 		runner = modelmocks.NewMockCommandRunner(mockctl)
 		mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
 		provider = NewMockPackageProvider(mockctl)
@@ -442,6 +442,153 @@ var _ = Describe("Package Type", func() {
 					Expect(result.Failed).To(BeFalse())
 					Expect(result.HealthCheck).To(BeNil())
 				})
+			})
+		})
+
+		Describe("Apply in noop mode", func() {
+			var noopMgr *modelmocks.MockManager
+			var noopPkg *Type
+			var noopProvider *MockPackageProvider
+
+			BeforeEach(func(ctx context.Context) {
+				noopMgr, _ = modelmocks.NewManager(facts, data, true, mockctl)
+				noopRunner := modelmocks.NewMockCommandRunner(mockctl)
+				noopMgr.EXPECT().NewRunner().AnyTimes().Return(noopRunner, nil)
+				noopProvider = NewMockPackageProvider(mockctl)
+				noopProvider.EXPECT().Name().Return("mock").AnyTimes()
+
+				noopFactory := modelmocks.NewMockProviderFactory(mockctl)
+				noopFactory.EXPECT().Name().Return("noop-test").AnyTimes()
+				noopFactory.EXPECT().TypeName().Return(model.PackageTypeName).AnyTimes()
+				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
+					return noopProvider, nil
+				})
+				noopFactory.EXPECT().IsManageable(facts).Return(true, nil).AnyTimes()
+
+				registry.Clear()
+				registry.MustRegister(noopFactory)
+
+				noopProperties := &model.PackageResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name:     "zsh",
+						Ensure:   "present",
+						Provider: "noop-test",
+					},
+				}
+				var err error
+				noopPkg, err = New(ctx, noopMgr, *noopProperties)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should not install when package is absent", func(ctx context.Context) {
+				noopPkg.prop.Ensure = EnsurePresent
+				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: EnsureAbsent}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				// No Install call expected
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have installed version present"))
+			})
+
+			It("Should not uninstall when package is present", func(ctx context.Context) {
+				noopPkg.prop.Ensure = EnsureAbsent
+				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				// No Uninstall call expected
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have uninstalled"))
+			})
+
+			It("Should not upgrade when ensure is latest", func(ctx context.Context) {
+				noopPkg.prop.Ensure = EnsureLatest
+				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				// No Upgrade call expected
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have upgraded to latest"))
+			})
+
+			It("Should not install latest when package is absent", func(ctx context.Context) {
+				noopPkg.prop.Ensure = EnsureLatest
+				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: EnsureAbsent}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				// No Install call expected
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have installed latest"))
+			})
+
+			It("Should not upgrade to specific version", func(ctx context.Context) {
+				noopPkg.prop.Ensure = "2.0.0"
+				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				// No Upgrade call expected
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have upgraded to 2.0.0"))
+			})
+
+			It("Should not downgrade to specific version", func(ctx context.Context) {
+				noopPkg.prop.Ensure = "1.0.0"
+				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				// No Downgrade call expected
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have downgraded to 1.0.0"))
+			})
+
+			It("Should not change when already in desired state", func(ctx context.Context) {
+				noopPkg.prop.Ensure = EnsurePresent
+				state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeFalse())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(BeEmpty())
+			})
+
+			It("Should not install specific version when package is absent", func(ctx context.Context) {
+				noopPkg.prop.Ensure = "2.0.0"
+				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: EnsureAbsent}}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				// No Install call expected
+
+				result, err := noopPkg.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have installed version 2.0.0"))
 			})
 		})
 

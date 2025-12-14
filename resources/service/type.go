@@ -126,6 +126,8 @@ func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
 		event.Changed = state.Changed
 		event.ActualEnsure = state.Ensure
 		event.Refreshed = state.Refreshed
+		event.Noop = state.Noop
+		event.NoopMessage = state.NoopMessage
 	}
 
 	event.Provider = t.providerUnlocked()
@@ -146,6 +148,8 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		p                         = t.provider.(ServiceProvider)
 		properties                = t.prop
 		shouldRefreshViaSubscribe bool
+		noop                      = t.mgr.NoopMode()
+		noopMessage               string
 	)
 
 	initialStatus, err = p.Status(ctx, properties.Name)
@@ -172,9 +176,14 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 	switch {
 	case shouldRefreshViaSubscribe:
 		t.log.Info("Refreshing via subscribe", "subscribe", t.subscribeType+"#"+t.subscribeName)
-		err = p.Restart(ctx, properties.Name)
-		if err != nil {
-			return nil, err
+		if !noop {
+			err = p.Restart(ctx, properties.Name)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping restart as noop")
+			noopMessage = "Would have restarted via subscribe"
 		}
 		refreshState = true
 
@@ -183,9 +192,14 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 
 	case properties.Ensure == model.ServiceEnsureStopped && initialStatus.Ensure != model.ServiceEnsureStopped:
 		t.log.Info("Stopping service")
-		err = p.Stop(ctx, properties.Name)
-		if err != nil {
-			return nil, err
+		if !noop {
+			err = p.Stop(ctx, properties.Name)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping stop as noop")
+			noopMessage = "Would have stopped"
 		}
 		refreshState = true
 
@@ -194,9 +208,14 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 
 	case properties.Ensure == model.ServiceEnsureRunning && initialStatus.Ensure != model.ServiceEnsureRunning:
 		t.log.Info("Starting service")
-		err = p.Start(ctx, properties.Name)
-		if err != nil {
-			return nil, err
+		if !noop {
+			err = p.Start(ctx, properties.Name)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping start as noop")
+			noopMessage = "Would have started"
 		}
 		refreshState = true
 
@@ -211,21 +230,39 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		// noop, leave refresh state from ensure alone
 	case *properties.Enable && !initialStatus.Metadata.Enabled:
 		t.log.Info("Enabling service")
-		err = p.Enable(ctx, properties.Name)
-		if err != nil {
-			return nil, err
+		if !noop {
+			err = p.Enable(ctx, properties.Name)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping enable as noop")
+			if noopMessage != "" {
+				noopMessage += ", would have enabled"
+			} else {
+				noopMessage = "Would have enabled"
+			}
 		}
 		refreshState = true
 	case !*properties.Enable && initialStatus.Metadata.Enabled:
 		t.log.Info("Disabling service")
-		err = p.Disable(ctx, properties.Name)
-		if err != nil {
-			return nil, err
+		if !noop {
+			err = p.Disable(ctx, properties.Name)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping disable as noop")
+			if noopMessage != "" {
+				noopMessage += ", would have disabled"
+			} else {
+				noopMessage = "Would have disabled"
+			}
 		}
 		refreshState = true
 	}
 
-	if refreshState {
+	if refreshState && !noop {
 		finalStatus, err = p.Status(ctx, properties.Name)
 		if err != nil {
 			return nil, err
@@ -234,11 +271,19 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		finalStatus = initialStatus
 	}
 
-	if !t.isDesiredState(properties, finalStatus) {
-		return nil, fmt.Errorf("failed to reach desired state %s", properties.Ensure)
+	if !noop {
+		if !t.isDesiredState(properties, finalStatus) {
+			return nil, fmt.Errorf("failed to reach desired state %s", properties.Ensure)
+		}
 	}
 
-	finalStatus.Changed = refreshState
+	finalStatus.Noop = noop
+	finalStatus.NoopMessage = noopMessage
+	if noop && refreshState {
+		finalStatus.Changed = true
+	} else {
+		finalStatus.Changed = refreshState
+	}
 	finalStatus.Refreshed = shouldRefreshViaSubscribe
 
 	return finalStatus, nil

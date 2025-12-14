@@ -102,3 +102,12 @@ resources:
     ensure: latest
     name: apache2
 ```
+
+## Checking what would be done (Noop mode)
+
+One can ask the system to operate in Noop mode, meaning it will attempt to detect what would happen without actually doing it.
+
+This is achieved by using the `--noop` flag.
+
+> [!info] Note
+> Noop mode is not perfect, if a change in a resource affects a future resource, it cannot always be detected.

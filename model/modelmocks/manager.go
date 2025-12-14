@@ -9,13 +9,14 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func NewManager(facts map[string]any, data map[string]any, ctl *gomock.Controller) (*MockManager, *MockLogger) {
+func NewManager(facts map[string]any, data map[string]any, noop bool, ctl *gomock.Controller) (*MockManager, *MockLogger) {
 	logger := NewMockLogger(ctl)
 	mgr := NewMockManager(ctl)
 
 	mgr.EXPECT().Logger(gomock.Any()).AnyTimes().Return(logger, nil)
 	mgr.EXPECT().Facts(gomock.Any()).AnyTimes().Return(facts, nil)
 	mgr.EXPECT().Data().AnyTimes().Return(data)
+	mgr.EXPECT().NoopMode().AnyTimes().Return(noop)
 	mgr.EXPECT().TemplateEnvironment(gomock.Any()).AnyTimes().Return(&templates.Env{Facts: facts, Data: data}, nil)
 	logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()

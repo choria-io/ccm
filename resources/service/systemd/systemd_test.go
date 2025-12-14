@@ -36,7 +36,7 @@ var _ = Describe("Systemd Provider", func() {
 
 	BeforeEach(func() {
 		mockctl = gomock.NewController(GinkgoT())
-		mgr, logger = modelmocks.NewManager(facts, data, mockctl)
+		mgr, logger = modelmocks.NewManager(facts, data, false, mockctl)
 		runner = modelmocks.NewMockCommandRunner(mockctl)
 		mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
 

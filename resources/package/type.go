@@ -87,7 +87,6 @@ func (t *Type) newTransactionEvent() *model.TransactionEvent {
 		event.Ensure = t.prop.Ensure
 	}
 
-	event.Provider = t.providerUnlocked()
 	return event
 }
 
@@ -124,7 +123,10 @@ func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
 		event.Status = *state
 		event.Changed = state.Changed
 		event.ActualEnsure = state.Ensure
+		event.Noop = state.Noop
+		event.NoopMessage = state.NoopMessage
 	}
+	event.Provider = t.providerUnlocked()
 
 	return event, nil
 }
@@ -135,13 +137,14 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 		return nil, fmt.Errorf("%s: %w", t.stringUnlocked(), err)
 	}
 
-	p := t.provider.(PackageProvider)
-	properties := t.prop
-
 	var (
 		initialStatus *model.PackageState
 		finalStatus   *model.PackageState
 		refreshState  bool
+		p             = t.provider.(PackageProvider)
+		properties    = t.prop
+		noop          = t.mgr.NoopMode()
+		noopMessage   string
 	)
 
 	initialStatus, err = p.Status(ctx, t.prop.Name)
@@ -156,14 +159,28 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 	case properties.Ensure == EnsureLatest:
 		if initialStatus.Ensure == EnsureAbsent {
 			t.log.Info("Installing package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
+			if !noop {
+				err := p.Install(ctx, properties.Name, properties.Ensure)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				t.log.Info("Skipping install as noop")
+				noopMessage = "Would have installed latest"
+			}
 		} else {
 			t.log.Info("Upgrading package to latest", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
+			if !noop {
+				err := p.Upgrade(ctx, properties.Name, properties.Ensure)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				t.log.Info("Skipping upgrade as noop")
+				noopMessage = "Would have upgraded to latest"
+			}
 		}
 
-		err := p.Upgrade(ctx, properties.Name, properties.Ensure)
-		if err != nil {
-			return nil, err
-		}
 		refreshState = true
 
 	case t.isDesiredState(properties, initialStatus):
@@ -171,18 +188,32 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 
 	case properties.Ensure == EnsureAbsent:
 		t.log.Info("Uninstalling package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
-		err := p.Uninstall(ctx, properties.Name)
-		if err != nil {
-			return nil, err
+
+		if !noop {
+			err := p.Uninstall(ctx, properties.Name)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping uninstall as noop")
+			noopMessage = "Would have uninstalled"
 		}
+
 		refreshState = true
 
 	case initialStatus.Ensure == EnsureAbsent:
 		t.log.Info("Installing package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
-		err := p.Install(ctx, properties.Name, properties.Ensure)
-		if err != nil {
-			return nil, err
+
+		if !noop {
+			err := p.Install(ctx, properties.Name, properties.Ensure)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping install as noop")
+			noopMessage = fmt.Sprintf("Would have installed version %s", properties.Ensure)
 		}
+
 		refreshState = true
 
 	default:
@@ -193,23 +224,37 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 
 		case -1:
 			t.log.Info("Upgrading package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
-			err := p.Upgrade(ctx, properties.Name, properties.Ensure)
-			if err != nil {
-				return nil, err
+
+			if !noop {
+				err := p.Upgrade(ctx, properties.Name, properties.Ensure)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				t.log.Info("Skipping upgrade as noop")
+				noopMessage = fmt.Sprintf("Would have upgraded to %s", properties.Ensure)
 			}
+
 			refreshState = true
 
 		case 1:
 			t.log.Info("Downgrading package", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
-			err := p.Downgrade(ctx, properties.Name, properties.Ensure)
-			if err != nil {
-				return nil, err
+
+			if !noop {
+				err := p.Downgrade(ctx, properties.Name, properties.Ensure)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				t.log.Info("Skipping downgrade as noop")
+				noopMessage = fmt.Sprintf("Would have downgraded to %s", properties.Ensure)
 			}
+
 			refreshState = true
 		}
 	}
 
-	if refreshState {
+	if refreshState && !noop {
 		finalStatus, err = p.Status(ctx, properties.Name)
 		if err != nil {
 			return nil, err
@@ -218,11 +263,19 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 		finalStatus = initialStatus
 	}
 
-	if !t.isDesiredState(properties, finalStatus) {
-		return nil, fmt.Errorf("failed to reach desired state %s", properties.Ensure)
+	if !noop {
+		if !t.isDesiredState(properties, finalStatus) {
+			return nil, fmt.Errorf("failed to reach desired state %s", properties.Ensure)
+		}
 	}
 
-	finalStatus.Changed = initialStatus.Ensure != finalStatus.Ensure
+	finalStatus.Noop = noop
+	finalStatus.NoopMessage = noopMessage
+	if noop && refreshState {
+		finalStatus.Changed = true
+	} else {
+		finalStatus.Changed = initialStatus.Ensure != finalStatus.Ensure
+	}
 
 	return finalStatus, nil
 }

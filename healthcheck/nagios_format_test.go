@@ -63,7 +63,7 @@ var _ = Describe("Execute", func() {
 
 	BeforeEach(func() {
 		mockctl = gomock.NewController(GinkgoT())
-		mgr, logger = modelmocks.NewManager(facts, data, mockctl)
+		mgr, logger = modelmocks.NewManager(facts, data, false, mockctl)
 		runner = modelmocks.NewMockCommandRunner(mockctl)
 		mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
 	})
@@ -128,7 +128,7 @@ var _ = Describe("Execute", func() {
 
 	It("should propagate runner creation errors", func(ctx context.Context) {
 		mockctl2 := gomock.NewController(GinkgoT())
-		mgr2, _ := modelmocks.NewManager(facts, data, mockctl2)
+		mgr2, _ := modelmocks.NewManager(facts, data, false, mockctl2)
 		expectedErr := fmt.Errorf("failed to create runner")
 		mgr2.EXPECT().NewRunner().Return(nil, expectedErr)
 

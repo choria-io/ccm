@@ -42,3 +42,10 @@ func WithEnvironmentData(data map[string]string) Option {
 		return nil
 	}
 }
+
+func WithNoop() Option {
+	return func(ccm *CCM) error {
+		ccm.noop = true
+		return nil
+	}
+}
