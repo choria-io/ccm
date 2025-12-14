@@ -29,8 +29,10 @@ type CCM struct {
 	session    model.SessionStore
 	log        model.Logger
 	userLogger model.Logger
-	data       map[string]any
-	env        map[string]string
+
+	noop bool
+	data map[string]any
+	env  map[string]string
 
 	mu sync.Mutex
 }
@@ -307,4 +309,11 @@ func (m *CCM) TemplateEnvironment(ctx context.Context) (*templates.Env, error) {
 	defer m.mu.Unlock()
 
 	return &templates.Env{Facts: f, Data: m.data, Environ: m.env}, nil
+}
+
+func (m *CCM) NoopMode() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.noop
 }

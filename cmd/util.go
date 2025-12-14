@@ -16,7 +16,7 @@ import (
 	"github.com/choria-io/tinyhiera"
 )
 
-func newManager(session string, hieraFile string, readEnv bool) (model.Manager, model.Logger, error) {
+func newManager(session string, hieraFile string, readEnv bool, noop bool) (model.Manager, model.Logger, error) {
 	var opts []manager.Option
 
 	if session != "" {
@@ -32,6 +32,10 @@ func newManager(session string, hieraFile string, readEnv bool) (model.Manager, 
 	}
 
 	opts = append(opts, manager.WithEnvironmentData(data))
+
+	if noop {
+		opts = append(opts, manager.WithNoop())
+	}
 
 	mgr, err := manager.NewManager(logger, out, opts...)
 	if err != nil {

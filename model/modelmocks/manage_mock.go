@@ -249,6 +249,20 @@ func (mr *MockManagerMockRecorder) NewRunner() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRunner", reflect.TypeOf((*MockManager)(nil).NewRunner))
 }
 
+// NoopMode mocks base method.
+func (m *MockManager) NoopMode() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NoopMode")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// NoopMode indicates an expected call of NoopMode.
+func (mr *MockManagerMockRecorder) NoopMode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NoopMode", reflect.TypeOf((*MockManager)(nil).NoopMode))
+}
+
 // RecordEvent mocks base method.
 func (m *MockManager) RecordEvent(event *model.TransactionEvent) error {
 	m.ctrl.T.Helper()

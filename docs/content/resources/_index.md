@@ -9,6 +9,10 @@ A resource is how you describe the desired state of your infrastructure. They re
 
 Each resource has a type and a unique name followed by some resource-specific properties.
 
+## Common Properties
+
+Resources can all have additional monitoring / health checks associated with them. See the [Monitoring page](../monitoring/) for more information.
+
 ## Package
 
 When you manage a package, you describe the stable state you desire. Should the package merely be present, or the latest version, or a specific version?

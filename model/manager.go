@@ -35,4 +35,5 @@ type Manager interface {
 	ResolveManifestReader(ctx context.Context, manifest io.ReadCloser) (map[string]any, Apply, error)
 	ApplyManifest(ctx context.Context, apply Apply) (SessionStore, error)
 	SessionSummary() (*SessionSummary, error)
+	NoopMode() bool
 }

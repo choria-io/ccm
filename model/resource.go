@@ -102,6 +102,8 @@ type CommonResourceState struct {
 	Ensure       string             `json:"ensure" yaml:"ensure"`
 	Changed      bool               `json:"changed" yaml:"changed"`
 	Refreshed    bool               `json:"refreshed" yaml:"refreshed"`
+	Noop         bool               `json:"noop" yaml:"noop"`
+	NoopMessage  string             `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
 	HealthCheck  *HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 }
 

@@ -50,6 +50,8 @@ type TransactionEvent struct {
 	Duration     time.Duration      `json:"duration" yaml:"duration"`
 	Properties   any                `json:"properties" yaml:"properties"`
 	Status       any                `json:"status" yaml:"status"`
+	Noop         bool               `json:"noop" yaml:"noop"`
+	NoopMessage  string             `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
 	HealthCheck  *HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 }
 
@@ -94,6 +96,14 @@ func (t *TransactionEvent) LogStatus(log Logger) {
 	if t.HealthCheck != nil {
 		args = append(args, "checks", t.HealthCheck.Tries)
 		args = append(args, "status", t.HealthCheck.Status.String())
+	}
+
+	if t.Noop {
+		if t.NoopMessage != "" {
+			args = append(args, "noop", t.NoopMessage)
+		} else {
+			args = append(args, "noop", true)
+		}
 	}
 
 	switch {

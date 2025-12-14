@@ -19,6 +19,7 @@ type applyCommand struct {
 	report     bool
 	hieraFile  string
 	readEnv    bool
+	noop       bool
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
@@ -29,6 +30,7 @@ func registerApplyCommand(ccm *fisk.Application) {
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
+	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
@@ -37,7 +39,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	mgr, _, err := newManager("", c.hieraFile, c.readEnv)
+	mgr, _, err := newManager("", c.hieraFile, c.readEnv, c.noop)
 	if err != nil {
 		return err
 	}

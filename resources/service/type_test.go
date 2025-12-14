@@ -40,7 +40,7 @@ var _ = Describe("Service Type", func() {
 
 	BeforeEach(func() {
 		mockctl = gomock.NewController(GinkgoT())
-		mgr, logger = modelmocks.NewManager(facts, data, mockctl)
+		mgr, logger = modelmocks.NewManager(facts, data, false, mockctl)
 		runner = modelmocks.NewMockCommandRunner(mockctl)
 		mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
 		provider = NewMockServiceProvider(mockctl)
@@ -586,6 +586,150 @@ var _ = Describe("Service Type", func() {
 					Expect(result.Failed).To(BeFalse())
 					Expect(result.HealthCheck).To(BeNil())
 				})
+			})
+		})
+
+		Describe("Apply in noop mode", func() {
+			var noopMgr *modelmocks.MockManager
+			var noopSvc *Type
+			var noopProvider *MockServiceProvider
+
+			BeforeEach(func(ctx context.Context) {
+				noopMgr, _ = modelmocks.NewManager(facts, data, true, mockctl)
+				noopRunner := modelmocks.NewMockCommandRunner(mockctl)
+				noopMgr.EXPECT().NewRunner().AnyTimes().Return(noopRunner, nil)
+				noopMgr.EXPECT().ShouldRefresh(gomock.Any(), gomock.Any()).AnyTimes().Return(false, nil)
+				noopProvider = NewMockServiceProvider(mockctl)
+				noopProvider.EXPECT().Name().Return("mock").AnyTimes()
+
+				noopFactory := modelmocks.NewMockProviderFactory(mockctl)
+				noopFactory.EXPECT().Name().Return("noop-test").AnyTimes()
+				noopFactory.EXPECT().TypeName().Return(model.ServiceTypeName).AnyTimes()
+				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
+					return noopProvider, nil
+				})
+				noopFactory.EXPECT().IsManageable(facts).Return(true, nil).AnyTimes()
+
+				registry.Clear()
+				registry.MustRegister(noopFactory)
+
+				noopProperties := &model.ServiceResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name:     "nginx",
+						Ensure:   model.ServiceEnsureRunning,
+						Provider: "noop-test",
+					},
+				}
+				var err error
+				noopSvc, err = New(ctx, noopMgr, *noopProperties)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should not start when service is stopped", func(ctx context.Context) {
+				noopSvc.prop.Ensure = model.ServiceEnsureRunning
+				initialState := &model.ServiceState{
+					CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureStopped},
+					Metadata:            &model.ServiceMetadata{Name: "nginx", Running: false},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "nginx").Return(initialState, nil)
+				// No Start call expected
+
+				result, err := noopSvc.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have started"))
+			})
+
+			It("Should not stop when service is running", func(ctx context.Context) {
+				noopSvc.prop.Ensure = model.ServiceEnsureStopped
+				initialState := &model.ServiceState{
+					CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+					Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "nginx").Return(initialState, nil)
+				// No Stop call expected
+
+				result, err := noopSvc.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have stopped"))
+			})
+
+			It("Should not enable when service is disabled", func(ctx context.Context) {
+				enable := true
+				noopSvc.prop.Enable = &enable
+				noopSvc.prop.Ensure = model.ServiceEnsureRunning
+				initialState := &model.ServiceState{
+					CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+					Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true, Enabled: false},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "nginx").Return(initialState, nil)
+				// No Enable call expected
+
+				result, err := noopSvc.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have enabled"))
+			})
+
+			It("Should not disable when service is enabled", func(ctx context.Context) {
+				disable := false
+				noopSvc.prop.Enable = &disable
+				noopSvc.prop.Ensure = model.ServiceEnsureRunning
+				initialState := &model.ServiceState{
+					CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+					Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true, Enabled: true},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "nginx").Return(initialState, nil)
+				// No Disable call expected
+
+				result, err := noopSvc.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have disabled"))
+			})
+
+			It("Should combine start and enable messages", func(ctx context.Context) {
+				enable := true
+				noopSvc.prop.Enable = &enable
+				noopSvc.prop.Ensure = model.ServiceEnsureRunning
+				initialState := &model.ServiceState{
+					CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureStopped},
+					Metadata:            &model.ServiceMetadata{Name: "nginx", Running: false, Enabled: false},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "nginx").Return(initialState, nil)
+				// No Start or Enable calls expected
+
+				result, err := noopSvc.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have started, would have enabled"))
+			})
+
+			It("Should not change when already in desired state", func(ctx context.Context) {
+				noopSvc.prop.Ensure = model.ServiceEnsureRunning
+				state := &model.ServiceState{
+					CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+					Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+
+				result, err := noopSvc.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeFalse())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(BeEmpty())
 			})
 		})
 
