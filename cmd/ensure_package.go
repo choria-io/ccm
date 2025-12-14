@@ -34,9 +34,10 @@ func (c *packageCommand) packageAction(_ *fisk.ParseContext) error {
 
 	pkg, err := packageresource.New(ctx, mgr, model.PackageResourceProperties{
 		CommonResourceProperties: model.CommonResourceProperties{
-			Name:     c.name,
-			Ensure:   c.ensure,
-			Provider: c.provider,
+			Name:        c.name,
+			Ensure:      c.ensure,
+			Provider:    c.provider,
+			HealthCheck: c.parent.healthCheckProperties(),
 		},
 	})
 	if err != nil {

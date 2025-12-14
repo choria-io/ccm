@@ -4,3 +4,6 @@ ccm
 .claude
 .hugo_build.lock
 docs/public
+public
+coverage.out
+coverage.html

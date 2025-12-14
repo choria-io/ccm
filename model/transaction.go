@@ -34,22 +34,23 @@ const SessionStartEventProtocol = "io.choria.ccm.v1.session.start"
 
 // TransactionEvent represents a single event for a resource session
 type TransactionEvent struct {
-	Protocol     string        `json:"protocol" yaml:"protocol"`
-	EventID      string        `json:"event_id" yaml:"event_id"`
-	TimeStamp    time.Time     `json:"timestamp" yaml:"timestamp"`
-	ResourceType string        `json:"type" yaml:"type"`
-	Provider     string        `json:"provider" yaml:"provider"`
-	Name         string        `json:"name" yaml:"name"`
-	Changed      bool          `json:"changed" yaml:"changed"`
-	Refreshed    bool          `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
-	Failed       bool          `json:"failed" yaml:"failed"`
-	Ensure       string        `json:"ensure" yaml:"ensure"`               // Ensure is the requested ensure value
-	ActualEnsure string        `json:"actual_ensure" yaml:"actual_ensure"` // ActualEnsure is the actual `ensure` value after the session
-	Error        string        `json:"error" yaml:"error"`
-	Skipped      bool          `json:"skipped" yaml:"skipped"`
-	Duration     time.Duration `json:"duration" yaml:"duration"`
-	Properties   any           `json:"properties" yaml:"properties"`
-	Status       any           `json:"status" yaml:"status"`
+	Protocol     string             `json:"protocol" yaml:"protocol"`
+	EventID      string             `json:"event_id" yaml:"event_id"`
+	TimeStamp    time.Time          `json:"timestamp" yaml:"timestamp"`
+	ResourceType string             `json:"type" yaml:"type"`
+	Provider     string             `json:"provider" yaml:"provider"`
+	Name         string             `json:"name" yaml:"name"`
+	Changed      bool               `json:"changed" yaml:"changed"`
+	Refreshed    bool               `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
+	Failed       bool               `json:"failed" yaml:"failed"`
+	Ensure       string             `json:"ensure" yaml:"ensure"`               // Ensure is the requested ensure value
+	ActualEnsure string             `json:"actual_ensure" yaml:"actual_ensure"` // ActualEnsure is the actual `ensure` value after the session
+	Error        string             `json:"error" yaml:"error"`
+	Skipped      bool               `json:"skipped" yaml:"skipped"`
+	Duration     time.Duration      `json:"duration" yaml:"duration"`
+	Properties   any                `json:"properties" yaml:"properties"`
+	Status       any                `json:"status" yaml:"status"`
+	HealthCheck  *HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 }
 
 type SessionStartEvent struct {
@@ -84,17 +85,28 @@ func (t *SessionStartEvent) String() string {
 func (t *TransactionEvent) SessionEventID() string { return t.EventID }
 
 func (t *TransactionEvent) LogStatus(log Logger) {
+	args := []any{
+		"ensure", t.Ensure,
+		"runtime", t.Duration.Truncate(time.Millisecond),
+		"provider", t.Provider,
+	}
+
+	if t.HealthCheck != nil {
+		args = append(args, "checks", t.HealthCheck.Tries)
+		args = append(args, "status", t.HealthCheck.Status.String())
+	}
+
 	switch {
 	case t.Failed:
-		log.Error(fmt.Sprintf("%s#%s failed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "error", t.Error, "provider", t.Provider)
+		log.Error(fmt.Sprintf("%s#%s failed", t.ResourceType, t.Name), append(args, "error", t.Error)...)
 	case t.Skipped:
-		log.Warn(fmt.Sprintf("%s#%s skipped", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
+		log.Warn(fmt.Sprintf("%s#%s skipped", t.ResourceType, t.Name), args...)
 	case t.Refreshed:
-		log.Warn(fmt.Sprintf("%s#%s refreshed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
+		log.Warn(fmt.Sprintf("%s#%s refreshed", t.ResourceType, t.Name), args...)
 	case t.Changed:
-		log.Warn(fmt.Sprintf("%s#%s changed", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
+		log.Warn(fmt.Sprintf("%s#%s changed", t.ResourceType, t.Name), args...)
 	default:
-		log.Info(fmt.Sprintf("%s#%s stable", t.ResourceType, t.Name), "ensure", t.Ensure, "runtime", t.Duration.Truncate(time.Millisecond), "provider", t.Provider)
+		log.Info(fmt.Sprintf("%s#%s stable", t.ResourceType, t.Name), args...)
 	}
 }
 func (t *TransactionEvent) String() string {

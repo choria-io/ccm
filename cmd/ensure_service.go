@@ -39,9 +39,10 @@ func (c *serviceCommand) serviceAction(_ *fisk.ParseContext) error {
 	props := model.ServiceResourceProperties{
 		Subscribe: c.subscribe,
 		CommonResourceProperties: model.CommonResourceProperties{
-			Name:     c.name,
-			Ensure:   c.ensure,
-			Provider: c.provider,
+			Name:        c.name,
+			Ensure:      c.ensure,
+			Provider:    c.provider,
+			HealthCheck: c.parent.healthCheckProperties(),
 		},
 	}
 

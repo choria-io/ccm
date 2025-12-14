@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/healthcheck"
 	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
 )
@@ -104,6 +105,20 @@ func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
 	if err != nil {
 		event.Failed = true
 		event.Error = err.Error()
+	}
+
+	if t.prop.HealthCheck != nil {
+		res, err := healthcheck.Execute(ctx, t.mgr, t.prop.HealthCheck, t.log)
+		event.HealthCheck = res
+		if err != nil {
+			event.Failed = true
+			event.Error = err.Error()
+		} else {
+			if res.Status != model.HealthCheckOK {
+				event.Failed = true
+				event.Error = fmt.Sprintf("health check status %q", res.Status.String())
+			}
+		}
 	}
 
 	if state != nil {

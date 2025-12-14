@@ -489,6 +489,104 @@ var _ = Describe("Service Type", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(event.Error).To(ContainSubstring("failed to reach desired state"))
 			})
+
+			Context("with health check", func() {
+				It("Should succeed when health check passes", func(ctx context.Context) {
+					svc.prop.HealthCheck = &model.CommonHealthCheck{
+						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
+					}
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+					runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_http", "-H", "localhost").
+						Return([]byte("HTTP OK"), []byte{}, 0, nil)
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Failed).To(BeFalse())
+					Expect(result.Error).To(BeEmpty())
+				})
+
+				It("Should fail when health check returns warning", func(ctx context.Context) {
+					svc.prop.HealthCheck = &model.CommonHealthCheck{
+						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
+					}
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+					runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_http", "-H", "localhost").
+						Return([]byte("HTTP WARNING - slow response"), []byte{}, 1, nil)
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Failed).To(BeTrue())
+					Expect(result.Error).To(Equal("health check status \"WARNING\""))
+					Expect(result.HealthCheck).ToNot(BeNil())
+					Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckWarning))
+				})
+
+				It("Should fail when health check returns critical", func(ctx context.Context) {
+					svc.prop.HealthCheck = &model.CommonHealthCheck{
+						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
+					}
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+					runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_http", "-H", "localhost").
+						Return([]byte("HTTP CRITICAL - connection refused"), []byte{}, 2, nil)
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Failed).To(BeTrue())
+					Expect(result.Error).To(Equal("health check status \"CRITICAL\""))
+					Expect(result.HealthCheck).ToNot(BeNil())
+					Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckCritical))
+				})
+
+				It("Should fail when health check command execution fails", func(ctx context.Context) {
+					svc.prop.HealthCheck = &model.CommonHealthCheck{
+						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
+					}
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+					runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_http", "-H", "localhost").
+						Return(nil, nil, 0, fmt.Errorf("command not found"))
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Failed).To(BeTrue())
+					Expect(result.Error).To(ContainSubstring("command not found"))
+				})
+
+				It("Should not run health check when not configured", func(ctx context.Context) {
+					svc.prop.HealthCheck = nil
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+					// No runner.EXPECT() for health check command
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Failed).To(BeFalse())
+					Expect(result.HealthCheck).To(BeNil())
+				})
+			})
 		})
 
 		Describe("Info", func() {

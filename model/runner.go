@@ -9,5 +9,5 @@ import (
 )
 
 type CommandRunner interface {
-	Execute(ctx context.Context, cmd string, args ...string) ([]byte, []byte, int, error)
+	Execute(ctx context.Context, cmd string, args ...string) (stdout []byte, stderr []byte, exitCode int, err error)
 }
