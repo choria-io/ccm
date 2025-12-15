@@ -102,9 +102,41 @@ Here we define the inputs in `data` and the Hiera hierarchy along with OS-specif
 
 ### Autonomous Agent Support
 
-We have not had a chance to POC integration into the Choria Autonomous Agent yet, but as the Autonomous Agent is designed to own one single component and manage that component's lifecycle, and is written as a YAML file, one can easily see how this could be used.
+As the Autonomous Agent is designed to own one single component and manage that component's lifecycle and is written as a YAML file, one can easily see how this could be used.
 
 As the state machine goes about its normal lifecycle, it would simply manage individual CCM resources autonomously and forever, augmenting that with data from key-value stores, parsed as Hiera data, monitoring and remediation components.
+
+```yaml
+name: ccm
+version: 0.0.1
+initial_state: MANAGE
+
+transitions:
+  - name: maintenance
+    description: Maintenance mode where no runs will be scheduled
+    destination: MAINTENANCE
+    from: [MANAGE]
+
+  - name: resume
+    description: Exit maintenance mode and start scheduling ccm runs
+    destination: MANAGE
+    from: [MAINTENANCE]
+
+watchers:
+  - name: ccm
+    type: ccmmanifest
+    state_match: [MANAGE]
+    interval: 1m
+    properties:
+      governor: CCM
+      manifest_file: manifest.yaml
+```
+
+Here we have a basic `ccm apply` scheduler, but by combining other parts like `kv` data you can imagine a `kv` update could create data that would be accessible in the manifest.
+
+This way we have a managed manifest, with external data and a scheduler that runs it periodically. 
+
+Together with Governors we can create rolling rollouts where any remediation or configuration change can be globally restricted to single nodes in a cluster concurrently. 
 
 ### Choria RPC Support
 
