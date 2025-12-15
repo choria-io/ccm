@@ -13,6 +13,7 @@ require (
 	github.com/onsi/gomega v1.38.3
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shirou/gopsutil/v4 v4.25.11
+	github.com/sirupsen/logrus v1.9.3
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/mock v0.6.0
 )
