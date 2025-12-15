@@ -22,7 +22,7 @@ type Env struct {
 	Data    map[string]any    `json:"data" yaml:"data"`
 	Environ map[string]string `json:"environ" yaml:"environ"`
 
-	envJson json.RawMessage
+	envJSON json.RawMessage
 	mu      sync.Mutex
 }
 
@@ -49,15 +49,15 @@ func (e *Env) lookup(params ...any) (any, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if e.envJson == nil {
+	if e.envJSON == nil {
 		j, err := json.Marshal(e)
 		if err != nil {
 			return "", err
 		}
-		e.envJson = j
+		e.envJSON = j
 	}
 
-	res := gjson.GetBytes(e.envJson, key)
+	res := gjson.GetBytes(e.envJSON, key)
 	if !res.Exists() {
 		return defaultValue, nil
 	}
@@ -65,9 +65,9 @@ func (e *Env) lookup(params ...any) (any, error) {
 	if res.Type == gjson.Number {
 		if strings.Contains(res.Raw, ".") {
 			return res.Float(), nil
-		} else {
-			return res.Int(), nil
 		}
+
+		return res.Int(), nil
 	}
 
 	return res.Value(), nil

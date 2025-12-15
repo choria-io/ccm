@@ -13,6 +13,63 @@ Each resource has a type and a unique name followed by some resource-specific pr
 
 Resources can all have additional monitoring / health checks associated with them. See the [Monitoring page](../monitoring/) for more information.
 
+## File
+
+When managing a package you have to state the content, owner, group and mode the file should be. 
+
+> [!info] Warning
+> You should use absolute file names and primary group names
+
+The `file` type is very minimal at the moment, most important TODO items:
+
+ * Source file contents from elsewhere
+ * Support creating symlinks
+ * Support creating directories
+ * More complete templating for contents
+
+In a manifest:
+
+```yaml
+file:
+  name: /etc/motd
+  ensure: present
+  content: |
+    Managed by CCM {{ now() }}
+  owner: root
+  group: root
+  mode: "0644"
+```
+
+On the CLI:
+
+```nohighlight
+$ ccm ensure file /etc/motd --source /tmp/ccm/motd --owner root --group root --mode 0644
+```
+
+This will copy the contents of `/tmp/ccm/motd` to `/etc/motd` verbatim and set the ownership.
+
+If you specify `--contents` or `--contents-file` instead then the result will be parsed by a template and rendered as the contents.
+
+### Ensure Values
+
+| Ensure Values |                              |
+|---------------|------------------------------|
+| `present`     | The file must be nonexisting |
+| `absent`      | The file must exist          |
+
+### Properties
+
+| Ensure Values |                                                               |
+|---------------|---------------------------------------------------------------|
+| `name`        | The resource name match the file name exactly                 |
+| `ensure`      | The desired state                                             |
+| `content`     | The contents of the file, parsed through `expr`               |
+| `source`      | Copy another file, in future will support remote sources      |
+| `owner`       | The file owner                                                |
+| `group`       | The file group                                                |
+| `mode`        | The file mode, a string like `0700`                           |
+| `provider`    | Force a specific provider to be used, only `postix` supported |
+
 ## Package
 
 When you manage a package, you describe the stable state you desire. Should the package merely be present, or the latest version, or a specific version?

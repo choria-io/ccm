@@ -16,6 +16,7 @@ import (
 	"github.com/choria-io/ccm/internal/facts"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/resources/apply"
+	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	serviceresource "github.com/choria-io/ccm/resources/service"
 	"github.com/choria-io/ccm/session"
@@ -92,13 +93,22 @@ func (m *CCM) Data() map[string]any {
 	return ret
 }
 
-func (m *CCM) applyServiceResource(ctx context.Context, properties *model.ServiceResourceProperties) (*model.TransactionEvent, error) {
-	pkg, err := serviceresource.New(ctx, m, *properties)
+func (m *CCM) applyFileResource(ctx context.Context, properties *model.FileResourceProperties) (*model.TransactionEvent, error) {
+	file, err := fileresource.New(ctx, m, *properties)
 	if err != nil {
 		return nil, err
 	}
 
-	return pkg.Apply(ctx)
+	return file.Apply(ctx)
+}
+
+func (m *CCM) applyServiceResource(ctx context.Context, properties *model.ServiceResourceProperties) (*model.TransactionEvent, error) {
+	svc, err := serviceresource.New(ctx, m, *properties)
+	if err != nil {
+		return nil, err
+	}
+
+	return svc.Apply(ctx)
 }
 
 func (m *CCM) applyPackageResource(ctx context.Context, properties *model.PackageResourceProperties) (*model.TransactionEvent, error) {
@@ -171,6 +181,7 @@ func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.Sessi
 			var err error
 
 			// TODO: error here should rather create a TransactionEvent with an error status
+			// TODO: this stuff should be stored in the registry so it knows when to call what so its automatic
 
 			switch resource := v.(type) {
 			case *model.PackageResourceProperties:
@@ -181,6 +192,12 @@ func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.Sessi
 
 			case *model.ServiceResourceProperties:
 				event, err = m.applyServiceResource(ctx, resource)
+				if err != nil {
+					return nil, err
+				}
+
+			case *model.FileResourceProperties:
+				event, err = m.applyFileResource(ctx, resource)
 				if err != nil {
 					return nil, err
 				}

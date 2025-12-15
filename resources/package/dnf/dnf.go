@@ -107,7 +107,7 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 
 	if exitcode != 0 {
 		return &model.PackageState{
-			CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, model.EnsureAbsent),
+			CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, model.PackageTypeName, pkg, model.EnsureAbsent),
 			Metadata: &model.PackageMetadata{
 				Name:     pkg,
 				Provider: ProviderName,

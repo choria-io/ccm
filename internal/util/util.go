@@ -5,7 +5,6 @@
 package util
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -145,12 +144,4 @@ func cmpStringsCaseInsensitive(a, b string) int {
 		return 1
 	}
 	return 0
-}
-
-func DumpJson(v any) []byte {
-	j, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	return j
 }

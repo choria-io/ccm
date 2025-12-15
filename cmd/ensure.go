@@ -37,6 +37,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	ens.Flag("hiera", "Hiera data file to use as data source").Default(".hiera").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
 	ens.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 
+	registerFileCommand(ens, cmd)
 	registerPackageCommand(ens, cmd)
 	registerServiceCommand(ens, cmd)
 }
