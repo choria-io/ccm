@@ -122,9 +122,8 @@ func (m *CCM) applyPackageResource(ctx context.Context, properties *model.Packag
 }
 
 // ResolveManifestReader reads and resolves a manifest using Hiera, returning the resolved data and parsed manifest
-func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.ReadCloser) (map[string]any, model.Apply, error) {
+func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.Reader) (map[string]any, model.Apply, error) {
 	mb, err := io.ReadAll(manifest)
-	manifest.Close()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -221,7 +220,7 @@ func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.Sessi
 }
 
 // ApplyManifestReader reads, resolves, and applies a manifest from a reader
-func (m *CCM) ApplyManifestReader(ctx context.Context, manifest io.ReadCloser) (model.SessionStore, error) {
+func (m *CCM) ApplyManifestReader(ctx context.Context, manifest io.Reader) (model.SessionStore, error) {
 	_, apply, err := m.ResolveManifestReader(ctx, manifest)
 	if err != nil {
 		return nil, err

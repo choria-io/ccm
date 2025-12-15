@@ -32,8 +32,9 @@ type Manager interface {
 
 	// apply related
 
-	ResolveManifestReader(ctx context.Context, manifest io.ReadCloser) (map[string]any, Apply, error)
+	ResolveManifestReader(ctx context.Context, manifest io.Reader) (map[string]any, Apply, error)
 	ApplyManifest(ctx context.Context, apply Apply) (SessionStore, error)
+	ApplyManifestReader(ctx context.Context, manifest io.Reader) (SessionStore, error)
 	SessionSummary() (*SessionSummary, error)
 	NoopMode() bool
 }

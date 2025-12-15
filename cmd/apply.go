@@ -38,6 +38,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 	if err != nil {
 		return err
 	}
+	defer manifest.Close()
 
 	mgr, _, err := newManager("", c.hieraFile, c.readEnv, c.noop)
 	if err != nil {
