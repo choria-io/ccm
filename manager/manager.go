@@ -31,9 +31,10 @@ type CCM struct {
 	log        model.Logger
 	userLogger model.Logger
 
-	noop bool
-	data map[string]any
-	env  map[string]string
+	noop  bool
+	data  map[string]any
+	facts map[string]any
+	env   map[string]string
 
 	mu sync.Mutex
 }
@@ -240,8 +241,22 @@ func (m *CCM) FactsRaw(ctx context.Context) (json.RawMessage, error) {
 	return j, err
 }
 
+func (m *CCM) SetFacts(facts map[string]any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.facts = facts
+}
+
 // Facts gathers and returns the system facts
 func (m *CCM) Facts(ctx context.Context) (map[string]any, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.facts != nil {
+		return m.facts, nil
+	}
+
 	to, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
