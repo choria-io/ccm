@@ -2,6 +2,64 @@ name: build_tasks
 description: Choria Build Tasks
 
 commands:
+    - name: build
+      type: parent
+      description: Build binaries
+      aliases:
+        - b
+      commands:
+        - name: binary
+          description: Build a basic test binary
+          type: exec
+          dir: "{{ AppDir }}"
+          aliases: [bin]
+          banner: |
+            >>>
+            >>> Building 'ccm' locally
+            >>>
+            >>>               Target: {{ if .Flags.target }}{{ .Flags.target }}{{else}}host{{end}}
+            >>>
+          flags:
+            - name: target
+              description: Target platform to build for
+              enum: ["linux/amd64", "linux/arm64", "windows/amd64"]
+              short: T
+            - name: verbose
+              description: Logs packages being build
+              bool: true
+              short: v
+          script: |
+            set -e
+
+            . "{{ BashHelperPath }}"
+
+            {{ if eq .Flags.target "linux/amd64" }}
+                export GOOS=linux
+                export GOARCH=amd64
+            {{ else if eq .Flags.target "linux/arm64" }}
+                export GOOS=linux
+                export GOARCH=arm64
+            {{ else if eq .Flags.target "windows/amd64" }}
+                export GOOS=windows
+                export GOARCH=amd64
+            {{ end }}
+
+            {{ if .Flags.verbose }}
+            ab_say Packages being build
+            {{ end }}
+
+            go build -o ccm  \
+              {{ if .Flags.verbose }}-v{{ end }} \
+              ./cmd
+
+            ab_say Build completed
+
+            echo
+            ls -lh ccm
+            echo
+            file ccm
+            echo
+
     - name: dependencies
       type: parent
       description: Manage dependencies
@@ -151,5 +209,8 @@ commands:
             cd -
             cd resources/service
             mockgen -write_generate_directive -source service.go -destination provider_mock_test.go -package serviceresource
+            cd -
+            cd resources/file
+            mockgen -write_generate_directive -source file.go -destination provider_mock_test.go -package fileresource
             cd -
 

@@ -112,6 +112,8 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 	var prop ResourceProperties
 	var err error
 
+	// TODO: extend the registry to include these so its automatic and doesnt need maintenance
+
 	switch typeName {
 	case PackageTypeName:
 		prop, err = NewPackageResourcePropertiesFromYaml(rawProperties)
@@ -120,6 +122,11 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 		}
 	case ServiceTypeName:
 		prop, err = NewServiceResourcePropertiesFromYaml(rawProperties)
+		if err != nil {
+			return nil, err
+		}
+	case FileTypeName:
+		prop, err = NewFileResourcePropertiesFromYaml(rawProperties)
 		if err != nil {
 			return nil, err
 		}

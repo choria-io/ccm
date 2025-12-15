@@ -21,7 +21,7 @@ This then is a new system designed for small-scale Configuration Management desi
 
 ## Status
 
-This is an experimental work in progress, there are only `service` and `package` resources implemented so far, they support only `dnf` and `systemd`.
+This is an experimental work in progress, there are only `file` (very basic), `service` and `package` resources implemented so far, they support only `dnf` and `systemd`.
 
 We're focusing on the plumbing for sessions, transactions, plugins, embeddability and experimenting with the CLI interaction model.
 

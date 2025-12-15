@@ -132,7 +132,7 @@ func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
 }
 
 func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
-	err := t.selectProvider()
+	err := t.selectProviderUnlocked()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", t.stringUnlocked(), err)
 	}
@@ -310,40 +310,16 @@ func (t *Type) Info(ctx context.Context) (any, error) {
 	return t.provider.(PackageProvider).Status(ctx, t.prop.Name)
 }
 
-// TODO: extract to model or something
 func (t *Type) selectProvider() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.selectProviderUnlocked()
+}
+
+func (t *Type) selectProviderUnlocked() error {
 	if t.provider != nil {
 		return nil
-	}
-
-	var selected model.ProviderFactory
-
-	if t.prop.Provider == "" {
-		provs, err := registry.SelectProviders(model.PackageTypeName, t.facts, t.log)
-		if err != nil {
-			return fmt.Errorf("%w: %w", model.ErrProviderNotFound, err)
-		}
-
-		if len(provs) == 0 {
-			return model.ErrNoSuitableProvider
-		}
-
-		if len(provs) != 1 {
-			return model.ErrMultipleProviders
-		}
-
-		selected = provs[0]
-	} else {
-		prov, err := registry.SelectProvider(model.PackageTypeName, t.prop.Provider, t.facts)
-		if err != nil {
-			return fmt.Errorf("%w: %w", model.ErrResourceInvalid, err)
-		}
-
-		selected = prov
-	}
-
-	if selected == nil {
-		return model.ErrNoSuitableProvider
 	}
 
 	runner, err := t.mgr.NewRunner()
@@ -351,12 +327,17 @@ func (t *Type) selectProvider() error {
 		return err
 	}
 
-	provider, err := selected.New(t.log, runner)
+	selected, err := registry.FindSuitableProvider(model.PackageTypeName, t.prop.Provider, t.facts, t.log, runner)
 	if err != nil {
-		return fmt.Errorf("%w: %w", model.ErrResourceInvalid, err)
+		return err
 	}
-	t.log.Debug("Selected provider", "provider", provider.Name())
-	t.provider = provider
+
+	if selected == nil {
+		return fmt.Errorf("%s#%s: %w", model.PackageTypeName, t.prop.Name, model.ErrNoSuitableProvider)
+	}
+
+	t.log.Debug("Selected provider", "provider", selected.Name())
+	t.provider = selected
 
 	return nil
 }

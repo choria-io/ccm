@@ -126,3 +126,37 @@ func Types() []string {
 
 	return res
 }
+
+func FindSuitableProvider(typeName string, provider string, facts map[string]any, log model.Logger, runner model.CommandRunner) (model.Provider, error) {
+	var selected model.ProviderFactory
+
+	if provider == "" {
+		provs, err := SelectProviders(typeName, facts, log)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", model.ErrProviderNotFound, err)
+		}
+
+		if len(provs) == 0 {
+			return nil, model.ErrNoSuitableProvider
+		}
+
+		if len(provs) != 1 {
+			return nil, model.ErrMultipleProviders
+		}
+
+		selected = provs[0]
+	} else {
+		prov, err := SelectProvider(typeName, provider, facts)
+		if err != nil && prov == nil {
+			return nil, fmt.Errorf("%w: %w", model.ErrResourceInvalid, err)
+		}
+
+		selected = prov
+	}
+
+	if selected == nil {
+		return nil, model.ErrNoSuitableProvider
+	}
+
+	return selected.New(log, runner)
+}

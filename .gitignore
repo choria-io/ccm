@@ -7,3 +7,4 @@ docs/public
 public
 coverage.out
 coverage.html
+*.test

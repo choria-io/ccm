@@ -49,9 +49,9 @@ func (c *CommandRunner) Execute(ctx context.Context, command string, args ...str
 		// we specifically dont want to error when exit codes are >0 but we do want to return the exit code instead
 		if exitCode > 0 {
 			return stdout.Bytes(), stderr.Bytes(), exitCode, nil
-		} else {
-			return stdout.Bytes(), stderr.Bytes(), exitCode, err
 		}
+
+		return stdout.Bytes(), stderr.Bytes(), exitCode, err
 	}
 
 	if err != nil {
