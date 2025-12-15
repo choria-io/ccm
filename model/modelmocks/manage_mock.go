@@ -171,6 +171,21 @@ func (mr *MockManagerMockRecorder) ApplyManifest(ctx, apply any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyManifest", reflect.TypeOf((*MockManager)(nil).ApplyManifest), ctx, apply)
 }
 
+// ApplyManifestReader mocks base method.
+func (m *MockManager) ApplyManifestReader(ctx context.Context, manifest io.Reader) (model.SessionStore, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyManifestReader", ctx, manifest)
+	ret0, _ := ret[0].(model.SessionStore)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplyManifestReader indicates an expected call of ApplyManifestReader.
+func (mr *MockManagerMockRecorder) ApplyManifestReader(ctx, manifest any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyManifestReader", reflect.TypeOf((*MockManager)(nil).ApplyManifestReader), ctx, manifest)
+}
+
 // Data mocks base method.
 func (m *MockManager) Data() map[string]any {
 	m.ctrl.T.Helper()
@@ -278,7 +293,7 @@ func (mr *MockManagerMockRecorder) RecordEvent(event any) *gomock.Call {
 }
 
 // ResolveManifestReader mocks base method.
-func (m *MockManager) ResolveManifestReader(ctx context.Context, manifest io.ReadCloser) (map[string]any, model.Apply, error) {
+func (m *MockManager) ResolveManifestReader(ctx context.Context, manifest io.Reader) (map[string]any, model.Apply, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResolveManifestReader", ctx, manifest)
 	ret0, _ := ret[0].(map[string]any)
