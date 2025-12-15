@@ -10,6 +10,8 @@ import (
 	"github.com/choria-io/ccm/model"
 )
 
+var _ model.Logger = (*SlogLogger)(nil)
+
 type SlogLogger struct {
 	log *slog.Logger
 }
