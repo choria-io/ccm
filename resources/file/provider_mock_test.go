@@ -43,6 +43,20 @@ func (m *MockFileProvider) EXPECT() *MockFileProviderMockRecorder {
 	return m.recorder
 }
 
+// CreateDirectory mocks base method.
+func (m *MockFileProvider) CreateDirectory(ctx context.Context, dir, owner, group, mode string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDirectory", ctx, dir, owner, group, mode)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateDirectory indicates an expected call of CreateDirectory.
+func (mr *MockFileProviderMockRecorder) CreateDirectory(ctx, dir, owner, group, mode any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDirectory", reflect.TypeOf((*MockFileProvider)(nil).CreateDirectory), ctx, dir, owner, group, mode)
+}
+
 // Name mocks base method.
 func (m *MockFileProvider) Name() string {
 	m.ctrl.T.Helper()

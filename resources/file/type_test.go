@@ -291,6 +291,53 @@ var _ = Describe("File Type", func() {
 				Expect(err.Error()).To(ContainSubstring("no such file or directory"))
 			})
 		})
+
+		Context("with directory ensure", func() {
+			BeforeEach(func() {
+				file.prop.Ensure = model.FileEnsureDirectory
+				file.prop.Contents = ""
+			})
+
+			It("Should return true when directory exists with matching properties", func() {
+				state := &model.FileState{
+					CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+					Metadata: &model.FileMetadata{
+						Owner:    "root",
+						Group:    "root",
+						Mode:     "0644",
+						Checksum: checksum(""),
+					},
+				}
+				isStable, _, err := file.isDesiredState(file.prop, state)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isStable).To(BeTrue())
+			})
+
+			It("Should return false when directory does not exist", func() {
+				state := &model.FileState{
+					CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
+					Metadata:            &model.FileMetadata{},
+				}
+				isStable, _, err := file.isDesiredState(file.prop, state)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isStable).To(BeFalse())
+			})
+
+			It("Should return false when path is a file instead of directory", func() {
+				state := &model.FileState{
+					CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+					Metadata: &model.FileMetadata{
+						Owner:    "root",
+						Group:    "root",
+						Mode:     "0644",
+						Checksum: checksum("some content"),
+					},
+				}
+				isStable, _, err := file.isDesiredState(file.prop, state)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isStable).To(BeFalse())
+			})
+		})
 	})
 
 	Context("with a prepared provider", func() {
@@ -477,6 +524,70 @@ var _ = Describe("File Type", func() {
 				})
 			})
 
+			Context("when ensure is directory", func() {
+				BeforeEach(func() {
+					file.prop.Ensure = model.FileEnsureDirectory
+					file.prop.Contents = ""
+				})
+
+				It("Should create directory when absent", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
+						Metadata:            &model.FileMetadata{},
+					}
+					finalState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum(""),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+					provider.EXPECT().CreateDirectory(gomock.Any(), "/tmp/testfile", "root", "root", "0644").Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(finalState, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Ensure).To(Equal(model.FileEnsureDirectory))
+				})
+
+				It("Should not change when directory already exists", func(ctx context.Context) {
+					state := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum(""),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(state, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+				})
+
+				It("Should fail if CreateDirectory fails", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
+						Metadata:            &model.FileMetadata{},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+					provider.EXPECT().CreateDirectory(gomock.Any(), "/tmp/testfile", "root", "root", "0644").Return(fmt.Errorf("mkdir failed"))
+
+					event, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Error).To(ContainSubstring("mkdir failed"))
+				})
+			})
+
 			It("Should fail if final status check fails", func(ctx context.Context) {
 				file.prop.Ensure = model.EnsurePresent
 				initialState := &model.FileState{
@@ -660,6 +771,24 @@ var _ = Describe("File Type", func() {
 				Expect(result.Changed).To(BeFalse())
 				Expect(result.Noop).To(BeTrue())
 				Expect(result.NoopMessage).To(BeEmpty())
+			})
+
+			It("Should not create directory when absent", func(ctx context.Context) {
+				noopFile.prop.Ensure = model.FileEnsureDirectory
+				noopFile.prop.Contents = ""
+				initialState := &model.FileState{
+					CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
+					Metadata:            &model.FileMetadata{},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "/tmp/noopfile").Return(initialState, nil)
+				// No CreateDirectory call expected
+
+				result, err := noopFile.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have created directory"))
 			})
 		})
 

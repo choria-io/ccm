@@ -18,6 +18,8 @@ const (
 
 	// FileTypeName is the type name for file resources
 	FileTypeName = "file"
+
+	FileEnsureDirectory = "directory"
 )
 
 // TODO: support ensure directory
@@ -57,8 +59,8 @@ func (p *FileResourceProperties) Validate() error {
 	}
 
 	// Validate ensure value if it's a version string
-	if p.Ensure != EnsurePresent && p.Ensure != EnsureAbsent {
-		return fmt.Errorf("ensure must be one of %q or %q", EnsurePresent, EnsureAbsent)
+	if p.Ensure != EnsurePresent && p.Ensure != EnsureAbsent && p.Ensure != FileEnsureDirectory {
+		return fmt.Errorf("ensure must be one of %q, %q or %q", EnsurePresent, EnsureAbsent, FileEnsureDirectory)
 	}
 
 	if filepath.Clean(p.Name) != p.Name {

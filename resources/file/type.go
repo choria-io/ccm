@@ -143,7 +143,19 @@ func (t *Type) apply(ctx context.Context) (*model.FileState, error) {
 
 	switch {
 	case isStable:
-		// nothing to do
+	// nothing to do
+	case properties.Ensure == model.FileEnsureDirectory:
+		if !noop {
+			t.log.Info("Creating directory")
+			err = p.CreateDirectory(ctx, properties.Name, properties.Owner, properties.Group, properties.Mode)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping create directory as noop")
+			noopMessage = "Would have created directory"
+		}
+		refreshState = true
 	case properties.Ensure == model.EnsureAbsent && initialStatus.Ensure != model.EnsureAbsent:
 		// remove
 		if !noop {
@@ -205,26 +217,33 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 	var contentChecksum string
 	var err error
 
-	if properties.Source != "" {
-		path, err := filepath.Abs(properties.Source)
-		if err != nil {
-			return false, "", fmt.Errorf("failed to find absolute path for source: %w", err)
-		}
-
-		contentChecksum, err = iu.Sha256HashFile(path)
-		if err != nil {
-			return false, "", err
-		}
-	} else {
-		contentChecksum, err = iu.Sha256HashBytes([]byte(properties.Contents))
-		if err != nil {
-			return false, "", err
-		}
+	if properties.Ensure != state.Ensure {
+		t.log.Debug("Ensure does not match", "requested", properties.Ensure, "state", state.Ensure)
+		return false, "", nil
 	}
 
-	if contentChecksum != state.Metadata.Checksum {
-		t.log.Debug("Content does not match", "requested", contentChecksum, "state", state.Metadata.Checksum)
-		return false, contentChecksum, nil
+	if properties.Ensure != model.FileEnsureDirectory {
+		if properties.Source != "" {
+			path, err := filepath.Abs(properties.Source)
+			if err != nil {
+				return false, "", fmt.Errorf("failed to find absolute path for source: %w", err)
+			}
+
+			contentChecksum, err = iu.Sha256HashFile(path)
+			if err != nil {
+				return false, "", err
+			}
+		} else {
+			contentChecksum, err = iu.Sha256HashBytes([]byte(properties.Contents))
+			if err != nil {
+				return false, "", err
+			}
+		}
+
+		if contentChecksum != state.Metadata.Checksum {
+			t.log.Debug("Content does not match", "requested", contentChecksum, "state", state.Metadata.Checksum)
+			return false, contentChecksum, nil
+		}
 	}
 
 	if state.Metadata.Owner != properties.Owner {
