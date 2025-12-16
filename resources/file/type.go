@@ -52,7 +52,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 		return nil, err
 	}
 
-	logger, err := mgr.Logger("type", model.FileTypeName, "name", properties.Name)
+	logger, err := mgr.Logger("type", model.FileTypeName, "name", properties.Name, "working_dir", mgr.WorkingDirectory())
 	if err != nil {
 		return nil, err
 	}
@@ -171,11 +171,13 @@ func (t *Type) apply(ctx context.Context) (*model.FileState, error) {
 		refreshState = true
 	default:
 		// create
+		t.log.Warn("Creating file", "source", properties.Source, "working_dir", t.mgr.WorkingDirectory())
+
 		if !noop {
-			t.log.Info("Creating file")
-			err = p.Store(ctx, properties.Name, []byte(properties.Contents), properties.Source, properties.Owner, properties.Group, properties.Mode)
+			source := t.adjustedSource(properties)
+			err = p.Store(ctx, properties.Name, []byte(properties.Contents), source, properties.Owner, properties.Group, properties.Mode)
 			if err != nil {
-				t.log.Error("Could not store new file", "error", err)
+				t.log.Error(fmt.Sprintf("Could not store new file %v", err))
 				return nil, err
 			}
 		} else {
@@ -224,11 +226,7 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 
 	if properties.Ensure != model.FileEnsureDirectory {
 		if properties.Source != "" {
-			path, err := filepath.Abs(properties.Source)
-			if err != nil {
-				return false, "", fmt.Errorf("failed to find absolute path for source: %w", err)
-			}
-
+			path := t.adjustedSource(properties)
 			contentChecksum, err = iu.Sha256HashFile(path)
 			if err != nil {
 				return false, "", err
@@ -373,4 +371,13 @@ func (t *Type) selectProvider() error {
 	defer t.mu.Unlock()
 
 	return t.selectProviderUnlocked()
+}
+
+func (t *Type) adjustedSource(properties *model.FileResourceProperties) string {
+	source := properties.Source
+	if properties.Source != "" && t.mgr.WorkingDirectory() != "" {
+		source = filepath.Join(t.mgr.WorkingDirectory(), properties.Source)
+	}
+
+	return source
 }

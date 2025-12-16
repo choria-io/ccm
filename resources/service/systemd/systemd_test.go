@@ -38,6 +38,7 @@ var _ = Describe("Systemd Provider", func() {
 		mockctl = gomock.NewController(GinkgoT())
 		mgr, logger = modelmocks.NewManager(facts, data, false, mockctl)
 		runner = modelmocks.NewMockCommandRunner(mockctl)
+		runner.EXPECT().Execute(gomock.Any(), "systemctl", "daemon-reload").AnyTimes()
 		mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
 
 		logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()

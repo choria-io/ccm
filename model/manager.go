@@ -29,7 +29,7 @@ type Manager interface {
 	RecordEvent(event *TransactionEvent) error
 	ShouldRefresh(resourceType string, resourceName string) (bool, error)
 	TemplateEnvironment(ctx context.Context) (*templates.Env, error)
-
+	WorkingDirectory() string
 	// apply related
 
 	ResolveManifestReader(ctx context.Context, manifest io.Reader) (map[string]any, Apply, error)

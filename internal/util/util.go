@@ -145,3 +145,57 @@ func cmpStringsCaseInsensitive(a, b string) int {
 	}
 	return 0
 }
+
+// DeepMergeMap merges source maps into target recursively. Map values are merged, slices are concatenated, and other values override.
+func DeepMergeMap(target map[string]any, source map[string]any) map[string]any {
+	result := cloneMap(target)
+	for key, value := range source {
+		if existing, ok := result[key]; ok {
+			switch existingTyped := existing.(type) {
+			case map[string]any:
+				if incomingMap, ok := value.(map[string]any); ok {
+					result[key] = DeepMergeMap(existingTyped, incomingMap)
+					continue
+				}
+			case []any:
+				if incomingSlice, ok := value.([]any); ok {
+					combined := append(cloneSlice(existingTyped), incomingSlice...)
+					result[key] = combined
+					continue
+				}
+			}
+		}
+		result[key] = cloneValue(value)
+	}
+	return result
+}
+
+// cloneMap creates a shallow copy of the provided map with cloned values.
+func cloneMap(source map[string]any) map[string]any {
+	result := make(map[string]any, len(source))
+	for key, value := range source {
+		result[key] = cloneValue(value)
+	}
+	return result
+}
+
+// cloneSlice returns a shallow copy of a slice with cloned elements.
+func cloneSlice(source []any) []any {
+	result := make([]any, len(source))
+	for i, value := range source {
+		result[i] = cloneValue(value)
+	}
+	return result
+}
+
+// cloneValue duplicates maps and slices to avoid mutating caller state.
+func cloneValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		return cloneMap(typed)
+	case []any:
+		return cloneSlice(typed)
+	default:
+		return typed
+	}
+}

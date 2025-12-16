@@ -105,11 +105,21 @@ func (p *FileResourceProperties) ResolveTemplates(env *templates.Env) error {
 	}
 	p.Mode = val
 
-	val, err = templates.ResolveTemplateString(p.Contents, env)
-	if err != nil {
-		return err
+	if p.Contents != "" {
+		val, err = templates.ResolveTemplateString(p.Contents, env)
+		if err != nil {
+			return err
+		}
+		p.Contents = val
 	}
-	p.Contents = val
+
+	if p.Source != "" {
+		val, err = templates.ResolveTemplateString(p.Source, env)
+		if err != nil {
+			return err
+		}
+		p.Source = filepath.Clean(val)
+	}
 
 	return nil
 }
