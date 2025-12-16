@@ -14,6 +14,7 @@ import (
 
 	"github.com/choria-io/ccm/internal/cmdrunner"
 	"github.com/choria-io/ccm/internal/facts"
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/resources/apply"
 	fileresource "github.com/choria-io/ccm/resources/file"
@@ -31,10 +32,12 @@ type CCM struct {
 	log        model.Logger
 	userLogger model.Logger
 
-	noop  bool
-	data  map[string]any
-	facts map[string]any
-	env   map[string]string
+	noop       bool
+	workingDir string
+	externData map[string]any
+	data       map[string]any
+	facts      map[string]any
+	env        map[string]string
 
 	mu sync.Mutex
 }
@@ -65,20 +68,55 @@ func NewManager(log model.Logger, userLogger model.Logger, opts ...Option) (*CCM
 	return mgr, nil
 }
 
-// SetData sets the resolved Hiera data for the manager
-func (m *CCM) SetData(data map[string]any) {
+// SetExternalData sets the external data for the manager that will be merged with manifest data
+func (m *CCM) SetExternalData(data map[string]any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.data = data
+	m.externData = data
+}
+
+// SetWorkingDirectory sets the working directory for the manager, used in templates to load files etc
+func (m *CCM) SetWorkingDirectory(dir string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.workingDir = dir
+}
+
+// WorkingDirectory returns the working directory for the manager as set by SetWorkingDirectory()
+func (m *CCM) WorkingDirectory() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.workingDir
+}
+
+// SetData sets the resolved Hiera data for the manager
+func (m *CCM) SetData(data map[string]any) map[string]any {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	copied := iu.DeepMergeMap(data, m.externData)
+	m.data = copied
+
+	return m.data
 }
 
 // SetEnviron sets the environment data for the manager
-func (m *CCM) SetEnviron(data map[string]string) {
+func (m *CCM) SetEnviron(env map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.env = data
+	m.env = env
+}
+
+// Environment returns the environment data set with SetEnviron()
+func (m *CCM) Environment() map[string]string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.env
 }
 
 // Data returns the resolved Hiera data
@@ -142,7 +180,12 @@ func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.Reader) (ma
 	if err != nil {
 		return nil, nil, err
 	}
-	m.SetData(resolved)
+
+	data := m.SetData(resolved)
+	env, err := m.TemplateEnvironment(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	var manifestRaw map[string]any
 	err = yaml.Unmarshal(mb, &manifestRaw)
@@ -151,7 +194,7 @@ func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.Reader) (ma
 	}
 
 	manifestData := map[string]any{
-		"data":      resolved,
+		"data":      data,
 		"resources": []map[string]any{},
 	}
 
@@ -160,7 +203,7 @@ func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.Reader) (ma
 		manifestData["resources"] = ccm["resources"]
 	}
 
-	apply, err := apply.ParseManifestHiera(manifestData, &templates.Env{Data: resolved, Facts: facts}, hieraLogger)
+	apply, err := apply.ParseManifestHiera(manifestData, env, hieraLogger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -339,7 +382,7 @@ func (m *CCM) TemplateEnvironment(ctx context.Context) (*templates.Env, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return &templates.Env{Facts: f, Data: m.data, Environ: m.env}, nil
+	return &templates.Env{Facts: f, Data: m.data, Environ: m.env, WorkingDir: m.workingDir}, nil
 }
 
 func (m *CCM) NoopMode() bool {

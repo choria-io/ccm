@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/choria-io/ccm/internal/registry"
@@ -237,7 +238,7 @@ var _ = Describe("File Type", func() {
 			BeforeEach(func() {
 				sourceContent = "source file content"
 				tmpDir := GinkgoT().TempDir()
-				sourceFile = fmt.Sprintf("%s/source.txt", tmpDir)
+				sourceFile = filepath.Join(tmpDir, "source.txt")
 				err := os.WriteFile(sourceFile, []byte(sourceContent), 0644)
 				Expect(err).ToNot(HaveOccurred())
 

@@ -75,7 +75,18 @@ func (p *ServiceResourceProperties) Validate() error {
 
 // ResolveTemplates resolves template expressions in the package resource properties
 func (p *ServiceResourceProperties) ResolveTemplates(env *templates.Env) error {
-	return p.CommonResourceProperties.ResolveTemplates(env)
+	err := p.CommonResourceProperties.ResolveTemplates(env)
+	if err != nil {
+		return err
+	}
+
+	val, err := templates.ResolveTemplateString(p.Subscribe, env)
+	if err != nil {
+		return err
+	}
+	p.Subscribe = val
+
+	return nil
 }
 
 // ToYamlManifest returns the service resource properties as a yaml document

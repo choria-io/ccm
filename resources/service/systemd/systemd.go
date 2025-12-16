@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/choria-io/ccm/model"
 )
@@ -17,8 +18,10 @@ const (
 )
 
 type Provider struct {
-	log    model.Logger
-	runner model.CommandRunner
+	log       model.Logger
+	runner    model.CommandRunner
+	didReload bool
+	mu        sync.Mutex
 }
 
 // NewSystemdProvider creates a new DNF package provider
@@ -31,36 +34,77 @@ func (p *Provider) Name() string {
 }
 
 func (p *Provider) Enable(ctx context.Context, service string) error {
-	_, _, _, err := p.runner.Execute(ctx, "systemctl", "enable", "--system", service)
+	err := p.maybeReload(ctx)
+	if err != nil {
+		return err
+	}
 
+	_, _, _, err = p.runner.Execute(ctx, "systemctl", "enable", "--system", service)
 	return err
 }
 
 func (p *Provider) Disable(ctx context.Context, service string) error {
-	_, _, _, err := p.runner.Execute(ctx, "systemctl", "disable", "--system", service)
+	err := p.maybeReload(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, _, _, err = p.runner.Execute(ctx, "systemctl", "disable", "--system", service)
 
 	return err
 }
 
 func (p *Provider) Restart(ctx context.Context, service string) error {
-	_, _, _, err := p.runner.Execute(ctx, "systemctl", "restart", "--system", service)
+	err := p.maybeReload(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, _, _, err = p.runner.Execute(ctx, "systemctl", "restart", "--system", service)
 
 	return err
 }
 
 func (p *Provider) Start(ctx context.Context, service string) error {
-	_, _, _, err := p.runner.Execute(ctx, "systemctl", "start", "--system", service)
+	err := p.maybeReload(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, _, _, err = p.runner.Execute(ctx, "systemctl", "start", "--system", service)
 
 	return err
 }
 
 func (p *Provider) Stop(ctx context.Context, service string) error {
-	_, _, _, err := p.runner.Execute(ctx, "systemctl", "stop", "--system", service)
+	err := p.maybeReload(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, _, _, err = p.runner.Execute(ctx, "systemctl", "stop", "--system", service)
 
 	return err
 }
 
+func (p *Provider) maybeReload(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.didReload {
+		return nil
+	}
+
+	_, _, _, err := p.runner.Execute(ctx, "systemctl", "daemon-reload")
+	return err
+}
+
 func (p *Provider) Status(ctx context.Context, service string) (*model.ServiceState, error) {
+	err := p.maybeReload(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	isActive, err := p.isActive(ctx, service)
 	if err != nil {
 		return nil, err

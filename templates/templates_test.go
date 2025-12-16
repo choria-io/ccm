@@ -188,9 +188,10 @@ var _ = Describe("Templates", func() {
 			Expect(result).To(Equal("default"))
 		})
 
-		It("Should return empty string for non-existent key without default", func() {
+		It("Should error for non-existent key without default", func() {
 			result, err := ResolveTemplateString("{{ lookup('data.nonexistent') }}", env)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("missing key 'data.nonexistent' in environment"))
 			Expect(result).To(Equal(""))
 		})
 

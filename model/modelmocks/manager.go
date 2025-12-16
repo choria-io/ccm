@@ -17,6 +17,7 @@ func NewManager(facts map[string]any, data map[string]any, noop bool, ctl *gomoc
 	mgr.EXPECT().Facts(gomock.Any()).AnyTimes().Return(facts, nil)
 	mgr.EXPECT().Data().AnyTimes().Return(data)
 	mgr.EXPECT().NoopMode().AnyTimes().Return(noop)
+	mgr.EXPECT().WorkingDirectory().AnyTimes().Return("/")
 	mgr.EXPECT().TemplateEnvironment(gomock.Any()).AnyTimes().Return(&templates.Env{Facts: facts, Data: data}, nil)
 	logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()

@@ -352,3 +352,17 @@ func (mr *MockManagerMockRecorder) TemplateEnvironment(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TemplateEnvironment", reflect.TypeOf((*MockManager)(nil).TemplateEnvironment), ctx)
 }
+
+// WorkingDirectory mocks base method.
+func (m *MockManager) WorkingDirectory() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WorkingDirectory")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// WorkingDirectory indicates an expected call of WorkingDirectory.
+func (mr *MockManagerMockRecorder) WorkingDirectory() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkingDirectory", reflect.TypeOf((*MockManager)(nil).WorkingDirectory))
+}

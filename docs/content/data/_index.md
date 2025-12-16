@@ -28,9 +28,14 @@ In these examples you'll see expressions like `{{ lookup('facts.host.info.platfo
 * [Expr Language](https://expr-lang.org/#documentation)
 * [Expr Language Documentation](https://expr-lang.org/docs/language-definition)
 
-We've added just the `lookup(key, default)` function to expr at this time, but it would be straightforward to add more as needs arise.
+We've added the following functions to Expr:
 
-The lookup function takes a [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) query and can dig into nested structures.
+| Function               | Description                                                                                                                |
+|------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| `lookup(key, default)` | Lookup data from the runtime environment using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) |
+| `readFile(file)`       | Read a file into a string, can only read files in the working directory                                                    |
+| `template(f)`          | Parses `f` using templates                                                                                                 |
+
 
 These expressions can be used in Hiera Data and even on the CLI.
 

@@ -7,6 +7,8 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -18,12 +20,58 @@ import (
 
 // Env represents the template execution environment containing facts and data
 type Env struct {
-	Facts   map[string]any    `json:"facts" yaml:"facts"`
-	Data    map[string]any    `json:"data" yaml:"data"`
-	Environ map[string]string `json:"environ" yaml:"environ"`
+	Facts      map[string]any    `json:"facts" yaml:"facts"`
+	Data       map[string]any    `json:"data" yaml:"data"`
+	Environ    map[string]string `json:"environ" yaml:"environ"`
+	WorkingDir string            `json:"-" yaml:"-"`
 
 	envJSON json.RawMessage
 	mu      sync.Mutex
+}
+
+func (e *Env) readFile(params ...any) (any, error) {
+	var file string
+	var ok bool
+
+	if len(params) == 0 {
+		return "", fmt.Errorf("readFile requires a string argument")
+	}
+
+	file, ok = params[0].(string)
+	if !ok {
+		return "", fmt.Errorf("readFile requires a string argument")
+	}
+
+	if filepath.IsAbs(file) {
+		return "", fmt.Errorf("readFile can only read files in the working directory")
+	}
+
+	if e.WorkingDir != "" {
+		file = filepath.Join(e.WorkingDir, filepath.Clean(file))
+	}
+
+	fb, err := os.ReadFile(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file %q: working dir: %q: %w", file, e.WorkingDir, err)
+	}
+
+	return string(fb), nil
+}
+
+func (e *Env) template(params ...any) (any, error) {
+	var contents string
+	var ok bool
+
+	if len(params) == 0 {
+		return "", fmt.Errorf("template requires a string argument")
+	}
+
+	contents, ok = params[0].(string)
+	if !ok {
+		return "", fmt.Errorf("template requires a string argument")
+	}
+
+	return ResolveTemplateTyped(contents, e)
 }
 
 func (e *Env) lookup(params ...any) (any, error) {
@@ -43,7 +91,7 @@ func (e *Env) lookup(params ...any) (any, error) {
 	if len(params) == 2 {
 		defaultValue = params[1]
 	} else {
-		defaultValue = ""
+		defaultValue = nil
 	}
 
 	e.mu.Lock()
@@ -59,6 +107,9 @@ func (e *Env) lookup(params ...any) (any, error) {
 
 	res := gjson.GetBytes(e.envJSON, key)
 	if !res.Exists() {
+		if defaultValue == nil {
+			return "", fmt.Errorf("missing key '%s' in environment", key)
+		}
 		return defaultValue, nil
 	}
 
@@ -170,7 +221,12 @@ func applyFactsString(template string, env *Env) (string, bool, error) {
 }
 
 func exprParse(query string, env *Env) (any, error) {
-	program, err := expr.Compile(query, expr.Env(env), expr.Function("lookup", env.lookup))
+	program, err := expr.Compile(query,
+		expr.Env(env),
+		expr.Function("lookup", env.lookup),
+		expr.Function("readFile", env.readFile),
+		expr.Function("template", env.template),
+	)
 	if err != nil {
 		return "", fmt.Errorf("expr compile error for '%s': %w", query, err)
 	}
