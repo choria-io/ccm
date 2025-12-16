@@ -25,8 +25,8 @@ const (
 // ServiceResourceProperties defines the properties for a service resource
 type ServiceResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
-	Enable                   *bool  `json:"enable,omitempty" yaml:"enable,omitempty"`
-	Subscribe                string `json:"subscribe,omitempty" yaml:"subscribe,omitempty"`
+	Enable                   *bool    `json:"enable,omitempty" yaml:"enable,omitempty"`
+	Subscribe                []string `json:"subscribe,omitempty" yaml:"subscribe,omitempty"`
 }
 
 // ServiceMetadata contains detailed metadata about a service
@@ -80,11 +80,17 @@ func (p *ServiceResourceProperties) ResolveTemplates(env *templates.Env) error {
 		return err
 	}
 
-	val, err := templates.ResolveTemplateString(p.Subscribe, env)
-	if err != nil {
-		return err
+	if len(p.Subscribe) > 0 {
+		subscribe := make([]string, len(p.Subscribe))
+		for i, s := range p.Subscribe {
+			val, err := templates.ResolveTemplateString(s, env)
+			if err != nil {
+				return err
+			}
+			subscribe[i] = val
+		}
+		p.Subscribe = subscribe
 	}
-	p.Subscribe = val
 
 	return nil
 }

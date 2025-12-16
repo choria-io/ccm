@@ -107,31 +107,19 @@ var _ = Describe("Service Type", func() {
 			Expect(err).To(MatchError(model.ErrResourceNameRequired))
 		})
 
-		It("Should parse subscribe property correctly", func(ctx context.Context) {
+		It("Should accept subscribe property as array", func(ctx context.Context) {
 			properties := model.ServiceResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{
 					Name:   "test-service",
 					Ensure: model.ServiceEnsureRunning,
 				},
-				Subscribe: "package#nginx",
+				Subscribe: []string{"package#nginx", "file#/etc/nginx/nginx.conf"},
 			}
 			svc, err := New(ctx, mgr, properties)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(svc.subscribeType).To(Equal("package"))
-			Expect(svc.subscribeName).To(Equal("nginx"))
-		})
-
-		It("Should fail with invalid subscribe property", func(ctx context.Context) {
-			properties := model.ServiceResourceProperties{
-				CommonResourceProperties: model.CommonResourceProperties{
-					Name:   "test-service",
-					Ensure: model.ServiceEnsureRunning,
-				},
-				Subscribe: "invalid",
-			}
-			_, err := New(ctx, mgr, properties)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("invalid subscribe property"))
+			Expect(svc.prop.Subscribe).To(HaveLen(2))
+			Expect(svc.prop.Subscribe[0]).To(Equal("package#nginx"))
+			Expect(svc.prop.Subscribe[1]).To(Equal("file#/etc/nginx/nginx.conf"))
 		})
 	})
 
@@ -391,7 +379,7 @@ var _ = Describe("Service Type", func() {
 
 			Context("when subscribe is set", func() {
 				BeforeEach(func(ctx context.Context) {
-					properties.Subscribe = "package#nginx"
+					properties.Subscribe = []string{"package#nginx"}
 					svc, err = New(ctx, mgr, *properties)
 					Expect(err).ToNot(HaveOccurred())
 				})
@@ -453,6 +441,65 @@ var _ = Describe("Service Type", func() {
 					event, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(event.Error).To(ContainSubstring("refresh check failed"))
+				})
+			})
+
+			Context("when multiple subscriptions are set", func() {
+				BeforeEach(func(ctx context.Context) {
+					properties.Subscribe = []string{"package#nginx", "file#/etc/nginx/nginx.conf"}
+					svc, err = New(ctx, mgr, *properties)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("Should restart when first subscription triggers", func(ctx context.Context) {
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					mgr.EXPECT().ShouldRefresh("package", "nginx").Return(true, nil)
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+					provider.EXPECT().Restart(gomock.Any(), "nginx").Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Refreshed).To(BeTrue())
+				})
+
+				It("Should restart when second subscription triggers", func(ctx context.Context) {
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					mgr.EXPECT().ShouldRefresh("package", "nginx").Return(false, nil)
+					mgr.EXPECT().ShouldRefresh("file", "/etc/nginx/nginx.conf").Return(true, nil)
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+					provider.EXPECT().Restart(gomock.Any(), "nginx").Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Refreshed).To(BeTrue())
+				})
+
+				It("Should not restart when no subscriptions trigger", func(ctx context.Context) {
+					state := &model.ServiceState{
+						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
+						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
+					}
+
+					mgr.EXPECT().ShouldRefresh("package", "nginx").Return(false, nil)
+					mgr.EXPECT().ShouldRefresh("file", "/etc/nginx/nginx.conf").Return(false, nil)
+					provider.EXPECT().Status(gomock.Any(), "nginx").Return(state, nil)
+
+					result, err := svc.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+					Expect(result.Refreshed).To(BeFalse())
 				})
 			})
 

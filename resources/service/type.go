@@ -24,9 +24,6 @@ type Type struct {
 	facts    map[string]any
 	data     map[string]any
 
-	subscribeType string
-	subscribeName string
-
 	mu sync.Mutex
 }
 
@@ -60,16 +57,6 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 		log:   logger,
 		facts: env.Facts,
 		data:  env.Data,
-	}
-
-	if properties.Subscribe != "" {
-		parts := strings.Split(properties.Subscribe, "#")
-		if len(parts) == 2 {
-			t.subscribeType = parts[0]
-			t.subscribeName = parts[1]
-		} else {
-			return nil, fmt.Errorf("invalid subscribe property: %q", properties.Subscribe)
-		}
 	}
 
 	err = t.validate()
@@ -148,6 +135,7 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		p                         = t.provider.(ServiceProvider)
 		properties                = t.prop
 		shouldRefreshViaSubscribe bool
+		refreshResource           string
 		noop                      = t.mgr.NoopMode()
 		noopMessage               string
 	)
@@ -157,8 +145,8 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		return nil, err
 	}
 
-	if t.subscribeType != "" && t.subscribeName != "" {
-		shouldRefreshViaSubscribe, err = t.mgr.ShouldRefresh(t.subscribeType, t.subscribeName)
+	if len(t.prop.Subscribe) > 0 {
+		shouldRefreshViaSubscribe, refreshResource, err = t.shouldRefresh()
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +163,7 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 
 	switch {
 	case shouldRefreshViaSubscribe:
-		t.log.Info("Refreshing via subscribe", "subscribe", t.subscribeType+"#"+t.subscribeName)
+		t.log.Info("Refreshing via subscribe", "subscribe", refreshResource)
 		if !noop {
 			err = p.Restart(ctx, properties.Name)
 			if err != nil {
@@ -401,4 +389,21 @@ func (t *Type) selectProvider() error {
 	defer t.mu.Unlock()
 
 	return t.selectProviderUnlocked()
+}
+
+func (t *Type) shouldRefresh() (bool, string, error) {
+	for _, s := range t.prop.Subscribe {
+		parts := strings.Split(s, "#")
+
+		// validate already ensured its the right shape
+		should, err := t.mgr.ShouldRefresh(parts[0], parts[1])
+		if err != nil {
+			return false, s, err
+		}
+		if should {
+			return true, s, nil
+		}
+	}
+
+	return false, "", nil
 }
