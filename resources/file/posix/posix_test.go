@@ -295,4 +295,157 @@ var _ = Describe("Posix Provider", func() {
 			Expect(p.log).To(Equal(logger))
 		})
 	})
+
+	Describe("CreateDirectory", func() {
+		var (
+			currentUser  *user.User
+			currentGroup *user.Group
+		)
+
+		BeforeEach(func() {
+			var err error
+			currentUser, err = user.Current()
+			Expect(err).ToNot(HaveOccurred())
+
+			currentGroup, err = user.LookupGroupId(currentUser.Gid)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should create a directory with correct permissions", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "newdir")
+
+			err := provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, "0755")
+			Expect(err).ToNot(HaveOccurred())
+
+			stat, err := os.Stat(testDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.IsDir()).To(BeTrue())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+		})
+
+		It("Should create nested directories", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "parent", "child", "grandchild")
+
+			err := provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, "0750")
+			Expect(err).ToNot(HaveOccurred())
+
+			stat, err := os.Stat(testDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.IsDir()).To(BeTrue())
+		})
+
+		It("Should not fail when directory already exists", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "existingdir")
+
+			err := os.Mkdir(testDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, "0755")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should remediate mode on existing directory", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "existingdir")
+
+			// Create directory and set wrong mode explicitly (umask affects Mkdir)
+			err := os.Mkdir(testDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.Chmod(testDir, 0777)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify initial mode
+			stat, err := os.Stat(testDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+
+			// CreateDirectory should fix the mode
+			err = provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, "0750")
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify mode was corrected
+			stat, err = os.Stat(testDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0750)))
+		})
+
+		It("Should fail with invalid owner", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "badowner")
+
+			err := provider.CreateDirectory(context.Background(), testDir, "nonexistent_user_12345", currentGroup.Name, "0755")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not lookup user"))
+		})
+
+		It("Should fail with invalid group", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "badgroup")
+
+			err := provider.CreateDirectory(context.Background(), testDir, currentUser.Username, "nonexistent_group_12345", "0755")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("could not lookup group"))
+		})
+
+		It("Should fail with invalid mode", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "badmode")
+
+			err := provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, "invalid")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("Status for directories", func() {
+		It("Should return directory ensure for existing directories", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "testdir")
+
+			err := os.Mkdir(testDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := provider.Status(context.Background(), testDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).ToNot(BeNil())
+			Expect(res.Ensure).To(Equal(model.FileEnsureDirectory))
+		})
+
+		It("Should not calculate checksum for directories", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "testdir")
+
+			err := os.Mkdir(testDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := provider.Status(context.Background(), testDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).ToNot(BeNil())
+			Expect(res.Metadata.Checksum).To(BeEmpty())
+		})
+
+		It("Should return absent for non-existent directory", func() {
+			nonExistentDir := "/tmp/this-directory-should-not-exist-12345"
+
+			res, err := provider.Status(context.Background(), nonExistentDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).ToNot(BeNil())
+			Expect(res.Ensure).To(Equal(model.EnsureAbsent))
+		})
+
+		It("Should return present for files (not directory)", func() {
+			tmpDir := GinkgoT().TempDir()
+			testFile := filepath.Join(tmpDir, "testfile.txt")
+
+			err := os.WriteFile(testFile, []byte("test content"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			res, err := provider.Status(context.Background(), testFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).ToNot(BeNil())
+			Expect(res.Ensure).To(Equal(model.EnsurePresent))
+		})
+	})
 })

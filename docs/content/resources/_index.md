@@ -15,7 +15,7 @@ Resources can all have additional monitoring / health checks associated with the
 
 ## File
 
-When managing a package you have to state the content, owner, group and mode the file should be. 
+When managing a file you have to state the content, owner, group and mode the file should be. 
 
 > [!info] Warning
 > You should use absolute file names and primary group names
@@ -24,7 +24,6 @@ The `file` type is very minimal at the moment, most important TODO items:
 
  * Source file contents from elsewhere
  * Support creating symlinks
- * Support creating directories
  * More complete templating for contents
 
 In a manifest:
@@ -56,6 +55,7 @@ If you specify `--contents` or `--contents-file` instead then the result will be
 |---------------|------------------------------|
 | `present`     | The file must be nonexisting |
 | `absent`      | The file must exist          |
+| `directory`   | The file must be a directory |
 
 ### Properties
 
