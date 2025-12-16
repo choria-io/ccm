@@ -15,7 +15,7 @@ type serviceCommand struct {
 	ensure    string
 	enable    *bool
 	provider  string
-	subscribe string
+	subscribe []string
 	parent    *ensureCommand
 }
 
@@ -27,7 +27,7 @@ func registerServiceCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	svc.Arg("ensure", "Ensure value").Default(model.ServiceEnsureRunning).StringVar(&cmd.ensure)
 	cmd.enable = svc.Flag("enable", "Enable the service").Default("true").Bool()
 	svc.Flag("provider", "Service provider").StringVar(&cmd.provider)
-	svc.Flag("subscribe", "Subscribe to changes in other resources").Short('S').StringVar(&cmd.subscribe)
+	svc.Flag("subscribe", "Subscribe to changes in other resources").Short('S').StringsVar(&cmd.subscribe)
 }
 
 func (c *serviceCommand) serviceAction(_ *fisk.ParseContext) error {

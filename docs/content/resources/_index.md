@@ -142,10 +142,10 @@ $ ccm ensure service httpd running --enable --subscribe package#httpd
 
 ### Properties
 
-| Ensure Values      |                                                                                                                 |
-|--------------------|-----------------------------------------------------------------------------------------------------------------|
-| `name`             | The resource name match the service name exactly                                                                |
-| `ensure`           | The desired state                                                                                               |
-| `enable` (boolean) | Enables the service to start at boot time                                                                       |
-| `subscribe`        | When the service is set to be running, and it's already running, restart it when th referenced resource changes |
-| `provider`         | Force a specific provider to be used, only `systemd` supported                                                  |
+| Ensure Values       |                                                                                                                  |
+|---------------------|------------------------------------------------------------------------------------------------------------------|
+| `name`              | The resource name match the service name exactly                                                                 |
+| `ensure`            | The desired state                                                                                                |
+| `enable` (boolean)  | Enables the service to start at boot time                                                                        |
+| `subscribe` (array) | When the service is set to be running, and it's already running, restart it when the referenced resource changes |
+| `provider`          | Force a specific provider to be used, only `systemd` supported                                                   |
