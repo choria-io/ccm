@@ -66,6 +66,14 @@ func (p *CommonResourceProperties) ResolveTemplates(env *templates.Env) error {
 	}
 	p.Provider = val
 
+	if p.HealthCheck != nil && p.HealthCheck.Command != "" {
+		val, err = templates.ResolveTemplateString(p.HealthCheck.Command, env)
+		if err != nil {
+			return err
+		}
+		p.HealthCheck.Command = val
+	}
+
 	return nil
 }
 
