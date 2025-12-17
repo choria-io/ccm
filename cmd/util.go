@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/choria-io/ccm/hiera"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/manager"
 	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/tinyhiera"
 )
 
 func newManager(session string, hieraFile string, readEnv bool, noop bool) (model.Manager, model.Logger, error) {
@@ -75,7 +75,7 @@ func hieraData(file string, facts map[string]any, log model.Logger) (map[string]
 		return nil, err
 	}
 
-	res, err := tinyhiera.ResolveYaml(raw, facts, tinyhiera.DefaultOptions, newLogger())
+	res, err := hiera.ResolveYaml(raw, facts, hiera.DefaultOptions, newLogger())
 	if err != nil {
 		return nil, err
 	}

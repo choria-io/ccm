@@ -11,7 +11,9 @@ This is an experimental Configuration Management System designed to manage softw
 
 ## Status
 
-This is an experimental work in progress, there are only service and package resources implemented so far, they support only dnf and systemd.
+This is an experimental work in progress, there are only `service`, `file` and `package` resources implemented so far, they support only dnf and systemd.
+
+It also includes a new implementation of Hiera that is focused on a single file.
 
 We’re focusing on the plumbing for sessions, transactions, plugins, embeddability and experimenting with the CLI interaction model.
 

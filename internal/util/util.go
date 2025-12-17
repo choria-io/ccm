@@ -148,7 +148,7 @@ func cmpStringsCaseInsensitive(a, b string) int {
 
 // DeepMergeMap merges source maps into target recursively. Map values are merged, slices are concatenated, and other values override.
 func DeepMergeMap(target map[string]any, source map[string]any) map[string]any {
-	result := cloneMap(target)
+	result := CloneMap(target)
 	for key, value := range source {
 		if existing, ok := result[key]; ok {
 			switch existingTyped := existing.(type) {
@@ -159,43 +159,59 @@ func DeepMergeMap(target map[string]any, source map[string]any) map[string]any {
 				}
 			case []any:
 				if incomingSlice, ok := value.([]any); ok {
-					combined := append(cloneSlice(existingTyped), incomingSlice...)
+					combined := append(CloneSlice(existingTyped), incomingSlice...)
 					result[key] = combined
 					continue
 				}
 			}
 		}
-		result[key] = cloneValue(value)
+		result[key] = CloneValue(value)
 	}
 	return result
 }
 
-// cloneMap creates a shallow copy of the provided map with cloned values.
-func cloneMap(source map[string]any) map[string]any {
+// CloneMap creates a shallow copy of the provided map with cloned values.
+func CloneMap(source map[string]any) map[string]any {
 	result := make(map[string]any, len(source))
 	for key, value := range source {
-		result[key] = cloneValue(value)
+		result[key] = CloneValue(value)
 	}
 	return result
 }
 
-// cloneSlice returns a shallow copy of a slice with cloned elements.
-func cloneSlice(source []any) []any {
+// CloneSlice returns a shallow copy of a slice with cloned elements.
+func CloneSlice(source []any) []any {
 	result := make([]any, len(source))
 	for i, value := range source {
-		result[i] = cloneValue(value)
+		result[i] = CloneValue(value)
 	}
 	return result
 }
 
-// cloneValue duplicates maps and slices to avoid mutating caller state.
-func cloneValue(value any) any {
+// CloneValue duplicates maps and slices to avoid mutating caller state.
+func CloneValue(value any) any {
 	switch typed := value.(type) {
 	case map[string]any:
-		return cloneMap(typed)
+		return CloneMap(typed)
 	case []any:
-		return cloneSlice(typed)
+		return CloneSlice(typed)
 	default:
 		return typed
 	}
+}
+
+// ShallowMerge merges source keys into target without recursion.
+func ShallowMerge(target, source map[string]any) map[string]any {
+	result := CloneMap(target)
+	for key, value := range source {
+		result[key] = CloneValue(value)
+	}
+	return result
+}
+
+// IsJsonObject checks if bytes are json maps
+func IsJsonObject(data []byte) bool {
+	trimmed := strings.TrimSpace(string(data))
+
+	return strings.HasPrefix(string(trimmed), "{") || strings.HasPrefix(string(trimmed), "[")
 }

@@ -30,6 +30,7 @@ func main() {
 	registerApplyCommand(app)
 	registerEnsureCommand(app)
 	registerFactsCommand(app)
+	registerHieraCommand(app)
 	registerSessionCommand(app)
 
 	app.PreAction(func(_ *fisk.ParseContext) error {

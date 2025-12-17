@@ -1,8 +1,8 @@
 +++
 title = "CLI Usage"
 toc = true
-weight = 30
-pre = "<b>3. </b>"
+weight = 40
+pre = "<b>4. </b>"
 +++
 
 We are designing CCM to be used as a CLI tool as its first class method of interaction.
