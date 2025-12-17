@@ -5,7 +5,7 @@ go 1.24.9
 require (
 	github.com/MatusOllah/slogcolor v1.7.0
 	github.com/choria-io/fisk v0.7.2
-	github.com/expr-lang/expr v1.17.6
+	github.com/expr-lang/expr v1.17.7
 	github.com/goccy/go-yaml v1.19.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/onsi/ginkgo/v2 v2.27.3
