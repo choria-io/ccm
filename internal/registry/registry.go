@@ -127,6 +127,7 @@ func Types() []string {
 	return res
 }
 
+// FindSuitableProvider searches all registered providers for a suitable provider capable of working on the node
 func FindSuitableProvider(typeName string, provider string, facts map[string]any, log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 	var selected model.ProviderFactory
 

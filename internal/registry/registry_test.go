@@ -262,6 +262,150 @@ var _ = Describe("Registry", func() {
 		})
 	})
 
+	Describe("FindSuitableProvider", func() {
+		var (
+			facts    map[string]any
+			runner   *modelmocks.MockCommandRunner
+			provider *modelmocks.MockProvider
+		)
+
+		BeforeEach(func() {
+			facts = map[string]any{
+				"os": "ubuntu",
+			}
+			runner = modelmocks.NewMockCommandRunner(mockctl)
+			provider = modelmocks.NewMockProvider(mockctl)
+		})
+
+		Context("with auto-selection (empty provider name)", func() {
+			It("Should return ErrNoSuitableProvider when no providers registered", func() {
+				result, err := FindSuitableProvider("package", "", facts, logger, runner)
+				Expect(err).To(Equal(model.ErrNoSuitableProvider))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should return ErrNoSuitableProvider when no providers are manageable", func() {
+				factory1.EXPECT().IsManageable(facts).Return(false, nil)
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "", facts, logger, runner)
+				Expect(err).To(Equal(model.ErrNoSuitableProvider))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should return ErrMultipleProviders when multiple providers are manageable", func() {
+				factory1.EXPECT().IsManageable(facts).Return(true, nil)
+				factory2.EXPECT().IsManageable(facts).Return(true, nil)
+				Register(factory1)
+				Register(factory2)
+
+				result, err := FindSuitableProvider("package", "", facts, logger, runner)
+				Expect(err).To(Equal(model.ErrMultipleProviders))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should create and return provider when exactly one is manageable", func() {
+				factory1.EXPECT().IsManageable(facts).Return(true, nil)
+				factory1.EXPECT().New(logger, runner).Return(provider, nil)
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "", facts, logger, runner)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(provider))
+			})
+
+			It("Should select the one manageable provider from multiple registered", func() {
+				factory1.EXPECT().IsManageable(facts).Return(true, nil)
+				factory1.EXPECT().New(logger, runner).Return(provider, nil)
+				factory2.EXPECT().IsManageable(facts).Return(false, nil)
+				Register(factory1)
+				Register(factory2)
+
+				result, err := FindSuitableProvider("package", "", facts, logger, runner)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(provider))
+			})
+
+			It("Should return error when provider New() fails", func() {
+				factory1.EXPECT().IsManageable(facts).Return(true, nil)
+				factory1.EXPECT().New(logger, runner).Return(nil, fmt.Errorf("failed to create provider"))
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "", facts, logger, runner)
+				Expect(err).To(MatchError(ContainSubstring("failed to create provider")))
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("with explicit provider selection", func() {
+			It("Should return ErrNoSuitableProvider when type not found", func() {
+				result, err := FindSuitableProvider("nonexistent", "apt", facts, logger, runner)
+				Expect(err).To(Equal(model.ErrNoSuitableProvider))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should return ErrResourceInvalid when provider not found", func() {
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "nonexistent", facts, logger, runner)
+				Expect(err).To(MatchError(model.ErrResourceInvalid))
+				Expect(err).To(MatchError(ContainSubstring(model.ErrProviderNotFound.Error())))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should return ErrResourceInvalid when provider is not manageable", func() {
+				factory1.EXPECT().IsManageable(facts).Return(false, nil)
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "apt", facts, logger, runner)
+				Expect(err).To(MatchError(model.ErrResourceInvalid))
+				Expect(err).To(MatchError(ContainSubstring("not applicable")))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should return ErrResourceInvalid when IsManageable check fails", func() {
+				factory1.EXPECT().IsManageable(facts).Return(false, fmt.Errorf("check failed"))
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "apt", facts, logger, runner)
+				Expect(err).To(MatchError(model.ErrResourceInvalid))
+				Expect(err).To(MatchError(ContainSubstring("check failed")))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should create and return provider when found and manageable", func() {
+				factory1.EXPECT().IsManageable(facts).Return(true, nil)
+				factory1.EXPECT().New(logger, runner).Return(provider, nil)
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "apt", facts, logger, runner)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(provider))
+			})
+
+			It("Should return error when provider New() fails", func() {
+				factory1.EXPECT().IsManageable(facts).Return(true, nil)
+				factory1.EXPECT().New(logger, runner).Return(nil, fmt.Errorf("initialization failed"))
+				Register(factory1)
+
+				result, err := FindSuitableProvider("package", "apt", facts, logger, runner)
+				Expect(err).To(MatchError(ContainSubstring("initialization failed")))
+				Expect(result).To(BeNil())
+			})
+
+			It("Should select correct provider from multiple registered", func() {
+				factory2.EXPECT().IsManageable(facts).Return(true, nil)
+				factory2.EXPECT().New(logger, runner).Return(provider, nil)
+				Register(factory1)
+				Register(factory2)
+
+				result, err := FindSuitableProvider("package", "yum", facts, logger, runner)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(provider))
+			})
+		})
+	})
+
 	Describe("Thread safety", func() {
 		It("Should handle concurrent operations", func() {
 			done := make(chan bool)

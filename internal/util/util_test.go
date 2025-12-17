@@ -138,3 +138,133 @@ var _ = Describe("Sha256HashFile", func() {
 		Expect(fileHash).To(Equal(bytesHash))
 	})
 })
+
+var _ = Describe("clone helpers", func() {
+	It("clones maps deeply so mutations do not leak", func() {
+		// Checks that modifying a cloned map leaves the original untouched.
+		source := map[string]any{
+			"nested": map[string]any{"value": 1},
+			"list":   []any{1, 2},
+		}
+
+		cloned := CloneMap(source)
+		cloned["nested"].(map[string]any)["value"] = 2
+		cloned["list"].([]any)[0] = 99
+
+		Expect(source).To(Equal(map[string]any{
+			"nested": map[string]any{"value": 1},
+			"list":   []any{1, 2},
+		}))
+	})
+
+	It("deep merges maps without reusing source slices", func() {
+		// Ensures deepMerge concatenates slices while maintaining isolation from inputs.
+		target := map[string]any{
+			"list": []any{1},
+		}
+		source := map[string]any{
+			"list": []any{2},
+		}
+
+		merged := DeepMergeMap(target, source)
+		merged["list"].([]any)[0] = 42
+
+		Expect(target["list"].([]any)).To(Equal([]any{1}))
+		Expect(source["list"].([]any)).To(Equal([]any{2}))
+		Expect(merged["list"].([]any)).To(Equal([]any{42, 2}))
+	})
+})
+
+var _ = Describe("ShallowMerge", func() {
+	It("merges source keys into target", func() {
+		target := map[string]any{
+			"a": 1,
+			"b": 2,
+		}
+		source := map[string]any{
+			"c": 3,
+		}
+
+		result := ShallowMerge(target, source)
+
+		Expect(result).To(Equal(map[string]any{
+			"a": 1,
+			"b": 2,
+			"c": 3,
+		}))
+	})
+
+	It("overwrites target keys with source values", func() {
+		target := map[string]any{
+			"a": 1,
+			"b": 2,
+		}
+		source := map[string]any{
+			"b": 99,
+		}
+
+		result := ShallowMerge(target, source)
+
+		Expect(result).To(Equal(map[string]any{
+			"a": 1,
+			"b": 99,
+		}))
+	})
+
+	It("does not recursively merge nested maps", func() {
+		target := map[string]any{
+			"nested": map[string]any{"a": 1, "b": 2},
+		}
+		source := map[string]any{
+			"nested": map[string]any{"b": 99},
+		}
+
+		result := ShallowMerge(target, source)
+
+		// Unlike DeepMergeMap, the entire nested map is replaced
+		Expect(result["nested"]).To(Equal(map[string]any{"b": 99}))
+	})
+
+	It("does not concatenate slices", func() {
+		target := map[string]any{
+			"list": []any{1, 2},
+		}
+		source := map[string]any{
+			"list": []any{3, 4},
+		}
+
+		result := ShallowMerge(target, source)
+
+		// Unlike DeepMergeMap, the slice is replaced not concatenated
+		Expect(result["list"]).To(Equal([]any{3, 4}))
+	})
+
+	It("does not mutate input maps", func() {
+		target := map[string]any{
+			"a":      1,
+			"nested": map[string]any{"x": 10},
+		}
+		source := map[string]any{
+			"b": 2,
+		}
+
+		result := ShallowMerge(target, source)
+		result["a"] = 999
+		result["nested"].(map[string]any)["x"] = 999
+
+		Expect(target["a"]).To(Equal(1))
+		Expect(target["nested"].(map[string]any)["x"]).To(Equal(10))
+		Expect(source["b"]).To(Equal(2))
+	})
+
+	It("handles empty maps", func() {
+		target := map[string]any{}
+		source := map[string]any{"a": 1}
+
+		result := ShallowMerge(target, source)
+		Expect(result).To(Equal(map[string]any{"a": 1}))
+
+		result2 := ShallowMerge(source, map[string]any{})
+		Expect(result2).To(Equal(map[string]any{"a": 1}))
+	})
+})

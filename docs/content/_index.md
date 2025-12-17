@@ -17,7 +17,7 @@ This then is a new system designed for small-scale Configuration Management desi
  * Single-file manifests in YAML format.
  * No dependencies.
  * Ready to integrate into other Go-based software like Choria Autonomous Agents.
- * Integrates with [Choria Hierarchical Data Resolver](https://github.com/choria-io/tinyhiera).
+ * Supports Hierarchical data similar to Hiera but with a focus on single file and single data structure
 
 ## Status
 

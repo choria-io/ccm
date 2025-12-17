@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/hiera"
 	"github.com/choria-io/ccm/internal/cmdrunner"
 	"github.com/choria-io/ccm/internal/facts"
 	iu "github.com/choria-io/ccm/internal/util"
@@ -22,7 +23,6 @@ import (
 	serviceresource "github.com/choria-io/ccm/resources/service"
 	"github.com/choria-io/ccm/session"
 	"github.com/choria-io/ccm/templates"
-	"github.com/choria-io/tinyhiera"
 	"github.com/goccy/go-yaml"
 )
 
@@ -176,7 +176,7 @@ func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.Reader) (ma
 		return nil, nil, err
 	}
 
-	resolved, err := tinyhiera.ResolveYaml(mb, facts, tinyhiera.DefaultOptions, hieraLogger)
+	resolved, err := hiera.ResolveYaml(mb, facts, hiera.DefaultOptions, hieraLogger)
 	if err != nil {
 		return nil, nil, err
 	}

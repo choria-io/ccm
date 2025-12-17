@@ -1,8 +1,8 @@
 +++
 title = "Data"
 toc = true
-weight = 20
-pre = "<b>2. </b>"
+weight = 30
+pre = "<b>3. </b>"
 +++
 
 Just like applications need data to vary their behavior and configure their environments, so do Configuration Management tools.

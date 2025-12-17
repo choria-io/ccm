@@ -4,8 +4,6 @@ github.com/MatusOllah/slogcolor v1.7.0 h1:Nrd7yBPv2EBEEBEwl7WEPRmMd1ozZzw2jm8SLM
 github.com/MatusOllah/slogcolor v1.7.0/go.mod h1:5y1H50XuQIBvuYTJlmokWi+4FuPiJN5L7Z0jM4K4bYA=
 github.com/choria-io/fisk v0.7.2 h1:d1F+XbGSJqLbBrPg4bu1uMJDBy+/2VB4HT2m6U9JE98=
 github.com/choria-io/fisk v0.7.2/go.mod h1:eepMPckPWRQ5H0FOdcHlKCH4q9En+490iIvs2c1N5Us=
-github.com/choria-io/tinyhiera v0.0.6-0.20251206205942-7fbc9369a833 h1:w0ULn/LICvuM9dBsUzfX2zsVGO9lom8O5BOmaIJ76ZQ=
-github.com/choria-io/tinyhiera v0.0.6-0.20251206205942-7fbc9369a833/go.mod h1:+pRVbOXSrdzxn40jlaHFZE6Q9iJdWmVMR+KLDAGY+3I=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

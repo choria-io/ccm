@@ -1,8 +1,8 @@
 +++
 title = "YAML Manifests"
 toc = true
-weight = 40
-pre = "<b>4. </b>"
+weight = 50
+pre = "<b>5. </b>"
 +++
 
 A manifest is a YAML file that combines data, platform-specific configuration and resources all in one file.
