@@ -16,7 +16,7 @@ import (
 	"github.com/choria-io/fisk"
 )
 
-type fileCommand struct {
+type ensureFileCommand struct {
 	name         string
 	ensure       string
 	provider     string
@@ -28,8 +28,8 @@ type fileCommand struct {
 	parent       *ensureCommand
 }
 
-func registerFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
-	cmd := &fileCommand{parent: parent}
+func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
+	cmd := &ensureFileCommand{parent: parent}
 
 	pkg := ccm.Command("file", "File management").Alias("pkg").Action(cmd.fileAction)
 	pkg.Arg("name", "File name to manage").Required().StringVar(&cmd.name)
@@ -42,7 +42,7 @@ func registerFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	pkg.Flag("provider", "File provider").StringVar(&cmd.provider)
 }
 
-func (c *fileCommand) fileAction(_ *fisk.ParseContext) error {
+func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 	if c.contentsFile != "" && c.contents != "" {
 		return fmt.Errorf("cannot specify both contents and contents-file")
 	}

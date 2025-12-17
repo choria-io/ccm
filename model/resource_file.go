@@ -7,6 +7,7 @@ package model
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
@@ -25,21 +26,24 @@ const (
 // TODO: support ensure directory
 type FileResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
-	Contents                 string `json:"content,omitempty" yaml:"content,omitempty"`
-	Source                   string `json:"source,omitempty" yaml:"source,omitempty"`
-	Owner                    string `json:"owner" yaml:"owner"`
-	Group                    string `json:"group" yaml:"group"`
-	Mode                     string `json:"mode" yaml:"mode"`
+	Contents                 string    `json:"content,omitempty" yaml:"content,omitempty"`
+	Source                   string    `json:"source,omitempty" yaml:"source,omitempty"`
+	Owner                    string    `json:"owner" yaml:"owner"`
+	Group                    string    `json:"group" yaml:"group"`
+	Mode                     string    `json:"mode" yaml:"mode"`
+	MTime                    time.Time `json:"mtime,omitempty" yaml:"mtime,omitempty"`
 }
 
 // FileMetadata contains detailed metadata about a file
 type FileMetadata struct {
 	Name     string         `json:"name" yaml:"name"`
-	Checksum string         `json:"checksum" yaml:"checksum"`
+	Checksum string         `json:"checksum,omitempty" yaml:"checksum,omitempty"`
 	Owner    string         `json:"owner" yaml:"owner"`
 	Group    string         `json:"group" yaml:"group"`
 	Mode     string         `json:"mode" yaml:"mode"`
 	Provider string         `json:"provider,omitempty" yaml:"provider,omitempty"`
+	MTime    time.Time      `json:"mtime,omitempty" yaml:"mtime,omitempty"`
+	Size     int64          `json:"size,omitempty" yaml:"size,omitempty"`
 	Extended map[string]any `json:"extended,omitempty" yaml:"extended,omitempty"`
 }
 
@@ -52,6 +56,10 @@ type FileState struct {
 
 // Validate validates the package resource properties
 func (p *FileResourceProperties) Validate() error {
+	if p.SkipValidate {
+		return nil
+	}
+
 	// First run common validation
 	err := p.CommonResourceProperties.Validate()
 	if err != nil {

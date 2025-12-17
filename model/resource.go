@@ -39,11 +39,12 @@ type ResourceProperties interface {
 
 // CommonResourceProperties contains properties shared by all resource types
 type CommonResourceProperties struct {
-	Type        string             `json:"-" yaml:"-"`
-	Name        string             `json:"name" yaml:"name"`
-	Ensure      string             `json:"ensure,omitempty" yaml:"ensure"`
-	Provider    string             `json:"provider,omitempty" yaml:"provider"`
-	HealthCheck *CommonHealthCheck `json:"health_check,omitempty" yaml:"health_check,omitempty"`
+	Type         string             `json:"-" yaml:"-"`
+	Name         string             `json:"name" yaml:"name"`
+	Ensure       string             `json:"ensure,omitempty" yaml:"ensure"`
+	Provider     string             `json:"provider,omitempty" yaml:"provider"`
+	HealthCheck  *CommonHealthCheck `json:"health_check,omitempty" yaml:"health_check,omitempty"`
+	SkipValidate bool               `json:"-" yaml:"-"`
 }
 
 // ResolveTemplates resolves template expressions in common resource properties
@@ -79,6 +80,10 @@ func (p *CommonResourceProperties) ResolveTemplates(env *templates.Env) error {
 
 // Validate validates common resource properties
 func (p *CommonResourceProperties) Validate() error {
+	if p.SkipValidate {
+		return nil
+	}
+
 	if p.Name == "" {
 		return ErrResourceNameRequired
 	}

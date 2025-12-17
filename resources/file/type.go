@@ -283,6 +283,10 @@ func (t *Type) Info(ctx context.Context) (any, error) {
 }
 
 func (t *Type) validate() error {
+	if t.prop.SkipValidate {
+		return nil
+	}
+
 	mode := t.prop.Mode
 
 	// Strip common octal prefixes (0o, 0O)
@@ -295,7 +299,7 @@ func (t *Type) validate() error {
 		return fmt.Errorf("mode %q is not a valid octal number: %w", t.prop.Mode, err)
 	}
 
-	// Validate it's within valid Unix permission range (0-0777)
+	// Validate it's within the valid Unix permission range (0-0777)
 	if parsed > 0o777 {
 		return fmt.Errorf("mode %q exceeds maximum value 0777", t.prop.Mode)
 	}
