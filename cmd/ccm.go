@@ -32,6 +32,7 @@ func main() {
 	registerFactsCommand(app)
 	registerHieraCommand(app)
 	registerSessionCommand(app)
+	registerStatusCommand(app)
 
 	app.PreAction(func(_ *fisk.ParseContext) error {
 		ctx, _ = signal.NotifyContext(context.Background(), os.Interrupt)

@@ -171,6 +171,9 @@ func (p *Provider) Status(ctx context.Context, file string) (*model.FileState, e
 	case err == nil:
 		var err error
 
+		state.Metadata.Size = stat.Size()
+		state.Metadata.MTime = stat.ModTime()
+
 		state.Metadata.Owner, state.Metadata.Group, state.Metadata.Mode, err = getFileOwner(stat)
 		if err != nil {
 			p.log.Warn("Failed to get file ownership information: %s", err)

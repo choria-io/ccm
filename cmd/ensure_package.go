@@ -17,7 +17,7 @@ type packageCommand struct {
 	parent   *ensureCommand
 }
 
-func registerPackageCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
+func registerEnsurePackageCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	cmd := &packageCommand{parent: parent}
 
 	pkg := ccm.Command("package", "Package management").Alias("pkg").Action(cmd.packageAction)

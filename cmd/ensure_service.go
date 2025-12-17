@@ -10,7 +10,7 @@ import (
 	"github.com/choria-io/fisk"
 )
 
-type serviceCommand struct {
+type ensureServiceCommand struct {
 	name      string
 	ensure    string
 	enable    *bool
@@ -19,8 +19,8 @@ type serviceCommand struct {
 	parent    *ensureCommand
 }
 
-func registerServiceCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
-	cmd := &serviceCommand{parent: parent}
+func registerEnsureServiceCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
+	cmd := &ensureServiceCommand{parent: parent}
 
 	svc := ccm.Command("service", "Service management").Alias("pkg").Action(cmd.serviceAction)
 	svc.Arg("name", "Service name to manage").Required().StringVar(&cmd.name)
@@ -30,7 +30,7 @@ func registerServiceCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	svc.Flag("subscribe", "Subscribe to changes in other resources").Short('S').StringsVar(&cmd.subscribe)
 }
 
-func (c *serviceCommand) serviceAction(_ *fisk.ParseContext) error {
+func (c *ensureServiceCommand) serviceAction(_ *fisk.ParseContext) error {
 	mgr, err := c.parent.manager()
 	if err != nil {
 		return err

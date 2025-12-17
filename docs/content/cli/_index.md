@@ -22,6 +22,12 @@ $ ccm ensure package zsh 5.8
 
 Here we create a resource that ensures the package `zsh` is installed with version `5.8`.
 
+We can also get the current state of a resource using the `status` subcommand.
+
+```
+$ ccm status package zsh
+```
+
 ## Managing multiple resources
 
 When managing multiple resources, in a script it is worth creating a session and then running the commands. The purpose of the session is to record the outcome of earlier resource so that features like refreshing a Service when a File is updated will function correctly.
