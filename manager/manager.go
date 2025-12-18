@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -209,6 +210,79 @@ func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.Reader) (ma
 	}
 
 	return manifestData, apply, err
+}
+
+func (m *CCM) infoFileResource(ctx context.Context, prop *model.FileResourceProperties) (*model.FileMetadata, error) {
+	abs, err := filepath.Abs(prop.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	prop.Name = abs
+	prop.SkipValidate = true
+
+	ft, err := fileresource.New(ctx, m, *prop)
+	if err != nil {
+		return nil, err
+	}
+
+	nfo, err := ft.Info(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return nfo.(*model.FileState).Metadata, nil
+}
+
+func (m *CCM) infoServiceResource(ctx context.Context, prop *model.ServiceResourceProperties) (*model.ServiceMetadata, error) {
+	prop.SkipValidate = true
+
+	ft, err := serviceresource.New(ctx, m, *prop)
+	if err != nil {
+		return nil, err
+	}
+
+	nfo, err := ft.Info(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return nfo.(*model.ServiceState).Metadata, nil
+}
+
+func (m *CCM) infoPackageResource(ctx context.Context, prop *model.PackageResourceProperties) (*model.PackageMetadata, error) {
+	prop.SkipValidate = true
+
+	ft, err := packageresource.New(ctx, m, *prop)
+	if err != nil {
+		return nil, err
+	}
+
+	nfo, err := ft.Info(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return nfo.(*model.PackageState).Metadata, nil
+}
+
+// ResourceInfo returns information about a resource of the given type and name
+func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, error) {
+	prop, err := model.NewResourcePropertiesFromYaml(typeName, yaml.RawMessage(fmt.Sprintf("name: %q", name)), &templates.Env{})
+	if err != nil {
+		return nil, err
+	}
+
+	switch typeName {
+	case model.FileTypeName:
+		return m.infoFileResource(ctx, prop.(*model.FileResourceProperties))
+	case model.ServiceTypeName:
+		return m.infoServiceResource(ctx, prop.(*model.ServiceResourceProperties))
+	case model.PackageTypeName:
+		return m.infoPackageResource(ctx, prop.(*model.PackageResourceProperties))
+	default:
+		return nil, fmt.Errorf("unsupported resource type %s", typeName)
+	}
 }
 
 // ApplyManifest applies a parsed manifest and records all changes to the session store

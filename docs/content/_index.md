@@ -13,12 +13,16 @@ Choria has [Autonomous Agents](https://choria.io/docs/autoagents/) that can be u
 This then is a new system designed for small-scale Configuration Management designed to meet users where they are:
 
  * Focused on the needs of a single application - think of it as a single module.
- * Designed to work in shell scripts.
- * Single-file manifests in YAML format.
- * No dependencies.
- * Ready to integrate into other Go-based software like Choria Autonomous Agents.
  * Supports Hierarchical data similar to Hiera but with a focus on single file and single data structure
-
+ * No dependencies for the binaries to operate other than your OS
+ * Designed to work at a first-class level in many environments:
+   * Command Line.
+   * Shell scripts.
+   * Single-file manifests in YAML format.
+   * Choria Autonomous Agents.
+   * Choria RPC.
+   * Embedded in Go applications.
+ 
 ## Status
 
 This is an experimental work in progress, there are only `file` (very basic), `service` and `package` resources implemented so far, they support only `dnf` and `systemd`.
