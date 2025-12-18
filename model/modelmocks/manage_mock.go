@@ -308,6 +308,21 @@ func (mr *MockManagerMockRecorder) ResolveManifestReader(ctx, manifest any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveManifestReader", reflect.TypeOf((*MockManager)(nil).ResolveManifestReader), ctx, manifest)
 }
 
+// ResourceInfo mocks base method.
+func (m *MockManager) ResourceInfo(ctx context.Context, typeName, name string) (any, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResourceInfo", ctx, typeName, name)
+	ret0, _ := ret[0].(any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResourceInfo indicates an expected call of ResourceInfo.
+func (mr *MockManagerMockRecorder) ResourceInfo(ctx, typeName, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceInfo", reflect.TypeOf((*MockManager)(nil).ResourceInfo), ctx, typeName, name)
+}
+
 // SessionSummary mocks base method.
 func (m *MockManager) SessionSummary() (*model.SessionSummary, error) {
 	m.ctrl.T.Helper()
