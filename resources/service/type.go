@@ -9,14 +9,15 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/choria-io/ccm/healthcheck"
 	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/resources/base"
 )
 
 type Type struct {
+	*base.Base
+
 	prop     *model.ServiceResourceProperties
 	mgr      model.Manager
 	log      model.Logger
@@ -31,17 +32,17 @@ var _ model.Resource = (*Type)(nil)
 
 // New creates a new service resource with the given properties
 func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourceProperties) (*Type, error) {
+	var facts map[string]any
+	var data map[string]any
+
 	env, err := mgr.TemplateEnvironment(ctx)
 	if err != nil {
 		return nil, err
 	}
+	facts = env.Facts
+	data = env.Data
 
 	err = properties.ResolveTemplates(env)
-	if err != nil {
-		return nil, err
-	}
-
-	err = properties.Validate()
 	if err != nil {
 		return nil, err
 	}
@@ -55,11 +56,20 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 		prop:  &properties,
 		mgr:   mgr,
 		log:   logger,
-		facts: env.Facts,
-		data:  env.Data,
+		facts: facts,
+		data:  data,
+	}
+	t.Base = &base.Base{
+		Resource:           t,
+		TypeName:           model.ServiceTypeName,
+		InstanceName:       properties.Name,
+		Ensure:             properties.Ensure,
+		ResourceProperties: &properties,
+		Log:                logger,
+		Manager:            mgr,
 	}
 
-	err = t.validate()
+	err = t.Validate()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w: %w", t.String(), model.ErrResourceInvalid, err)
 	}
@@ -69,65 +79,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 	return t, nil
 }
 
-func (t *Type) newTransactionEvent() *model.TransactionEvent {
-	event := model.NewTransactionEvent(model.ServiceTypeName, t.prop.Name)
-	if t.prop != nil {
-		event.Properties = t.prop
-		event.Name = t.prop.Name
-		event.Ensure = t.prop.Ensure
-	}
-
-	return event
-}
-
-func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	event := t.newTransactionEvent()
-	start := time.Now()
-
-	state, err := t.apply(ctx)
-	event.Duration = time.Since(start)
-	if err != nil {
-		event.Failed = true
-		event.Error = err.Error()
-	}
-
-	if t.prop.HealthCheck != nil {
-		res, err := healthcheck.Execute(ctx, t.mgr, t.prop.HealthCheck, t.log)
-		event.HealthCheck = res
-		if err != nil {
-			event.Failed = true
-			event.Error = err.Error()
-		} else {
-			if res.Status != model.HealthCheckOK {
-				event.Failed = true
-				event.Error = fmt.Sprintf("health check status %q", res.Status.String())
-			}
-		}
-	}
-
-	if state != nil {
-		event.Status = state
-		event.Changed = state.Changed
-		event.ActualEnsure = state.Ensure
-		event.Refreshed = state.Refreshed
-		event.Noop = state.Noop
-		event.NoopMessage = state.NoopMessage
-	}
-
-	event.Provider = t.providerUnlocked()
-
-	return event, nil
-}
-
-func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
-	err := t.selectProviderUnlocked()
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", t.stringUnlocked(), err)
-	}
-
+func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	var (
 		initialStatus             *model.ServiceState
 		finalStatus               *model.ServiceState
@@ -138,6 +90,7 @@ func (t *Type) apply(ctx context.Context) (*model.ServiceState, error) {
 		refreshResource           string
 		noop                      = t.mgr.NoopMode()
 		noopMessage               string
+		err                       error
 	)
 
 	initialStatus, err = p.Status(ctx, properties.Name)
@@ -299,40 +252,12 @@ func (t *Type) isDesiredState(properties *model.ServiceResourceProperties, state
 }
 
 func (t *Type) Info(ctx context.Context) (any, error) {
-	err := t.selectProvider()
+	_, err := t.SelectProvider()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", t.String(), err)
 	}
 
 	return t.provider.(ServiceProvider).Status(ctx, t.prop.Name)
-}
-
-func (t *Type) String() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.stringUnlocked()
-}
-
-func (t *Type) stringUnlocked() string {
-	return fmt.Sprintf("%s#%s", model.ServiceTypeName, t.prop.Name)
-}
-
-func (t *Type) validate() error {
-	return t.prop.Validate()
-}
-
-// Type returns the resource type name
-func (t *Type) Type() string {
-	return model.ServiceTypeName
-}
-
-// Name returns the service name
-func (t *Type) Name() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.prop.Name
 }
 
 func (t *Type) providerUnlocked() string {
@@ -349,14 +274,6 @@ func (t *Type) Provider() string {
 	defer t.mu.Unlock()
 
 	return t.providerUnlocked()
-}
-
-// Properties returns the service resource properties
-func (t *Type) Properties() any {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.prop
 }
 
 func (t *Type) selectProviderUnlocked() error {
@@ -384,11 +301,16 @@ func (t *Type) selectProviderUnlocked() error {
 	return nil
 }
 
-func (t *Type) selectProvider() error {
+func (t *Type) SelectProvider() (string, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	return t.selectProviderUnlocked()
+	err := t.selectProviderUnlocked()
+	if err != nil {
+		return "", err
+	}
+
+	return t.providerUnlocked(), nil
 }
 
 func (t *Type) shouldRefresh() (bool, string, error) {

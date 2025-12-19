@@ -145,6 +145,7 @@ var _ = Describe("Package Type", func() {
 			Context("when ensure is present", func() {
 				BeforeEach(func() {
 					pkg.prop.Ensure = EnsurePresent
+					pkg.Base.Ensure = EnsurePresent
 				})
 
 				It("Should install when package is absent", func(ctx context.Context) {
@@ -188,6 +189,7 @@ var _ = Describe("Package Type", func() {
 			Context("when ensure is absent", func() {
 				BeforeEach(func() {
 					pkg.prop.Ensure = EnsureAbsent
+					pkg.Base.Ensure = EnsureAbsent
 				})
 
 				It("Should uninstall when package is present", func(ctx context.Context) {
@@ -232,7 +234,7 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Status.(model.PackageState).Ensure).To(Equal("2.0.0"))
+					Expect(result.Status.(*model.PackageState).Ensure).To(Equal("2.0.0"))
 				})
 
 				It("Should fail if upgrade fails", func(ctx context.Context) {
@@ -250,6 +252,7 @@ var _ = Describe("Package Type", func() {
 			Context("when ensure is a specific version", func() {
 				It("Should install when package is absent", func(ctx context.Context) {
 					pkg.prop.Ensure = "2.0.0"
+					pkg.Base.Ensure = "2.0.0"
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: EnsureAbsent}}
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 
@@ -266,6 +269,7 @@ var _ = Describe("Package Type", func() {
 
 				It("Should not change when version matches", func(ctx context.Context) {
 					pkg.prop.Ensure = "1.0.0"
+					pkg.Base.Ensure = "1.0.0"
 					state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
@@ -279,6 +283,7 @@ var _ = Describe("Package Type", func() {
 
 				It("Should upgrade when current version is lower", func(ctx context.Context) {
 					pkg.prop.Ensure = "2.0.0"
+					pkg.Base.Ensure = "2.0.0"
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 
@@ -295,6 +300,7 @@ var _ = Describe("Package Type", func() {
 
 				It("Should downgrade when current version is higher", func(ctx context.Context) {
 					pkg.prop.Ensure = "1.0.0"
+					pkg.Base.Ensure = "1.0.0"
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 

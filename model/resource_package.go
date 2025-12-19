@@ -56,6 +56,14 @@ type PackageState struct {
 	Metadata *PackageMetadata `json:"metadata,omitempty"`
 }
 
+func (f *PackageState) CommonState() CommonResourceState {
+	return f.CommonResourceState
+}
+
+func (p *PackageResourceProperties) CommonProperties() *CommonResourceProperties {
+	return &p.CommonResourceProperties
+}
+
 // Validate validates the package resource properties
 func (p *PackageResourceProperties) Validate() error {
 	// First run common validation

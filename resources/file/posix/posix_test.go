@@ -68,12 +68,13 @@ var _ = Describe("Posix Provider", func() {
 			Expect(res).ToNot(BeNil())
 
 			Expect(res.Ensure).To(Equal(model.EnsurePresent))
-			Expect(res.Metadata.Name).To(Equal(testFile))
-			Expect(res.Metadata.Provider).To(Equal(ProviderName))
-			Expect(res.Metadata.Checksum).To(Equal(expectedChecksum))
+			meta := res.Metadata.(*model.FileMetadata)
+			Expect(meta.Name).To(Equal(testFile))
+			Expect(meta.Provider).To(Equal(ProviderName))
+			Expect(meta.Checksum).To(Equal(expectedChecksum))
 			// Owner and Group should be populated (actual values depend on system)
-			Expect(res.Metadata.Owner).ToNot(BeEmpty())
-			Expect(res.Metadata.Group).ToNot(BeEmpty())
+			Expect(meta.Owner).ToNot(BeEmpty())
+			Expect(meta.Group).ToNot(BeEmpty())
 		})
 
 		It("Should return absent for a non-existent file", func() {
@@ -83,9 +84,10 @@ var _ = Describe("Posix Provider", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).ToNot(BeNil())
 
+			meta := res.Metadata.(*model.FileMetadata)
 			Expect(res.Ensure).To(Equal(model.EnsureAbsent))
-			Expect(res.Metadata.Name).To(Equal(nonExistentFile))
-			Expect(res.Metadata.Provider).To(Equal(ProviderName))
+			Expect(meta.Name).To(Equal(nonExistentFile))
+			Expect(meta.Provider).To(Equal(ProviderName))
 		})
 
 		It("Should return correct mode in octal format", func() {
@@ -101,7 +103,7 @@ var _ = Describe("Posix Provider", func() {
 			Expect(res).ToNot(BeNil())
 
 			// Mode should contain the permission bits (last 3 octal digits should be 755)
-			Expect(res.Metadata.Mode).To(ContainSubstring("755"))
+			Expect(res.Metadata.(*model.FileMetadata).Mode).To(ContainSubstring("755"))
 		})
 	})
 
@@ -231,14 +233,15 @@ var _ = Describe("Posix Provider", func() {
 			status, err := provider.Status(context.Background(), testFile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(status.Ensure).To(Equal(model.EnsurePresent))
-			Expect(status.Metadata.Owner).To(Equal(currentUser.Username))
-			Expect(status.Metadata.Group).To(Equal(currentGroup.Name))
-			Expect(status.Metadata.Mode).To(Equal("0640"))
+			meta := status.Metadata.(*model.FileMetadata)
+			Expect(meta.Owner).To(Equal(currentUser.Username))
+			Expect(meta.Group).To(Equal(currentGroup.Name))
+			Expect(meta.Mode).To(Equal("0640"))
 
 			hasher := sha256.New()
 			hasher.Write(content)
 			expectedChecksum := hex.EncodeToString(hasher.Sum(nil))
-			Expect(status.Metadata.Checksum).To(Equal(expectedChecksum))
+			Expect(meta.Checksum).To(Equal(expectedChecksum))
 		})
 
 		It("Should copy from source file when source is specified", func() {
@@ -423,7 +426,7 @@ var _ = Describe("Posix Provider", func() {
 			res, err := provider.Status(context.Background(), testDir)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).ToNot(BeNil())
-			Expect(res.Metadata.Checksum).To(BeEmpty())
+			Expect(res.Metadata.(*model.FileMetadata).Checksum).To(BeEmpty())
 		})
 
 		It("Should return absent for non-existent directory", func() {

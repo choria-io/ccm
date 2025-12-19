@@ -12,16 +12,17 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/choria-io/ccm/healthcheck"
 	"github.com/choria-io/ccm/internal/registry"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/resources/base"
 	"github.com/choria-io/ccm/resources/file/posix"
 )
 
 type Type struct {
+	*base.Base
+
 	prop     *model.FileResourceProperties
 	mgr      model.Manager
 	log      model.Logger
@@ -47,11 +48,6 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 		return nil, err
 	}
 
-	err = properties.Validate()
-	if err != nil {
-		return nil, err
-	}
-
 	logger, err := mgr.Logger("type", model.FileTypeName, "name", properties.Name, "working_dir", mgr.WorkingDirectory())
 	if err != nil {
 		return nil, err
@@ -64,6 +60,15 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 		facts: env.Facts,
 		data:  env.Data,
 	}
+	t.Base = &base.Base{
+		Resource:           t,
+		TypeName:           model.FileTypeName,
+		InstanceName:       properties.Name,
+		Ensure:             properties.Ensure,
+		ResourceProperties: &properties,
+		Log:                logger,
+		Manager:            mgr,
+	}
 
 	err = t.validate()
 	if err != nil {
@@ -75,52 +80,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 	return t, nil
 }
 
-func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	event := t.newTransactionEvent()
-	start := time.Now()
-
-	state, err := t.apply(ctx)
-	event.Duration = time.Since(start)
-	if err != nil {
-		event.Failed = true
-		event.Error = err.Error()
-	}
-
-	if t.prop.HealthCheck != nil {
-		res, err := healthcheck.Execute(ctx, t.mgr, t.prop.HealthCheck, t.log)
-		event.HealthCheck = res
-		if err != nil {
-			event.Failed = true
-			event.Error = err.Error()
-		} else {
-			if res.Status != model.HealthCheckOK {
-				event.Failed = true
-				event.Error = fmt.Sprintf("health check status %q", res.Status.String())
-			}
-		}
-	}
-
-	if state != nil {
-		event.Status = *state
-		event.Changed = state.Changed
-		event.ActualEnsure = state.Ensure
-		event.Noop = state.Noop
-		event.NoopMessage = state.NoopMessage
-	}
-	event.Provider = t.providerUnlocked()
-
-	return event, nil
-}
-
-func (t *Type) apply(ctx context.Context) (*model.FileState, error) {
-	err := t.selectProviderUnlocked()
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", t.stringUnlocked(), err)
-	}
-
+func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	var (
 		initialStatus *model.FileState
 		finalStatus   *model.FileState
@@ -129,6 +89,7 @@ func (t *Type) apply(ctx context.Context) (*model.FileState, error) {
 		properties    = t.prop
 		noop          = t.mgr.NoopMode()
 		noopMessage   string
+		err           error
 	)
 
 	initialStatus, err = p.Status(ctx, t.prop.Name)
@@ -206,6 +167,7 @@ func (t *Type) apply(ctx context.Context) (*model.FileState, error) {
 	finalStatus.Noop = noop
 	finalStatus.NoopMessage = noopMessage
 	finalStatus.Changed = refreshState // we mark it changed even in noop mode since noop guesses what would have happened
+	finalStatus.Stable = isStable
 
 	return finalStatus, nil
 }
@@ -218,6 +180,7 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 
 	var contentChecksum string
 	var err error
+	meta := state.Metadata.(*model.FileMetadata)
 
 	if properties.Ensure != state.Ensure {
 		t.log.Debug("Ensure does not match", "requested", properties.Ensure, "state", state.Ensure)
@@ -238,43 +201,32 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 			}
 		}
 
-		if contentChecksum != state.Metadata.Checksum {
-			t.log.Debug("Content does not match", "requested", contentChecksum, "state", state.Metadata.Checksum)
+		if contentChecksum != meta.Checksum {
+			t.log.Debug("Content does not match", "requested", contentChecksum, "state", meta.Checksum)
 			return false, contentChecksum, nil
 		}
 	}
 
-	if state.Metadata.Owner != properties.Owner {
-		t.log.Debug("Owner does not match", "state", state.Metadata.Owner, "requested", properties.Owner)
+	if meta.Owner != properties.Owner {
+		t.log.Debug("Owner does not match", "state", meta.Owner, "requested", properties.Owner)
 		return false, contentChecksum, nil
 	}
 
-	if state.Metadata.Group != properties.Group {
-		t.log.Debug("Group does not match", "state", state.Metadata.Group, "requested", properties.Group)
+	if meta.Group != properties.Group {
+		t.log.Debug("Group does not match", "state", meta.Group, "requested", properties.Group)
 		return false, contentChecksum, nil
 	}
 
-	if state.Metadata.Mode != properties.Mode {
-		t.log.Debug("Mode does not match", "state", state.Metadata.Mode, "requested", properties.Mode)
+	if meta.Mode != properties.Mode {
+		t.log.Debug("Mode does not match", "state", meta.Mode, "requested", properties.Mode)
 		return false, contentChecksum, nil
 	}
 
 	return true, contentChecksum, nil
 }
 
-func (t *Type) newTransactionEvent() *model.TransactionEvent {
-	event := model.NewTransactionEvent(model.FileTypeName, t.prop.Name)
-	if t.prop != nil {
-		event.Properties = t.prop
-		event.Name = t.prop.Name
-		event.Ensure = t.prop.Ensure
-	}
-
-	return event
-}
-
 func (t *Type) Info(ctx context.Context) (any, error) {
-	err := t.selectProvider()
+	_, err := t.SelectProvider()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", t.String(), err)
 	}
@@ -285,6 +237,11 @@ func (t *Type) Info(ctx context.Context) (any, error) {
 func (t *Type) validate() error {
 	if t.prop.SkipValidate {
 		return nil
+	}
+
+	err := t.prop.Validate()
+	if err != nil {
+		return err
 	}
 
 	mode := t.prop.Mode
@@ -307,28 +264,6 @@ func (t *Type) validate() error {
 	return t.prop.Validate()
 }
 
-func (t *Type) String() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.stringUnlocked()
-}
-
-func (t *Type) stringUnlocked() string {
-	return fmt.Sprintf("%s#%s", model.FileTypeName, t.prop.Name)
-}
-
-func (t *Type) Type() string {
-	return model.FileTypeName
-}
-
-func (t *Type) Name() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.prop.Name
-}
-
 func (t *Type) providerUnlocked() string {
 	if t.provider == nil {
 		return ""
@@ -336,6 +271,7 @@ func (t *Type) providerUnlocked() string {
 
 	return t.provider.Name()
 }
+
 func (t *Type) Provider() string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -343,14 +279,9 @@ func (t *Type) Provider() string {
 	return t.providerUnlocked()
 }
 
-func (t *Type) Properties() any {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.prop
-}
-
 func (t *Type) selectProviderUnlocked() error {
+	// TODO: move to base
+
 	if t.provider != nil {
 		return nil
 	}
@@ -370,11 +301,18 @@ func (t *Type) selectProviderUnlocked() error {
 	return nil
 }
 
-func (t *Type) selectProvider() error {
+func (t *Type) SelectProvider() (string, error) {
+	// TODO: move to base
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	return t.selectProviderUnlocked()
+	err := t.selectProviderUnlocked()
+	if err != nil {
+		return "", err
+	}
+
+	return t.providerUnlocked(), nil
 }
 
 func (t *Type) adjustedSource(properties *model.FileResourceProperties) string {

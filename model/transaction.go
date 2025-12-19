@@ -5,6 +5,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -19,6 +20,7 @@ type SessionEvent interface {
 type Apply interface {
 	Resources() []map[string]ResourceProperties
 	Data() map[string]any
+	Execute(ctx context.Context, mgr Manager, healthCheckOnly bool, userLog Logger) (SessionStore, error)
 }
 
 type SessionStore interface {
@@ -32,6 +34,8 @@ type SessionStore interface {
 const TransactionEventProtocol = "io.choria.ccm.v1.transaction.event"
 const SessionStartEventProtocol = "io.choria.ccm.v1.session.start"
 
+// **NOTE** If this change also update metrics, event summary, cmd and CommonResourceState
+
 // TransactionEvent represents a single event for a resource session
 type TransactionEvent struct {
 	Protocol     string             `json:"protocol" yaml:"protocol"`
@@ -40,19 +44,20 @@ type TransactionEvent struct {
 	ResourceType string             `json:"type" yaml:"type"`
 	Provider     string             `json:"provider" yaml:"provider"`
 	Name         string             `json:"name" yaml:"name"`
-	Changed      bool               `json:"changed" yaml:"changed"`
-	Refreshed    bool               `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
-	Failed       bool               `json:"failed" yaml:"failed"`
 	Ensure       string             `json:"ensure" yaml:"ensure"`               // Ensure is the requested ensure value
 	ActualEnsure string             `json:"actual_ensure" yaml:"actual_ensure"` // ActualEnsure is the actual `ensure` value after the session
-	Error        string             `json:"error" yaml:"error"`
-	Skipped      bool               `json:"skipped" yaml:"skipped"`
 	Duration     time.Duration      `json:"duration" yaml:"duration"`
-	Properties   any                `json:"properties" yaml:"properties"`
-	Status       any                `json:"status" yaml:"status"`
-	Noop         bool               `json:"noop" yaml:"noop"`
+	Properties   ResourceProperties `json:"properties" yaml:"properties"`
+	Status       ResourceState      `json:"status" yaml:"status"`
 	NoopMessage  string             `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
 	HealthCheck  *HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
+
+	Error     string `json:"error" yaml:"error"`
+	Changed   bool   `json:"changed" yaml:"changed"`
+	Refreshed bool   `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
+	Failed    bool   `json:"failed" yaml:"failed"`
+	Skipped   bool   `json:"skipped" yaml:"skipped"`
+	Noop      bool   `json:"noop" yaml:"noop"`
 }
 
 type SessionStartEvent struct {
@@ -134,17 +139,22 @@ func (t *TransactionEvent) String() string {
 
 // SessionSummary provides a statistical summary of a configuration management session
 type SessionSummary struct {
-	StartTime        time.Time     `json:"start_time" yaml:"start_time"`
-	EndTime          time.Time     `json:"end_time" yaml:"end_time"`
-	TotalDuration    time.Duration `json:"total_duration" yaml:"total_duration"`
-	TotalResources   int           `json:"total_resources" yaml:"total_resources"`
-	UniqueResources  int           `json:"unique_resources" yaml:"unique_resources"`
-	ChangedResources int           `json:"changed_resources" yaml:"changed_resources"`
-	FailedResources  int           `json:"failed_resources" yaml:"failed_resources"`
-	SkippedResources int           `json:"skipped_resources" yaml:"skipped_resources"`
-	StableResources  int           `json:"stable_resources" yaml:"stable_resources"`
-	RefreshedCount   int           `json:"refreshed_count" yaml:"refreshed_count"`
-	TotalErrors      int           `json:"total_errors" yaml:"total_errors"`
+	StartTime                time.Time     `json:"start_time" yaml:"start_time"`
+	EndTime                  time.Time     `json:"end_time" yaml:"end_time"`
+	TotalDuration            time.Duration `json:"total_duration" yaml:"total_duration"`
+	TotalResources           int           `json:"total_resources" yaml:"total_resources"`
+	UniqueResources          int           `json:"unique_resources" yaml:"unique_resources"`
+	ChangedResources         int           `json:"changed_resources" yaml:"changed_resources"`
+	FailedResources          int           `json:"failed_resources" yaml:"failed_resources"`
+	SkippedResources         int           `json:"skipped_resources" yaml:"skipped_resources"`
+	StableResources          int           `json:"stable_resources" yaml:"stable_resources"`
+	RefreshedCount           int           `json:"refreshed_count" yaml:"refreshed_count"`
+	HealthCheckedCount       int           `json:"health_checked_count" yaml:"health_checked_count"`
+	HealthCheckOKCount       int           `json:"health_check_ok_count" yaml:"health_check_ok_count"`
+	HealthCheckWarningCount  int           `json:"health_check_warning_count" yaml:"health_check_warning_count"`
+	HealthCheckCriticalCount int           `json:"health_check_critical_count" yaml:"health_check_critical_count"`
+	HealthCheckUnknownCount  int           `json:"health_check_unknown_count" yaml:"health_check_unknown_count"`
+	TotalErrors              int           `json:"total_errors" yaml:"total_errors"`
 }
 
 // BuildSessionSummary creates a summary report from all events in a session
@@ -191,6 +201,20 @@ func BuildSessionSummary(events []SessionEvent) *SessionSummary {
 		// Track refreshes separately (a resource can be both changed and refreshed)
 		if txEvent.Refreshed {
 			summary.RefreshedCount++
+		}
+
+		if txEvent.HealthCheck != nil {
+			summary.HealthCheckedCount++
+			switch txEvent.HealthCheck.Status {
+			case HealthCheckOK:
+				summary.HealthCheckOKCount++
+			case HealthCheckWarning:
+				summary.HealthCheckWarningCount++
+			case HealthCheckCritical:
+				summary.HealthCheckCriticalCount++
+			default:
+				summary.HealthCheckUnknownCount++
+			}
 		}
 	}
 

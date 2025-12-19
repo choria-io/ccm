@@ -9,17 +9,19 @@ import (
 	"os"
 	"time"
 
+	"github.com/choria-io/ccm/resources/apply"
 	"github.com/choria-io/fisk"
 	"github.com/goccy/go-yaml"
 )
 
 type applyCommand struct {
-	manifest   string
-	renderOnly bool
-	report     bool
-	hieraFile  string
-	readEnv    bool
-	noop       bool
+	manifest    string
+	renderOnly  bool
+	report      bool
+	hieraFile   string
+	readEnv     bool
+	noop        bool
+	monitorOnly bool
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
@@ -31,27 +33,28 @@ func registerApplyCommand(ccm *fisk.Application) {
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
+	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
-	manifest, err := os.Open(c.manifest)
+	manifestFile, err := os.Open(c.manifest)
 	if err != nil {
 		return err
 	}
-	defer manifest.Close()
+	defer manifestFile.Close()
 
-	mgr, _, err := newManager("", c.hieraFile, c.readEnv, c.noop)
+	mgr, userLogger, err := newManager("", c.hieraFile, c.readEnv, c.noop)
 	if err != nil {
 		return err
 	}
 
-	_, apply, err := mgr.ResolveManifestReader(ctx, manifest)
+	_, manifest, err := apply.ResolveManifestReader(ctx, mgr, manifestFile)
 	if err != nil {
 		return err
 	}
 
 	if c.renderOnly {
-		resolvedYaml, err := yaml.Marshal(apply)
+		resolvedYaml, err := yaml.Marshal(manifest)
 		if err != nil {
 			return err
 		}
@@ -61,7 +64,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		return nil
 	}
 
-	_, err = mgr.ApplyManifest(ctx, apply)
+	_, err = manifest.Execute(ctx, mgr, c.monitorOnly, userLogger)
 	if err != nil {
 		return err
 	}
@@ -82,6 +85,11 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		fmt.Printf("     Failed Resources: %d\n", summary.FailedResources)
 		fmt.Printf("    Skipped Resources: %d\n", summary.SkippedResources)
 		fmt.Printf("  Refreshed Resources: %d\n", summary.RefreshedCount)
+		if summary.HealthCheckOKCount > 0 {
+			fmt.Printf("    Checked Resources: %d (ok: %d, critical: %d, warning: %d unknown: %d)\n", summary.HealthCheckedCount, summary.HealthCheckOKCount, summary.HealthCheckCriticalCount, summary.HealthCheckWarningCount, summary.HealthCheckUnknownCount)
+		} else {
+			fmt.Printf("    Checked Resources: %d\n", summary.HealthCheckedCount)
+		}
 		fmt.Printf("         Total Errors: %d\n", summary.TotalErrors)
 	}
 

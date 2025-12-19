@@ -25,13 +25,19 @@ type Resource interface {
 	Type() string
 	Name() string
 	Provider() string
-	Properties() any
+	Properties() ResourceProperties
 	Apply(context.Context) (*TransactionEvent, error)
 	Info(context.Context) (any, error)
+	Healthcheck(ctx context.Context) (*TransactionEvent, error)
+}
+
+type ResourceState interface {
+	CommonState() CommonResourceState
 }
 
 // ResourceProperties defines the interface for resource property validation and template resolution
 type ResourceProperties interface {
+	CommonProperties() *CommonResourceProperties
 	Validate() error
 	ResolveTemplates(*templates.Env) error
 	ToYamlManifest() (yaml.RawMessage, error)
@@ -106,6 +112,8 @@ func NewCommonResourceState(protocol string, resourceType string, name string, e
 	}
 }
 
+// TODO: seems redundant
+
 // CommonResourceState contains state information shared by all resource types
 type CommonResourceState struct {
 	TimeStamp    time.Time          `json:"timestamp" yaml:"timestamp"`
@@ -115,6 +123,7 @@ type CommonResourceState struct {
 	Ensure       string             `json:"ensure" yaml:"ensure"`
 	Changed      bool               `json:"changed" yaml:"changed"`
 	Refreshed    bool               `json:"refreshed" yaml:"refreshed"`
+	Stable       bool               `json:"stable" yaml:"stable"`
 	Noop         bool               `json:"noop" yaml:"noop"`
 	NoopMessage  string             `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
 	HealthCheck  *HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
@@ -148,6 +157,16 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 	}
 
 	err = prop.ResolveTemplates(env)
+	if err != nil {
+		return nil, err
+	}
+
+	return prop, nil
+}
+
+// NewValidatedResourcePropertiesFromYaml creates and validates a new resource properties object from a yaml document, it validates the properties and expands any templates
+func NewValidatedResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessage, env *templates.Env) (ResourceProperties, error) {
+	prop, err := NewResourcePropertiesFromYaml(typeName, rawProperties, env)
 	if err != nil {
 		return nil, err
 	}

@@ -166,6 +166,7 @@ var _ = Describe("Service Type", func() {
 			Context("when ensure is running", func() {
 				BeforeEach(func() {
 					svc.prop.Ensure = model.ServiceEnsureRunning
+					svc.Base.Ensure = model.ServiceEnsureRunning
 				})
 
 				It("Should start when service is stopped", func(ctx context.Context) {
@@ -221,6 +222,7 @@ var _ = Describe("Service Type", func() {
 			Context("when ensure is stopped", func() {
 				BeforeEach(func() {
 					svc.prop.Ensure = model.ServiceEnsureStopped
+					svc.Base.Ensure = model.ServiceEnsureStopped
 				})
 
 				It("Should stop when service is running", func(ctx context.Context) {

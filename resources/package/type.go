@@ -8,16 +8,17 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
-	"github.com/choria-io/ccm/healthcheck"
 	"github.com/choria-io/ccm/internal/registry"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/resources/base"
 )
 
 // Type represents a package resource that manages software package installation
 type Type struct {
+	*base.Base
+
 	prop     *model.PackageResourceProperties
 	mgr      model.Manager
 	log      model.Logger
@@ -51,11 +52,6 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 		return nil, err
 	}
 
-	err = properties.Validate()
-	if err != nil {
-		return nil, err
-	}
-
 	logger, err := mgr.Logger("type", model.PackageTypeName, "name", properties.Name)
 	if err != nil {
 		return nil, err
@@ -68,8 +64,17 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 		facts: env.Facts,
 		data:  env.Data,
 	}
+	t.Base = &base.Base{
+		Resource:           t,
+		TypeName:           model.PackageTypeName,
+		InstanceName:       properties.Name,
+		Ensure:             properties.Ensure,
+		ResourceProperties: &properties,
+		Log:                logger,
+		Manager:            mgr,
+	}
 
-	err = t.validate()
+	err = t.Validate()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w: %w", t.String(), model.ErrResourceInvalid, err)
 	}
@@ -79,64 +84,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 	return t, nil
 }
 
-func (t *Type) newTransactionEvent() *model.TransactionEvent {
-	event := model.NewTransactionEvent(model.PackageTypeName, t.prop.Name)
-	if t.prop != nil {
-		event.Properties = t.prop
-		event.Name = t.prop.Name
-		event.Ensure = t.prop.Ensure
-	}
-
-	return event
-}
-
-// Apply executes the package resource, ensuring it matches the desired state
-func (t *Type) Apply(ctx context.Context) (*model.TransactionEvent, error) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	event := t.newTransactionEvent()
-	start := time.Now()
-
-	state, err := t.apply(ctx)
-	event.Duration = time.Since(start)
-	if err != nil {
-		event.Failed = true
-		event.Error = err.Error()
-	}
-
-	if t.prop.HealthCheck != nil {
-		res, err := healthcheck.Execute(ctx, t.mgr, t.prop.HealthCheck, t.log)
-		event.HealthCheck = res
-		if err != nil {
-			event.Failed = true
-			event.Error = err.Error()
-		} else {
-			if res.Status != model.HealthCheckOK {
-				event.Failed = true
-				event.Error = fmt.Sprintf("health check status %q", res.Status.String())
-			}
-		}
-	}
-
-	if state != nil {
-		event.Status = *state
-		event.Changed = state.Changed
-		event.ActualEnsure = state.Ensure
-		event.Noop = state.Noop
-		event.NoopMessage = state.NoopMessage
-	}
-	event.Provider = t.providerUnlocked()
-
-	return event, nil
-}
-
-func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
-	err := t.selectProviderUnlocked()
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", t.stringUnlocked(), err)
-	}
-
+func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	var (
 		initialStatus *model.PackageState
 		finalStatus   *model.PackageState
@@ -147,7 +95,7 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 		noopMessage   string
 	)
 
-	initialStatus, err = p.Status(ctx, t.prop.Name)
+	initialStatus, err := p.Status(ctx, t.prop.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +219,7 @@ func (t *Type) apply(ctx context.Context) (*model.PackageState, error) {
 
 	finalStatus.Noop = noop
 	finalStatus.NoopMessage = noopMessage
+	finalStatus.Stable = !refreshState
 	if noop && refreshState {
 		finalStatus.Changed = true
 	} else {
@@ -302,7 +251,7 @@ func (t *Type) isDesiredState(properties *model.PackageResourceProperties, state
 
 // Info returns the current status of the package
 func (t *Type) Info(ctx context.Context) (any, error) {
-	err := t.selectProvider()
+	_, err := t.SelectProvider()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", t.String(), err)
 	}
@@ -310,14 +259,23 @@ func (t *Type) Info(ctx context.Context) (any, error) {
 	return t.provider.(PackageProvider).Status(ctx, t.prop.Name)
 }
 
-func (t *Type) selectProvider() error {
+func (t *Type) SelectProvider() (string, error) {
+	// TODO: move to base
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	return t.selectProviderUnlocked()
+	err := t.selectProviderUnlocked()
+	if err != nil {
+		return "", err
+	}
+
+	return t.providerUnlocked(), nil
 }
 
 func (t *Type) selectProviderUnlocked() error {
+	// TODO: move to base
+
 	if t.provider != nil {
 		return nil
 	}
@@ -342,34 +300,6 @@ func (t *Type) selectProviderUnlocked() error {
 	return nil
 }
 
-func (t *Type) String() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.stringUnlocked()
-}
-
-func (t *Type) stringUnlocked() string {
-	return fmt.Sprintf("%s#%s", model.PackageTypeName, t.prop.Name)
-}
-
-func (t *Type) validate() error {
-	return t.prop.Validate()
-}
-
-// Type returns the resource type name
-func (t *Type) Type() string {
-	return model.PackageTypeName
-}
-
-// Name returns the package name
-func (t *Type) Name() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.prop.Name
-}
-
 func (t *Type) providerUnlocked() string {
 	if t.provider == nil {
 		return ""
@@ -384,12 +314,4 @@ func (t *Type) Provider() string {
 	defer t.mu.Unlock()
 
 	return t.providerUnlocked()
-}
-
-// Properties returns the package resource properties
-func (t *Type) Properties() any {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	return t.prop
 }

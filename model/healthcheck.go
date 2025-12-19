@@ -45,6 +45,8 @@ type CommonHealthCheck struct {
 	Format        HealthCheckFormat `json:"format,omitempty" yaml:"format,omitempty"`
 	ParsedTimeout time.Duration     `json:"-" yaml:"-"`
 	ParseTrySleep time.Duration     `json:"-" yaml:"-"`
+	TypeName      string            `json:"-" yaml:"-"`
+	ResourceName  string            `json:"-" yaml:"-"`
 }
 
 // commonHealthCheckAlias is used to prevent infinite recursion in custom unmarshallers
