@@ -8,17 +8,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/choria-io/ccm/hiera"
 	"github.com/choria-io/ccm/internal/cmdrunner"
 	"github.com/choria-io/ccm/internal/facts"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/resources/apply"
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	serviceresource "github.com/choria-io/ccm/resources/service"
@@ -133,85 +130,6 @@ func (m *CCM) Data() map[string]any {
 	return ret
 }
 
-func (m *CCM) applyFileResource(ctx context.Context, properties *model.FileResourceProperties) (*model.TransactionEvent, error) {
-	file, err := fileresource.New(ctx, m, *properties)
-	if err != nil {
-		return nil, err
-	}
-
-	return file.Apply(ctx)
-}
-
-func (m *CCM) applyServiceResource(ctx context.Context, properties *model.ServiceResourceProperties) (*model.TransactionEvent, error) {
-	svc, err := serviceresource.New(ctx, m, *properties)
-	if err != nil {
-		return nil, err
-	}
-
-	return svc.Apply(ctx)
-}
-
-func (m *CCM) applyPackageResource(ctx context.Context, properties *model.PackageResourceProperties) (*model.TransactionEvent, error) {
-	pkg, err := packageresource.New(ctx, m, *properties)
-	if err != nil {
-		return nil, err
-	}
-
-	return pkg.Apply(ctx)
-}
-
-// ResolveManifestReader reads and resolves a manifest using Hiera, returning the resolved data and parsed manifest
-func (m *CCM) ResolveManifestReader(ctx context.Context, manifest io.Reader) (map[string]any, model.Apply, error) {
-	mb, err := io.ReadAll(manifest)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	facts, err := m.Facts(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	hieraLogger, err := m.Logger("hiera", "resources")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	resolved, err := hiera.ResolveYaml(mb, facts, hiera.DefaultOptions, hieraLogger)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	data := m.SetData(resolved)
-	env, err := m.TemplateEnvironment(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var manifestRaw map[string]any
-	err = yaml.Unmarshal(mb, &manifestRaw)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	manifestData := map[string]any{
-		"data":      data,
-		"resources": []map[string]any{},
-	}
-
-	ccm, ok := manifestRaw["ccm"].(map[string]any)
-	if ok {
-		manifestData["resources"] = ccm["resources"]
-	}
-
-	apply, err := apply.ParseManifestHiera(manifestData, env, hieraLogger)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return manifestData, apply, err
-}
-
 func (m *CCM) infoFileResource(ctx context.Context, prop *model.FileResourceProperties) (*model.FileMetadata, error) {
 	abs, err := filepath.Abs(prop.Name)
 	if err != nil {
@@ -228,10 +146,10 @@ func (m *CCM) infoFileResource(ctx context.Context, prop *model.FileResourceProp
 
 	nfo, err := ft.Info(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get file info: %w", err)
 	}
 
-	return nfo.(*model.FileState).Metadata, nil
+	return nfo.(*model.FileState).Metadata.(*model.FileMetadata), nil
 }
 
 func (m *CCM) infoServiceResource(ctx context.Context, prop *model.ServiceResourceProperties) (*model.ServiceMetadata, error) {
@@ -285,65 +203,8 @@ func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, err
 	}
 }
 
-// ApplyManifest applies a parsed manifest and records all changes to the session store
-func (m *CCM) ApplyManifest(ctx context.Context, apply model.Apply) (model.SessionStore, error) {
-	err := m.session.StartSession(apply)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, r := range apply.Resources() {
-		for _, v := range r {
-			var event *model.TransactionEvent
-			var err error
-
-			// TODO: error here should rather create a TransactionEvent with an error status
-			// TODO: this stuff should be stored in the registry so it knows when to call what so its automatic
-
-			switch resource := v.(type) {
-			case *model.PackageResourceProperties:
-				event, err = m.applyPackageResource(ctx, resource)
-				if err != nil {
-					return nil, err
-				}
-
-			case *model.ServiceResourceProperties:
-				event, err = m.applyServiceResource(ctx, resource)
-				if err != nil {
-					return nil, err
-				}
-
-			case *model.FileResourceProperties:
-				event, err = m.applyFileResource(ctx, resource)
-				if err != nil {
-					return nil, err
-				}
-
-			default:
-				return nil, fmt.Errorf("unsupported resource type %T", resource)
-			}
-
-			event.LogStatus(m.userLogger)
-
-			err = m.session.RecordEvent(event)
-			if err != nil {
-				m.log.Error("Could not save event", "event", event.String())
-			}
-
-		}
-	}
-
-	return m.session, nil
-}
-
-// ApplyManifestReader reads, resolves, and applies a manifest from a reader
-func (m *CCM) ApplyManifestReader(ctx context.Context, manifest io.Reader) (model.SessionStore, error) {
-	_, apply, err := m.ResolveManifestReader(ctx, manifest)
-	if err != nil {
-		return nil, err
-	}
-
-	return m.ApplyManifest(ctx, apply)
+func (m *CCM) StartSession(apply model.Apply) (model.SessionStore, error) {
+	return m.session, m.session.StartSession(apply)
 }
 
 // FactsRaw returns the system facts as a JSON raw message

@@ -111,6 +111,8 @@ func (s *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	updateMetrics(event)
+
 	// Validate EventID is a valid ksuid to prevent directory traversal
 	// Valid ksuids contain only safe characters (base62) and no path separators
 	_, err := ksuid.Parse(event.SessionEventID())

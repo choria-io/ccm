@@ -173,6 +173,17 @@ commands:
             staticcheck ./...
             {{ end }}
 
+    - name: docs
+      aliases: [d]
+      type: parent
+      description: Documentation management
+      commands:
+        - name: serve
+          description: Serve docs locally
+          type: exec
+          dir: "{{ AppDir }}/docs"
+          command: hugo serve
+
     - name: generate
       type: parent
       aliases: [gen]
@@ -197,20 +208,14 @@ commands:
             {{ end }}
 
             ab_say "Generating model mocks"
-            cd ./model
-            mockgen -write_generate_directive -source manager.go -destination modelmocks/manage_mock.go -package modelmocks
-            mockgen -write_generate_directive -source runner.go -destination modelmocks/runner_mock.go -package modelmocks
-            mockgen -write_generate_directive -source provider.go -destination modelmocks/provider_mock.go -package modelmocks
-            mockgen -write_generate_directive -source provider.go -destination modelmocks/provider_mock.go -package modelmocks
-            mockgen -write_generate_directive -source transaction.go -destination modelmocks/transaction_mock.go -package modelmocks
-            cd -
-            cd resources/package
-            mockgen -write_generate_directive -source package.go -destination provider_mock_test.go -package packageresource
-            cd -
-            cd resources/service
-            mockgen -write_generate_directive -source service.go -destination provider_mock_test.go -package serviceresource
-            cd -
-            cd resources/file
-            mockgen -write_generate_directive -source file.go -destination provider_mock_test.go -package fileresource
-            cd -
-
+            
+            mockgen -write_generate_directive -source model/manager.go -destination model/modelmocks/manage_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/runner.go -destination model/modelmocks/runner_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/transaction.go -destination model/modelmocks/transaction_mock.go -package modelmocks
+            mockgen -write_generate_directive -source resources/package/package.go -destination resources/package/provider_mock_test.go -package packageresource
+            mockgen -write_generate_directive -source resources/service/service.go -destination resources/service/provider_mock_test.go -package serviceresource
+            mockgen -write_generate_directive -source resources/file/file.go -destination resources/file/provider_mock_test.go -package fileresource
+            mockgen -write_generate_directive -source resources/base/base.go -destination resources/base/embedded_mock_test.go -package base
+            

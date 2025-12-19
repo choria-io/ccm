@@ -44,6 +44,14 @@ type ServiceState struct {
 	Metadata *ServiceMetadata `json:"metadata,omitempty"`
 }
 
+func (f *ServiceState) CommonState() CommonResourceState {
+	return f.CommonResourceState
+}
+
+func (p *ServiceResourceProperties) CommonProperties() *CommonResourceProperties {
+	return &p.CommonResourceProperties
+}
+
 // Validate validates the package resource properties
 func (p *ServiceResourceProperties) Validate() error {
 	// Default ensure to running if not specified

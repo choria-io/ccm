@@ -21,7 +21,7 @@ type statusCommand struct {
 func registerStatusCommand(ccm *fisk.Application) {
 	cmd := &statusCommand{}
 
-	status := ccm.Command("status", "Get resource status").Action(cmd.statusAction)
+	status := ccm.Command("status", "Get resource status").Alias("info").Action(cmd.statusAction)
 	status.Arg("type", "Type to get status for").Required().EnumVar(&cmd.typeName, "file", "package", "service")
 	status.Arg("name", "Resource name to get status for").Required().StringVar(&cmd.name)
 	status.Flag("json", "Output status in JSON format").UnNegatableBoolVar(&cmd.json)
@@ -32,9 +32,10 @@ func (c *statusCommand) statusAction(_ *fisk.ParseContext) error {
 	if err != nil {
 		return err
 	}
+
 	nfo, err := mgr.ResourceInfo(ctx, c.typeName, c.name)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get status: %s", err)
 	}
 
 	if c.json {

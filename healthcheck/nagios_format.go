@@ -10,8 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/kballard/go-shellquote"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -81,7 +83,10 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 			execCtx, cancel = context.WithTimeout(ctx, hc.ParsedTimeout)
 		}
 
+		timer := prometheus.NewTimer(metrics.HealthCheckTime.WithLabelValues(hc.TypeName, hc.ResourceName))
 		out, _, exitCode, err := runner.Execute(execCtx, cmd[0], args...)
+		timer.ObserveDuration()
+
 		if cancel != nil {
 			cancel()
 		}
@@ -96,7 +101,7 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 
 		// If check passed, return immediately
 		if result.Status == model.HealthCheckOK {
-			return result, nil
+			break
 		}
 
 		// If this was the last attempt, return the result
@@ -118,6 +123,8 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 			}
 		}
 	}
+
+	metrics.HealthStatusCount.WithLabelValues(hc.TypeName, hc.ResourceName, result.Status.String()).Inc()
 
 	return result, nil
 }

@@ -51,7 +51,15 @@ type FileMetadata struct {
 type FileState struct {
 	CommonResourceState
 
-	Metadata *FileMetadata `json:"metadata,omitempty"`
+	Metadata any `json:"metadata,omitempty"`
+}
+
+func (f *FileState) CommonState() CommonResourceState {
+	return f.CommonResourceState
+}
+
+func (p *FileResourceProperties) CommonProperties() *CommonResourceProperties {
+	return &p.CommonResourceProperties
 }
 
 // Validate validates the package resource properties

@@ -48,6 +48,8 @@ func (s *MemorySessionStore) RecordEvent(event model.SessionEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	updateMetrics(event)
+
 	s.events = append(s.events, event)
 
 	return nil

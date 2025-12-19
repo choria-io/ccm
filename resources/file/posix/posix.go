@@ -152,13 +152,15 @@ func (p *Provider) Store(ctx context.Context, file string, contents []byte, sour
 
 // Status returns the current installation status of a file
 func (p *Provider) Status(ctx context.Context, file string) (*model.FileState, error) {
+	metadata := &model.FileMetadata{
+		Name:     file,
+		Provider: ProviderName,
+		Extended: map[string]any{},
+	}
+
 	state := &model.FileState{
 		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusFileProtocol, model.FileTypeName, file, model.EnsurePresent),
-		Metadata: &model.FileMetadata{
-			Name:     file,
-			Provider: ProviderName,
-			Extended: map[string]any{},
-		},
+		Metadata:            metadata,
 	}
 
 	stat, err := os.Stat(file)
@@ -171,10 +173,10 @@ func (p *Provider) Status(ctx context.Context, file string) (*model.FileState, e
 	case err == nil:
 		var err error
 
-		state.Metadata.Size = stat.Size()
-		state.Metadata.MTime = stat.ModTime()
+		metadata.Size = stat.Size()
+		metadata.MTime = stat.ModTime()
 
-		state.Metadata.Owner, state.Metadata.Group, state.Metadata.Mode, err = getFileOwner(stat)
+		metadata.Owner, metadata.Group, metadata.Mode, err = getFileOwner(stat)
 		if err != nil {
 			p.log.Warn("Failed to get file ownership information: %s", err)
 		}
@@ -182,7 +184,7 @@ func (p *Provider) Status(ctx context.Context, file string) (*model.FileState, e
 		if stat.IsDir() {
 			state.Ensure = model.FileEnsureDirectory
 		} else {
-			state.Metadata.Checksum, err = iu.Sha256HashFile(file)
+			metadata.Checksum, err = iu.Sha256HashFile(file)
 			if err != nil {
 				p.log.Warn("Failed to calculate checksum: %s", err)
 			}

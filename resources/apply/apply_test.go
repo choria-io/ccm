@@ -5,8 +5,11 @@
 package apply
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
+	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
 	"github.com/choria-io/ccm/templates"
@@ -315,6 +318,126 @@ var _ = Describe("Apply", func() {
 			for i := 0; i < 10; i++ {
 				<-done
 			}
+		})
+	})
+
+	Describe("Execute", func() {
+		var (
+			facts      map[string]any
+			data       map[string]any
+			mgr        *modelmocks.MockManager
+			mgrLogger  *modelmocks.MockLogger
+			userLogger *modelmocks.MockLogger
+			runner     *modelmocks.MockCommandRunner
+			session    *modelmocks.MockSessionStore
+		)
+
+		BeforeEach(func() {
+			facts = make(map[string]any)
+			data = make(map[string]any)
+			mgr, mgrLogger = modelmocks.NewManager(facts, data, false, mockctl)
+			userLogger = modelmocks.NewMockLogger(mockctl)
+			runner = modelmocks.NewMockCommandRunner(mockctl)
+			session = modelmocks.NewMockSessionStore(mockctl)
+
+			mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
+
+			registry.Clear()
+		})
+
+		It("Should fail when StartSession fails", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{},
+			}
+
+			mgr.EXPECT().StartSession(apply).Return(nil, fmt.Errorf("session failed"))
+
+			result, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("session failed"))
+			Expect(result).To(BeNil())
+		})
+
+		It("Should return session when no resources", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{},
+			}
+
+			mgr.EXPECT().StartSession(apply).Return(session, nil)
+
+			result, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(session))
+		})
+
+		It("Should fail when no provider is available for package", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{
+					{model.PackageTypeName: &model.PackageResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name:     "vim",
+							Ensure:   "present",
+							Provider: "nonexistent",
+						},
+					}},
+				},
+			}
+
+			mgr.EXPECT().StartSession(apply).Return(session, nil)
+			mgrLogger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
+
+			result, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no suitable provider found"))
+			Expect(result).To(BeNil())
+		})
+
+		It("Should fail when no provider is available for service", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{
+					{model.ServiceTypeName: &model.ServiceResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name:     "nginx",
+							Ensure:   "running",
+							Provider: "nonexistent",
+						},
+					}},
+				},
+			}
+
+			mgr.EXPECT().StartSession(apply).Return(session, nil)
+			mgrLogger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
+
+			result, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no suitable provider found"))
+			Expect(result).To(BeNil())
+		})
+
+		It("Should fail when no provider is available for file", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{
+					{model.FileTypeName: &model.FileResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name:     "/tmp/test",
+							Ensure:   "present",
+							Provider: "nonexistent",
+						},
+						Owner:    "root",
+						Group:    "root",
+						Mode:     "0644",
+						Contents: "test content",
+					}},
+				},
+			}
+
+			mgr.EXPECT().StartSession(apply).Return(session, nil)
+			mgrLogger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
+
+			result, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no suitable provider found"))
+			Expect(result).To(BeNil())
 		})
 	})
 })

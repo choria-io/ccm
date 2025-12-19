@@ -388,6 +388,7 @@ var _ = Describe("File Type", func() {
 			Context("when ensure is present", func() {
 				BeforeEach(func() {
 					file.prop.Ensure = model.EnsurePresent
+					file.Base.Ensure = model.EnsurePresent
 				})
 
 				It("Should create file when absent", func(ctx context.Context) {
@@ -528,6 +529,7 @@ var _ = Describe("File Type", func() {
 			Context("when ensure is directory", func() {
 				BeforeEach(func() {
 					file.prop.Ensure = model.FileEnsureDirectory
+					file.Base.Ensure = model.FileEnsureDirectory
 					file.prop.Contents = ""
 				})
 
@@ -833,23 +835,6 @@ var _ = Describe("File Type", func() {
 		})
 
 		Describe("Accessor methods", func() {
-			It("Should return correct Type", func() {
-				Expect(file.Type()).To(Equal(model.FileTypeName))
-			})
-
-			It("Should return correct Name", func() {
-				Expect(file.Name()).To(Equal("/tmp/testfile"))
-			})
-
-			It("Should return correct String representation", func() {
-				Expect(file.String()).To(Equal("file#/tmp/testfile"))
-			})
-
-			It("Should return properties", func() {
-				props := file.Properties()
-				Expect(props).To(Equal(file.prop))
-			})
-
 			It("Should return empty provider before selection", func() {
 				Expect(file.Provider()).To(BeEmpty())
 			})
