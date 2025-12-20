@@ -11,9 +11,9 @@ There is no logic - other than what expressions can do, consider it to be no mor
 
 The YAML file resolves the manifest using [Choria Hierarchical Data Resolver](https://github.com/choria-io/tinyhiera), our single-file implementation of Hiera.
 
-## Full Example
+### Full Example
 
-#### Input Data
+##### Input Data
 
 First, we define input data, think of this like the properties a module accepts:
 
@@ -22,7 +22,7 @@ data:
   package_name: "httpd"
 ```
 
-#### Resources
+##### Resources
 
 We will manage the Apache Server package here:
 
@@ -34,7 +34,7 @@ ccm:
         ensure: latest
 ```
 
-#### Configure Hierarchy
+##### Configure Hierarchy
 
 We need to be able to configure the package name on a number of dimensions - like OS Platform - so we'll create a Hierarchy here:
 
@@ -46,7 +46,7 @@ hierarchy:
 
 Here we will look for overrides in `os:rhel`, `os:debian` etc
 
-#### Overrides
+##### Overrides
 
 Finally, we configure a package name for Debian:
 
@@ -56,7 +56,7 @@ overrides:
     package_name: apache2
 ```
 
-#### Applying the manifest
+##### Applying the manifest
 
 Let’s apply the manifest, this is how it should look now:
 
@@ -103,7 +103,7 @@ resources:
     name: apache2
 ```
 
-## Checking what would be done (Noop mode)
+### Checking what would be done (Noop mode)
 
 One can ask the system to operate in Noop mode, meaning it will attempt to detect what would happen without actually doing it.
 
@@ -111,3 +111,57 @@ This is achieved by using the `--noop` flag.
 
 > [!info] Note
 > Noop mode is not perfect, if a change in a resource affects a future resource, it cannot always be detected.
+
+### Manifests in NATS Object Store
+
+Like [Hierarchical Data](../hiera) data can be accessed via NATS Server to avoid needing all the manifests and hiera files locally.
+
+[NATS](https://nats.io) is a lightweight messaging system that is straightforward to run and host; it supports being used as a Key-Value store.
+
+We can't cover NATS here in detail here, but manifest and dependant files can be stored in NATS Object Stores and used in the `ccm apply` command.
+
+Let's add a context called `ccm` for our needs:
+
+```
+$ nats context add ccm --user nats.example.org --user ccm --password s£cret --description "Choria CM Configuration Store" 
+```
+
+We create a Object Store stored replicated in a cluster and store the hierarchy from `hiera.yaml` in a Key called `data`:
+
+```
+$ nats obj add CCM --replicas 3 --context ccm
+```
+
+Let's create a manifest that copies a file onto the node:
+
+```
+$ mkdir /tmp/manifest
+$ echo 'CCM Managed' > /tmp/manifest/mode
+$ vi /tmp/manifest/manifest.yaml
+...
+ccm:
+  resources:
+        name: /etc/motd
+        ensure: present
+        source: motd
+        owner: root
+        group: root
+        mode: "0644"
+```
+
+You can see here we read the file `motd` and copy it to `/etc/motd` on the node.
+
+Let's create a tar file and place it in the Object Store: 
+
+```
+$ tar -C /tmp/manifest/ -cvzf /tmp/manifest.tgz .
+$ cd /tmp
+$ nats --server localhost:4222 obj put CCM manifest.tgz
+```
+We can now apply the manifest:
+
+```
+$ ccm apply obj://CCM/manifest.tgz --context local
+ INFO  Using manifest from Object Store in temporary directory bucket=CCM file=manifest.tgz
+ INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix 
+```
