@@ -408,7 +408,12 @@ var _ = Describe("Registry", func() {
 
 	Describe("Thread safety", func() {
 		It("Should handle concurrent operations", func() {
-			done := make(chan bool)
+			// Set up IsManageable expectations since SelectProviders may call it
+			// if factories are registered before it runs
+			factory1.EXPECT().IsManageable(gomock.Any()).Return(true, nil).AnyTimes()
+			factory2.EXPECT().IsManageable(gomock.Any()).Return(true, nil).AnyTimes()
+
+			done := make(chan bool, 4) // Buffered to prevent blocking if goroutine fails
 
 			// Concurrent registrations
 			go func() {

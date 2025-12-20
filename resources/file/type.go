@@ -132,7 +132,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		refreshState = true
 	default:
 		// create
-		t.log.Warn("Creating file", "source", properties.Source, "working_dir", t.mgr.WorkingDirectory())
+		t.log.Debug("Creating file", "source", properties.Source, "working_dir", t.mgr.WorkingDirectory())
 
 		if !noop {
 			source := t.adjustedSource(properties)

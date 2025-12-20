@@ -22,35 +22,36 @@ type applyCommand struct {
 	readEnv     bool
 	noop        bool
 	monitorOnly bool
+	natsContext string
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
 	cmd := &applyCommand{}
 
 	apply := ccm.Command("apply", "Apply a manifest").Action(cmd.applyAction)
-	apply.Arg("manifest", "Path to manifest to apply").ExistingFileVar(&cmd.manifest)
+	apply.Arg("manifest", "Path to manifest to apply").StringVar(&cmd.manifest)
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
 	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
+	apply.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").StringVar(&cmd.natsContext)
+
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
-	manifestFile, err := os.Open(c.manifest)
-	if err != nil {
-		return err
-	}
-	defer manifestFile.Close()
-
-	mgr, userLogger, err := newManager("", c.hieraFile, "", c.readEnv, c.noop)
+	mgr, userLogger, err := newManager("", c.hieraFile, c.natsContext, c.readEnv, c.noop)
 	if err != nil {
 		return err
 	}
 
-	_, manifest, err := apply.ResolveManifestReader(ctx, mgr, manifestFile)
+	_, manifest, wd, err := apply.ResolveManifestUrl(ctx, mgr, c.manifest, userLogger)
 	if err != nil {
 		return err
+	}
+	if wd != "" {
+		mgr.SetWorkingDirectory(wd)
+		defer os.RemoveAll(wd)
 	}
 
 	if c.renderOnly {

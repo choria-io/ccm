@@ -7,6 +7,7 @@ package hiera
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/choria-io/ccm/model/modelmocks"
@@ -456,6 +457,7 @@ var _ = Describe("normalizeNumericValues", func() {
 var _ = Describe("ResolveKeyValue", func() {
 	var (
 		ctrl    *gomock.Controller
+		mockMgr *modelmocks.MockManager
 		mockJS  *modelmocks.MockJetStream
 		mockKV  *modelmocks.MockKeyValue
 		mockLog *modelmocks.MockLogger
@@ -464,6 +466,7 @@ var _ = Describe("ResolveKeyValue", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+		mockMgr = modelmocks.NewMockManager(ctrl)
 		mockJS = modelmocks.NewMockJetStream(ctrl)
 		mockKV = modelmocks.NewMockKeyValue(ctrl)
 		mockLog = modelmocks.NewMockLogger(ctrl)
@@ -476,26 +479,38 @@ var _ = Describe("ResolveKeyValue", func() {
 		ctrl.Finish()
 	})
 
-	It("returns an error when JetStream is nil", func() {
-		opts := Options{JetStream: nil}
-		_, err := ResolveKeyValue(ctx, "bucket", "key", nil, opts, mockLog)
-		Expect(err).To(MatchError("jetstream is required"))
+	It("returns an error when bucket is empty", func() {
+		_, err := ResolveKeyValue(ctx, mockMgr, "", "key", nil, DefaultOptions, mockLog)
+		Expect(err).To(MatchError("bucket name is required for kv hiera data source"))
+	})
+
+	It("returns an error when key is empty", func() {
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "", nil, DefaultOptions, mockLog)
+		Expect(err).To(MatchError("key is required for kv hiera data source"))
+	})
+
+	It("returns an error when JetStream fails", func() {
+		jsErr := errors.New("jetstream unavailable")
+		mockMgr.EXPECT().JetStream().Return(nil, jsErr)
+
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "key", nil, DefaultOptions, mockLog)
+		Expect(err).To(MatchError(jsErr))
 	})
 
 	It("returns an error when bucket does not exist", func() {
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "missing-bucket").Return(nil, jetstream.ErrBucketNotFound)
 
-		opts := Options{JetStream: mockJS}
-		_, err := ResolveKeyValue(ctx, "missing-bucket", "key", nil, opts, mockLog)
+		_, err := ResolveKeyValue(ctx, mockMgr, "missing-bucket", "key", nil, DefaultOptions, mockLog)
 		Expect(err).To(MatchError(jetstream.ErrBucketNotFound))
 	})
 
 	It("returns an error when key does not exist", func() {
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "missing-key").Return(nil, jetstream.ErrKeyNotFound)
 
-		opts := Options{JetStream: mockJS}
-		_, err := ResolveKeyValue(ctx, "bucket", "missing-key", nil, opts, mockLog)
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "missing-key", nil, DefaultOptions, mockLog)
 		Expect(err).To(MatchError(jetstream.ErrKeyNotFound))
 	})
 
@@ -503,11 +518,11 @@ var _ = Describe("ResolveKeyValue", func() {
 		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
 		mockEntry.EXPECT().Operation().Return(jetstream.KeyValueDelete)
 
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "deleted-key").Return(mockEntry, nil)
 
-		opts := Options{JetStream: mockJS}
-		_, err := ResolveKeyValue(ctx, "bucket", "deleted-key", nil, opts, mockLog)
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "deleted-key", nil, DefaultOptions, mockLog)
 		Expect(err).To(MatchError("kv bucket#deleted-key is not a put operation"))
 	})
 
@@ -516,11 +531,11 @@ var _ = Describe("ResolveKeyValue", func() {
 		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
 		mockEntry.EXPECT().Value().Return([]byte{})
 
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "empty-key").Return(mockEntry, nil)
 
-		opts := Options{JetStream: mockJS}
-		_, err := ResolveKeyValue(ctx, "bucket", "empty-key", nil, opts, mockLog)
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "empty-key", nil, DefaultOptions, mockLog)
 		Expect(err).To(MatchError("kv bucket#empty-key is empty"))
 	})
 
@@ -529,11 +544,11 @@ var _ = Describe("ResolveKeyValue", func() {
 		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
 		mockEntry.EXPECT().Value().Return([]byte(`{invalid json`))
 
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "bad-json").Return(mockEntry, nil)
 
-		opts := Options{JetStream: mockJS}
-		_, err := ResolveKeyValue(ctx, "bucket", "bad-json", nil, opts, mockLog)
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "bad-json", nil, DefaultOptions, mockLog)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("failed to parse JSON from kv bucket#bad-json"))
 	})
@@ -554,11 +569,11 @@ var _ = Describe("ResolveKeyValue", func() {
 		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
 		mockEntry.EXPECT().Value().Return(jsonData)
 
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "config").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "app.settings").Return(mockEntry, nil)
 
-		opts := Options{JetStream: mockJS}
-		result, err := ResolveKeyValue(ctx, "config", "app.settings", map[string]any{}, opts, mockLog)
+		result, err := ResolveKeyValue(ctx, mockMgr, "config", "app.settings", map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(map[string]any{
 			"log_level": "INFO",
@@ -581,11 +596,11 @@ data:
 		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
 		mockEntry.EXPECT().Value().Return(yamlData)
 
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "config").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "app.yaml").Return(mockEntry, nil)
 
-		opts := Options{JetStream: mockJS}
-		result, err := ResolveKeyValue(ctx, "config", "app.yaml", map[string]any{}, opts, mockLog)
+		result, err := ResolveKeyValue(ctx, mockMgr, "config", "app.yaml", map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(map[string]any{
 			"log_level": "DEBUG",
@@ -615,12 +630,12 @@ data:
 		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
 		mockEntry.EXPECT().Value().Return(jsonData)
 
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "config").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "app.config").Return(mockEntry, nil)
 
 		facts := map[string]any{"env": "prod"}
-		opts := Options{JetStream: mockJS}
-		result, err := ResolveKeyValue(ctx, "config", "app.config", facts, opts, mockLog)
+		result, err := ResolveKeyValue(ctx, mockMgr, "config", "app.config", facts, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(map[string]any{
 			"log_level": "WARN",
@@ -630,20 +645,184 @@ data:
 
 	It("handles KeyValue access errors", func() {
 		accessErr := errors.New("connection timeout")
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(nil, accessErr)
 
-		opts := Options{JetStream: mockJS}
-		_, err := ResolveKeyValue(ctx, "bucket", "key", nil, opts, mockLog)
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "key", nil, DefaultOptions, mockLog)
 		Expect(err).To(MatchError(accessErr))
 	})
 
 	It("handles Get errors", func() {
 		getErr := errors.New("read timeout")
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
 		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
 		mockKV.EXPECT().Get(ctx, "key").Return(nil, getErr)
 
-		opts := Options{JetStream: mockJS}
-		_, err := ResolveKeyValue(ctx, "bucket", "key", nil, opts, mockLog)
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "key", nil, DefaultOptions, mockLog)
 		Expect(err).To(MatchError(getErr))
+	})
+})
+
+var _ = Describe("ResolveUrl", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockMgr *modelmocks.MockManager
+		mockJS  *modelmocks.MockJetStream
+		mockKV  *modelmocks.MockKeyValue
+		mockLog *modelmocks.MockLogger
+		ctx     context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockMgr = modelmocks.NewMockManager(ctrl)
+		mockJS = modelmocks.NewMockJetStream(ctrl)
+		mockKV = modelmocks.NewMockKeyValue(ctrl)
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		ctx = context.Background()
+
+		mockLog.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("returns an error when source is empty", func() {
+		_, err := ResolveUrl(ctx, "", mockMgr, nil, DefaultOptions, mockLog)
+		Expect(err).To(MatchError("source is required"))
+	})
+
+	It("returns an error for unsupported schemes", func() {
+		_, err := ResolveUrl(ctx, "http://example.com/data", mockMgr, nil, DefaultOptions, mockLog)
+		Expect(err).To(MatchError("unsupported hiera data source: http://example.com/data"))
+	})
+
+	It("resolves kv:// URLs", func() {
+		jsonData := []byte(`{
+			"hierarchy": {
+				"order": ["default"],
+				"merge": "first"
+			},
+			"data": {
+				"setting": "value"
+			}
+		}`)
+
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return(jsonData)
+
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
+		mockJS.EXPECT().KeyValue(ctx, "mybucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "mykey").Return(mockEntry, nil)
+
+		result, err := ResolveUrl(ctx, "kv://mybucket/mykey", mockMgr, map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"setting": "value",
+		}))
+	})
+})
+
+var _ = Describe("ResolveFile", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+		ctx     context.Context
+		tempDir string
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		ctx = context.Background()
+
+		mockLog.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+
+		var err error
+		tempDir, err = os.MkdirTemp("", "hiera-test-*")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+		os.RemoveAll(tempDir)
+	})
+
+	It("returns nil for non-existent files", func() {
+		result, err := ResolveFile(ctx, "/nonexistent/file.yaml", nil, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(BeNil())
+	})
+
+	It("resolves YAML files", func() {
+		yamlContent := `
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  setting: from_yaml
+  count: 42
+`
+		filePath := tempDir + "/config.yaml"
+		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		result, err := ResolveFile(ctx, filePath, map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"setting": "from_yaml",
+			"count":   42,
+		}))
+	})
+
+	It("resolves JSON files", func() {
+		jsonContent := `{
+			"hierarchy": {
+				"order": ["default"],
+				"merge": "first"
+			},
+			"data": {
+				"setting": "from_json",
+				"enabled": true
+			}
+		}`
+		filePath := tempDir + "/config.json"
+		err := os.WriteFile(filePath, []byte(jsonContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		result, err := ResolveFile(ctx, filePath, map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"setting": "from_json",
+			"enabled": true,
+		}))
+	})
+
+	It("resolves files with facts and overrides", func() {
+		yamlContent := `
+hierarchy:
+  order:
+    - env:{{ lookup('facts.env') }}
+    - default
+  merge: deep
+data:
+  log_level: INFO
+overrides:
+  env:production:
+    log_level: WARN
+`
+		filePath := tempDir + "/config.yaml"
+		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		facts := map[string]any{"env": "production"}
+		result, err := ResolveFile(ctx, filePath, facts, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"log_level": "WARN",
+		}))
 	})
 })

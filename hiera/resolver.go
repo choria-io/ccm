@@ -9,6 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -32,8 +35,6 @@ type Hierarchy struct {
 type Options struct {
 	// DataKey is the key where the data section is stored in the parsed document.
 	DataKey string
-	// JetStream is the JetStream client to use for KV lookups
-	JetStream jetstream.JetStream
 }
 
 var DefaultOptions = Options{
@@ -164,13 +165,75 @@ func ResolveJson(data []byte, facts map[string]any, opts Options, log model.Logg
 	return Resolve(root, facts, opts, log)
 }
 
+// ResolveUrl parse a url that's either a file or kv://Bucket/Key and resolves the data using the correct helper
+func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+	if source == "" {
+		return nil, fmt.Errorf("source is required")
+	}
+
+	uri, err := url.Parse(source)
+	if err != nil {
+		return nil, err
+	}
+
+	var res map[string]any
+
+	switch uri.Scheme {
+	case "kv":
+		res, err = ResolveKeyValue(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), facts, opts, log)
+
+	case "":
+		res, err = ResolveFile(ctx, source, facts, opts, log)
+
+	default:
+		return nil, fmt.Errorf("unsupported hiera data source: %s", source)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("Resolved hiera data", "data", res)
+
+	return res, nil
+}
+
+// ResolveFile reads a YAML or JSON file and delegates to ResolveYaml or ResolveJson respectively.
+func ResolveFile(ctx context.Context, file string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+	abs, err := filepath.Abs(file)
+	if err != nil {
+		return nil, err
+	}
+
+	if !iu.FileExists(abs) {
+		return nil, nil
+	}
+
+	raw, err := os.ReadFile(abs)
+	if err != nil {
+		return nil, err
+	}
+
+	if iu.IsJsonObject(raw) {
+		return ResolveJson(raw, facts, opts, log)
+	}
+
+	return ResolveYaml(raw, facts, opts, log)
+}
+
 // ResolveKeyValue consumes raw JSON bytes from a KV value and a map of facts to produce a final data map
 // The function decodes the JSON document and delegates processing to Resolve to perform merges and fact substitution.
-func ResolveKeyValue(ctx context.Context, bucket string, key string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
-	if opts.JetStream == nil {
-		return nil, fmt.Errorf("jetstream is required")
+func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+	if bucket == "" {
+		return nil, fmt.Errorf("bucket name is required for kv hiera data source")
 	}
-	js := opts.JetStream
+	if key == "" {
+		return nil, fmt.Errorf("key is required for kv hiera data source")
+	}
+
+	js, err := mgr.JetStream()
+	if err != nil {
+		return nil, err
+	}
 
 	log.Debug("Getting hiera data from JetStream KV", "key", key, "bucket", bucket)
 

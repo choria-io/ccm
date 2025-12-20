@@ -9,9 +9,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/choria-io/ccm/hiera"
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	fileresource "github.com/choria-io/ccm/resources/file"
@@ -62,6 +67,108 @@ func (a *Apply) Data() map[string]any {
 	defer a.mu.Unlock()
 
 	return a.data
+}
+
+// ResolveManifestUrl parse a url that's either a file or obj://Bucket/Key and resolves the manifest using the correct helpers
+//
+// When accessing manifests from an object store the working directory of the manager should be set to this directory, it should
+// be removed after use and the manager working dir be reset. The wd output from the function is the path to the temporary directory or empty
+// string when no temporary directory was used
+func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, log model.Logger) (res map[string]any, apply model.Apply, wd string, err error) {
+	if source == "" {
+		return nil, nil, "", fmt.Errorf("source is required")
+	}
+
+	uri, err := url.Parse(source)
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	switch uri.Scheme {
+	case "obj":
+		res, apply, wd, err = ResolveManifestObjectValue(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), log)
+
+	case "":
+		res, apply, err = ResolveManifestFilePath(ctx, mgr, source)
+
+	default:
+		return nil, nil, "", fmt.Errorf("unsupported manifest source: %s", source)
+	}
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	return res, apply, wd, nil
+}
+
+// ResolveManifestObjectValue reads a manifest from an object store and resolves it using ResolveManifestReader()
+//
+// If a value for `dir` is returned it should be cleaned up after use
+func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket string, file string, log model.Logger) (manifest map[string]any, apply model.Apply, dir string, err error) {
+	if bucket == "" {
+		return nil, nil, "", fmt.Errorf("bucket name is required for object store manifest source")
+	}
+	if file == "" {
+		return nil, nil, "", fmt.Errorf("key is required for object store manifest source")
+	}
+
+	js, err := mgr.JetStream()
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	log.Debug("Getting manifest data from JetStream Object Store", "key", file, "bucket", bucket)
+
+	obj, err := js.ObjectStore(ctx, bucket)
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	res, err := obj.Get(ctx, file)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	defer res.Close()
+
+	td, err := os.MkdirTemp("", "manifest-*")
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	files, err := iu.UntarGz(res, td)
+	if err != nil {
+		os.RemoveAll(td)
+		return nil, nil, "", err
+	}
+
+	var manifestPath string
+	for _, f := range files {
+		if filepath.Base(f) == "manifest.yaml" {
+			manifestPath = f
+			break
+		}
+	}
+
+	resolved, apply, err := ResolveManifestFilePath(ctx, mgr, manifestPath)
+	if err != nil {
+		os.RemoveAll(td)
+		return nil, nil, "", err
+	}
+
+	log.Info("Using manifest from Object Store in temporary directory", "directory", td, "manifest", manifestPath, "bucket", bucket, "file", file)
+
+	return resolved, apply, td, nil
+}
+
+// ResolveManifestFilePath reads a file and resolves the manifest using ResolveManifestReader()
+func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string) (map[string]any, model.Apply, error) {
+	manifestFile, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer manifestFile.Close()
+
+	return ResolveManifestReader(ctx, mgr, manifestFile)
 }
 
 // ResolveManifestReader reads and resolves a manifest using Hiera, returning the resolved data and parsed manifest
