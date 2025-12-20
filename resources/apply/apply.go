@@ -147,7 +147,7 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 			case *model.FileResourceProperties:
 				resource, err = fileresource.New(ctx, mgr, *rprop)
 			default:
-				return nil, fmt.Errorf("unsupported rprop type %T", rprop)
+				return nil, fmt.Errorf("unsupported resource property type %T", rprop)
 			}
 			if err != nil {
 				return nil, err

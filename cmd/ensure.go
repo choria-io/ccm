@@ -12,9 +12,10 @@ import (
 )
 
 type ensureCommand struct {
-	session   string
-	hieraFile string
-	readEnv   bool
+	session     string
+	hieraFile   string
+	readEnv     bool
+	natsContext string
 
 	healthCheckCommand string
 	healthCheckTries   int
@@ -36,6 +37,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	ens.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").PlaceHolder("DIRECTORY").StringVar(&cmd.session)
 	ens.Flag("hiera", "Hiera data file to use as data source").Default(".hiera").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
 	ens.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
+	ens.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").StringVar(&cmd.natsContext)
 
 	registerEnsureFileCommand(ens, cmd)
 	registerEnsurePackageCommand(ens, cmd)
@@ -43,7 +45,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 }
 
 func (cmd *ensureCommand) manager() (model.Manager, error) {
-	mgr, out, err := newManager(cmd.session, cmd.hieraFile, cmd.readEnv, cmd.noop)
+	mgr, out, err := newManager(cmd.session, cmd.hieraFile, cmd.natsContext, cmd.readEnv, cmd.noop)
 	if err != nil {
 		return nil, err
 	}

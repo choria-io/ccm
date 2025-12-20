@@ -5,10 +5,15 @@
 package hiera
 
 import (
+	"context"
+	"errors"
 	"testing"
 
+	"github.com/choria-io/ccm/model/modelmocks"
+	"github.com/nats-io/nats.go/jetstream"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 )
 
 func TestHiera(t *testing.T) {
@@ -445,5 +450,200 @@ var _ = Describe("normalizeNumericValues", func() {
 			"uint64":   30,
 			"inBounds": []any{5},
 		}))
+	})
+})
+
+var _ = Describe("ResolveKeyValue", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockJS  *modelmocks.MockJetStream
+		mockKV  *modelmocks.MockKeyValue
+		mockLog *modelmocks.MockLogger
+		ctx     context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockJS = modelmocks.NewMockJetStream(ctrl)
+		mockKV = modelmocks.NewMockKeyValue(ctrl)
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		ctx = context.Background()
+
+		mockLog.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("returns an error when JetStream is nil", func() {
+		opts := Options{JetStream: nil}
+		_, err := ResolveKeyValue(ctx, "bucket", "key", nil, opts, mockLog)
+		Expect(err).To(MatchError("jetstream is required"))
+	})
+
+	It("returns an error when bucket does not exist", func() {
+		mockJS.EXPECT().KeyValue(ctx, "missing-bucket").Return(nil, jetstream.ErrBucketNotFound)
+
+		opts := Options{JetStream: mockJS}
+		_, err := ResolveKeyValue(ctx, "missing-bucket", "key", nil, opts, mockLog)
+		Expect(err).To(MatchError(jetstream.ErrBucketNotFound))
+	})
+
+	It("returns an error when key does not exist", func() {
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "missing-key").Return(nil, jetstream.ErrKeyNotFound)
+
+		opts := Options{JetStream: mockJS}
+		_, err := ResolveKeyValue(ctx, "bucket", "missing-key", nil, opts, mockLog)
+		Expect(err).To(MatchError(jetstream.ErrKeyNotFound))
+	})
+
+	It("returns an error when the entry is not a put operation", func() {
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValueDelete)
+
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "deleted-key").Return(mockEntry, nil)
+
+		opts := Options{JetStream: mockJS}
+		_, err := ResolveKeyValue(ctx, "bucket", "deleted-key", nil, opts, mockLog)
+		Expect(err).To(MatchError("kv bucket#deleted-key is not a put operation"))
+	})
+
+	It("returns an error when the entry value is empty", func() {
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return([]byte{})
+
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "empty-key").Return(mockEntry, nil)
+
+		opts := Options{JetStream: mockJS}
+		_, err := ResolveKeyValue(ctx, "bucket", "empty-key", nil, opts, mockLog)
+		Expect(err).To(MatchError("kv bucket#empty-key is empty"))
+	})
+
+	It("returns an error when JSON parsing fails", func() {
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return([]byte(`{invalid json`))
+
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "bad-json").Return(mockEntry, nil)
+
+		opts := Options{JetStream: mockJS}
+		_, err := ResolveKeyValue(ctx, "bucket", "bad-json", nil, opts, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to parse JSON from kv bucket#bad-json"))
+	})
+
+	It("resolves JSON data from KV successfully", func() {
+		jsonData := []byte(`{
+			"hierarchy": {
+				"order": ["default"],
+				"merge": "first"
+			},
+			"data": {
+				"log_level": "INFO",
+				"port": 8080
+			}
+		}`)
+
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return(jsonData)
+
+		mockJS.EXPECT().KeyValue(ctx, "config").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "app.settings").Return(mockEntry, nil)
+
+		opts := Options{JetStream: mockJS}
+		result, err := ResolveKeyValue(ctx, "config", "app.settings", map[string]any{}, opts, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"log_level": "INFO",
+			"port":      8080,
+		}))
+	})
+
+	It("resolves YAML data from KV successfully", func() {
+		yamlData := []byte(`
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  log_level: DEBUG
+  timeout: 30
+`)
+
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return(yamlData)
+
+		mockJS.EXPECT().KeyValue(ctx, "config").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "app.yaml").Return(mockEntry, nil)
+
+		opts := Options{JetStream: mockJS}
+		result, err := ResolveKeyValue(ctx, "config", "app.yaml", map[string]any{}, opts, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"log_level": "DEBUG",
+			"timeout":   30,
+		}))
+	})
+
+	It("resolves data with facts and hierarchy overrides", func() {
+		jsonData := []byte(`{
+			"hierarchy": {
+				"order": ["env:{{ lookup('facts.env') }}", "default"],
+				"merge": "deep"
+			},
+			"data": {
+				"log_level": "INFO",
+				"retries": 3
+			},
+			"overrides": {
+				"env:prod": {
+					"log_level": "WARN",
+					"retries": 5
+				}
+			}
+		}`)
+
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return(jsonData)
+
+		mockJS.EXPECT().KeyValue(ctx, "config").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "app.config").Return(mockEntry, nil)
+
+		facts := map[string]any{"env": "prod"}
+		opts := Options{JetStream: mockJS}
+		result, err := ResolveKeyValue(ctx, "config", "app.config", facts, opts, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"log_level": "WARN",
+			"retries":   5,
+		}))
+	})
+
+	It("handles KeyValue access errors", func() {
+		accessErr := errors.New("connection timeout")
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(nil, accessErr)
+
+		opts := Options{JetStream: mockJS}
+		_, err := ResolveKeyValue(ctx, "bucket", "key", nil, opts, mockLog)
+		Expect(err).To(MatchError(accessErr))
+	})
+
+	It("handles Get errors", func() {
+		getErr := errors.New("read timeout")
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "key").Return(nil, getErr)
+
+		opts := Options{JetStream: mockJS}
+		_, err := ResolveKeyValue(ctx, "bucket", "key", nil, opts, mockLog)
+		Expect(err).To(MatchError(getErr))
 	})
 })

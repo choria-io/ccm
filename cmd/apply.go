@@ -43,7 +43,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 	}
 	defer manifestFile.Close()
 
-	mgr, userLogger, err := newManager("", c.hieraFile, c.readEnv, c.noop)
+	mgr, userLogger, err := newManager("", c.hieraFile, "", c.readEnv, c.noop)
 	if err != nil {
 		return err
 	}

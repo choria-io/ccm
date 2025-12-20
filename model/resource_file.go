@@ -23,7 +23,6 @@ const (
 	FileEnsureDirectory = "directory"
 )
 
-// TODO: support ensure directory
 type FileResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
 	Contents                 string    `json:"content,omitempty" yaml:"content,omitempty"`

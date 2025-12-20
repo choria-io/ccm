@@ -86,6 +86,11 @@ overrides:
 
 Running `ccm ensure package '{{ lookup("data.package_name") }}'` will install `httpd` on RHEL based systems and `apache2` on Debian based systems. 
 
+> [!info] Note
+> See the [Hiera](../hiera) section for details on how to configure Hiera Data in NATS
+
+The data can also be stored in a NATS Key-Value store and read from there instead of from `./hiera` by passing `--context` and `--hiera kv://BUCKET/key` options.
+
 ## Environment
 
 The shell environment and any environment data defined in `./.env` can be accessed via expressions like `{{ lookup("env.MY_VAR") }}`

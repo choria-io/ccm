@@ -132,6 +132,8 @@ func (t *TransactionEvent) String() string {
 		return fmt.Sprintf("%s#%s skipped ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
 	case t.Changed:
 		return fmt.Sprintf("%s#%s changed ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
+	case t.Refreshed:
+		return fmt.Sprintf("%s#%s refreshed ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
 	default:
 		return fmt.Sprintf("%s#%s ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
 	}
