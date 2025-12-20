@@ -16,6 +16,7 @@ import (
 
 	model "github.com/choria-io/ccm/model"
 	templates "github.com/choria-io/ccm/templates"
+	jetstream "github.com/nats-io/nats.go/jetstream"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -199,6 +200,21 @@ func (mr *MockManagerMockRecorder) FactsRaw(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FactsRaw", reflect.TypeOf((*MockManager)(nil).FactsRaw), ctx)
 }
 
+// JetStream mocks base method.
+func (m *MockManager) JetStream() (jetstream.JetStream, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "JetStream")
+	ret0, _ := ret[0].(jetstream.JetStream)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// JetStream indicates an expected call of JetStream.
+func (mr *MockManagerMockRecorder) JetStream() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JetStream", reflect.TypeOf((*MockManager)(nil).JetStream))
+}
+
 // Logger mocks base method.
 func (m *MockManager) Logger(args ...any) (model.Logger, error) {
 	m.ctrl.T.Helper()
@@ -303,6 +319,18 @@ func (m *MockManager) SetData(data map[string]any) map[string]any {
 func (mr *MockManagerMockRecorder) SetData(data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetData", reflect.TypeOf((*MockManager)(nil).SetData), data)
+}
+
+// SetWorkingDirectory mocks base method.
+func (m *MockManager) SetWorkingDirectory(dir string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWorkingDirectory", dir)
+}
+
+// SetWorkingDirectory indicates an expected call of SetWorkingDirectory.
+func (mr *MockManagerMockRecorder) SetWorkingDirectory(dir any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkingDirectory", reflect.TypeOf((*MockManager)(nil).SetWorkingDirectory), dir)
 }
 
 // ShouldRefresh mocks base method.

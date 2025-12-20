@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/choria-io/ccm/templates"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 type Logger interface {
@@ -29,9 +30,11 @@ type Manager interface {
 	RecordEvent(event *TransactionEvent) error
 	ShouldRefresh(resourceType string, resourceName string) (bool, error)
 	TemplateEnvironment(ctx context.Context) (*templates.Env, error)
+	SetWorkingDirectory(dir string)
 	WorkingDirectory() string
 	StartSession(Apply) (SessionStore, error)
 	ResourceInfo(ctx context.Context, typeName, name string) (any, error)
 	SessionSummary() (*SessionSummary, error)
 	NoopMode() bool
+	JetStream() (jetstream.JetStream, error)
 }

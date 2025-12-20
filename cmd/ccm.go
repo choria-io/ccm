@@ -17,13 +17,17 @@ import (
 )
 
 var (
-	ctx   context.Context
-	debug bool
-	info  bool
+	ctx     context.Context
+	debug   bool
+	info    bool
+	Version string = "development"
 )
 
 func main() {
 	app := fisk.New("ccm", "Choria Configuration Management")
+	app.Version(Version)
+	app.Author("https://choria.io")
+
 	app.Flag("debug", "Enable debug logging").UnNegatableBoolVar(&debug)
 	app.Flag("info", "Enable info logging").UnNegatableBoolVar(&info)
 

@@ -100,7 +100,12 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 		logger = manager.NewSlogLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	}
 
-	res, err = getHieraData(cmd.input, cmd.natsContext, hiera.DefaultOptions, facts, logger)
+	mgr, _, err := newManager("", "", cmd.natsContext, false, true)
+	if err != nil {
+		return err
+	}
+
+	res, err = hiera.ResolveUrl(ctx, cmd.input, mgr, facts, hiera.DefaultOptions, logger)
 	if err != nil {
 		return err
 	}

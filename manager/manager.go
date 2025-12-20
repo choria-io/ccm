@@ -22,6 +22,9 @@ import (
 	"github.com/choria-io/ccm/session"
 	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/synadia-io/orbit.go/natscontext"
 )
 
 // CCM is the main configuration and change management orchestrator
@@ -29,13 +32,16 @@ type CCM struct {
 	session    model.SessionStore
 	log        model.Logger
 	userLogger model.Logger
+	js         jetstream.JetStream
+	nc         *nats.Conn
 
-	noop       bool
-	workingDir string
-	externData map[string]any
-	data       map[string]any
-	facts      map[string]any
-	env        map[string]string
+	noop        bool
+	workingDir  string
+	externData  map[string]any
+	data        map[string]any
+	facts       map[string]any
+	env         map[string]string
+	natsContext string
 
 	mu sync.Mutex
 }
@@ -64,6 +70,68 @@ func NewManager(log model.Logger, userLogger model.Logger, opts ...Option) (*CCM
 	}
 
 	return mgr, nil
+}
+
+// JetStream returns a JetStream connection, requires the context be set using WithNatsContext()
+func (m *CCM) JetStream() (jetstream.JetStream, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.js != nil {
+		return m.js, nil
+	}
+
+	if m.natsContext == "" {
+		return nil, fmt.Errorf("nats context not set")
+	}
+
+	var err error
+
+	m.nc, _, err = natscontext.Connect(m.natsContext, m.natsOptions(m.log)...)
+	if err != nil {
+		return nil, err
+	}
+
+	m.js, err = jetstream.New(m.nc, jetstream.WithDefaultTimeout(2*time.Second))
+	if err != nil {
+		return nil, err
+	}
+
+	return m.js, nil
+}
+
+func (m *CCM) natsOptions(log model.Logger) []nats.Option {
+	return []nats.Option{
+		nats.Name("choria-ccm"),
+		nats.MaxReconnects(-1),
+		nats.ReconnectErrHandler(func(conn *nats.Conn, err error) {
+			if conn != nil {
+				log.Error("NATS connection lost, attempting to reconnect", "error", conn.LastError())
+			} else {
+				log.Error("NATS connection lost, attempting to reconnect", "error", err.Error())
+			}
+		}),
+		nats.ConnectHandler(func(conn *nats.Conn) {
+			log.Debug("Connected to NATS Server", "server", conn.ConnectedUrlRedacted())
+		}),
+		nats.ClosedHandler(func(conn *nats.Conn) {
+			log.Error("NATS connection closed", "error", conn.LastError())
+		}),
+		nats.DisconnectErrHandler(func(conn *nats.Conn, err error) {
+			log.Error("NATS connection disconnected", "error", err.Error(), "server", conn.ConnectedUrlRedacted())
+		}),
+		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+			if subscription != nil {
+				log.Error("NATS subscription error", "error", err.Error(), "subject", subscription.Subject)
+			} else {
+				log.Error("NATS connection error", "error", err.Error())
+			}
+
+		}),
+		nats.ReconnectHandler(func(conn *nats.Conn) {
+			log.Info("NATS connection reconnected", "server", conn.ConnectedUrlRedacted())
+		}),
+	}
 }
 
 // SetExternalData sets the external data for the manager that will be merged with manifest data

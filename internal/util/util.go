@@ -5,9 +5,14 @@
 package util
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -213,5 +218,60 @@ func ShallowMerge(target, source map[string]any) map[string]any {
 func IsJsonObject(data []byte) bool {
 	trimmed := strings.TrimSpace(string(data))
 
-	return strings.HasPrefix(string(trimmed), "{") || strings.HasPrefix(string(trimmed), "[")
+	return strings.HasPrefix(trimmed, "{") || strings.HasPrefix(string(trimmed), "[")
+}
+
+func UntarGz(s io.Reader, td string) ([]string, error) {
+	uncompressed, err := gzip.NewReader(s)
+	if err != nil {
+		return nil, fmt.Errorf("unzip failed: %s", err)
+	}
+
+	var files []string
+
+	tarReader := tar.NewReader(uncompressed)
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeDir {
+			return nil, fmt.Errorf("only regular files and directories are supported")
+		}
+
+		if strings.Contains(header.Name, "..") {
+			return nil, fmt.Errorf("invalid tar file detected")
+		}
+
+		path := filepath.Join(td, header.Name)
+		if !strings.HasPrefix(path, td) {
+			return nil, fmt.Errorf("invalid tar file detected")
+		}
+
+		nfo := header.FileInfo()
+		if nfo.IsDir() {
+			err = os.MkdirAll(path, nfo.Mode())
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, nfo.Mode())
+		if err != nil {
+			return nil, err
+		}
+		_, err = io.Copy(file, tarReader)
+		file.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		files = append(files, path)
+	}
+
+	return files, nil
 }

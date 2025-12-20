@@ -11,6 +11,14 @@ import (
 // Option is a functional option for configuring CCM
 type Option func(*CCM) error
 
+// WithNatsContext sets the NATS context to use
+func WithNatsContext(nctx string) Option {
+	return func(ccm *CCM) error {
+		ccm.natsContext = nctx
+		return nil
+	}
+}
+
 // WithSessionDirectory sets the session store to use
 func WithSessionDirectory(path string) Option {
 	return func(c *CCM) error {
