@@ -23,16 +23,17 @@ import (
 )
 
 type hieraCommand struct {
-	input      string
-	factsInput map[string]string
-	factsFile  string
-	sysFacts   bool
-	envFacts   bool
-	yamlOutput bool
-	envOutput  bool
-	envPrefix  string
-	dataKey    string
-	query      string
+	input       string
+	factsInput  map[string]string
+	factsFile   string
+	sysFacts    bool
+	envFacts    bool
+	yamlOutput  bool
+	envOutput   bool
+	envPrefix   string
+	dataKey     string
+	query       string
+	natsContext string
 }
 
 func registerHieraCommand(ccm *fisk.Application) {
@@ -42,8 +43,8 @@ func registerHieraCommand(ccm *fisk.Application) {
 
 	hiera := ccm.Command("hiera", "Hierarchical data resolver")
 
-	parse := hiera.Command("parse", "Parses a YAML or JSON file and prints the result as JSON").Action(cmd.runAction)
-	parse.Arg("input", "Input JSON or YAML file to resolve").Envar("HIERA_INPUT").Required().ExistingFileVar(&cmd.input)
+	parse := hiera.Command("parse", "Parses a YAML or JSON file and prints the result as JSON").Action(cmd.parseAction)
+	parse.Arg("input", "Input JSON or YAML file to resolve").Envar("HIERA_INPUT").Required().StringVar(&cmd.input)
 	parse.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)
 	parse.Flag("facts", "JSON or YAML file containing facts").ExistingFileVar(&cmd.factsFile)
 	parse.Flag("system-facts", "Provide facts from the internal facts provider").Short('S').UnNegatableBoolVar(&cmd.sysFacts)
@@ -53,6 +54,7 @@ func registerHieraCommand(ccm *fisk.Application) {
 	parse.Flag("env-prefix", "Prefix for environment variable names").Default("HIERA").StringVar(&cmd.envPrefix)
 	parse.Flag("query", "Performs a gjson query on the result").StringVar(&cmd.query)
 	parse.Flag("data", "Sets the data key").Default("data").StringVar(&cmd.dataKey)
+	parse.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").StringVar(&cmd.natsContext)
 
 	facts := hiera.Command("facts", "Shows resolved facts").Action(cmd.showFactsAction)
 	facts.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)
@@ -83,13 +85,8 @@ func (cmd *hieraCommand) showFactsAction(_ *fisk.ParseContext) error {
 
 	return nil
 }
-func (cmd *hieraCommand) runAction(_ *fisk.ParseContext) error {
+func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 	facts, err := cmd.resolveFacts()
-	if err != nil {
-		return err
-	}
-
-	data, err := os.ReadFile(cmd.input)
 	if err != nil {
 		return err
 	}
@@ -99,13 +96,11 @@ func (cmd *hieraCommand) runAction(_ *fisk.ParseContext) error {
 
 	if debug {
 		logger = manager.NewSlogLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	} else {
+		logger = manager.NewSlogLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	}
 
-	if iu.IsJsonObject(data) {
-		res, err = hiera.ResolveJson(data, facts, hiera.Options{DataKey: cmd.dataKey}, logger)
-	} else {
-		res, err = hiera.ResolveYaml(data, facts, hiera.Options{DataKey: cmd.dataKey}, logger)
-	}
+	res, err = getHieraData(cmd.input, cmd.natsContext, hiera.DefaultOptions, facts, logger)
 	if err != nil {
 		return err
 	}
@@ -171,7 +166,7 @@ func (cmd *hieraCommand) resolveFacts() (map[string]any, error) {
 	facts := make(map[string]any)
 
 	if cmd.sysFacts {
-		mgr, _, err := newManager("", "", false, true)
+		mgr, _, err := newManager("", "", "", false, true)
 		if err != nil {
 			return nil, err
 		}

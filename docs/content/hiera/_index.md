@@ -148,6 +148,33 @@ $ ccm hiera parse test.json --env-facts
 
 These facts will be merged with ones from the command line and external files and all can be combined
 
+### Data in NATS
+
+[NATS](https://nats.io) is a lightweight messaging system that is straightforward to run and host; it supports being used as a Key-Value store.
+
+We can't cover NATS here in detail here, but hierarchy data can be stored in NATS Key-Value stores and used in the `ccm ensure` and `ccm hiera` commands.
+
+To use NATS as a hierarchy store, you need to configure a NATS `context` - a way to configure authentication or URLs for NATS.
+
+Let's add a context called `ccm` for our needs:
+
+```
+$ nats context add ccm --user nats.example.org --user ccm --password s£cret --description "Choria CM Configuration Store" 
+```
+
+We create a KV store that is stored replicated in a cluster and store the hierarchy from `hiera.yaml` in a Key called `data`:
+
+```
+$ nats kv add CCM --replicas 3 --context ccm
+$ nats kv put CCM data "$(cat hiera.yaml)"
+```
+
+We can now parse the hierarchy using system facts, this is identical to using the file locally:
+
+```
+$ ccm hiera parse kv://CCM/data --context ccm -S
+```
+
 ### Go example
 
 Supply a YAML document and a map of facts. The resolver will parse the hierarchy, replace `{{ lookup('facts.fact') }}` placeholders, and merge the matching sections.

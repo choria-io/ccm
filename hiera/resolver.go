@@ -5,6 +5,7 @@
 package hiera
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -16,6 +17,7 @@ import (
 	"github.com/choria-io/ccm/model"
 	"github.com/expr-lang/expr"
 	"github.com/goccy/go-yaml"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/tidwall/gjson"
 )
 
@@ -28,7 +30,10 @@ type Hierarchy struct {
 }
 
 type Options struct {
+	// DataKey is the key where the data section is stored in the parsed document.
 	DataKey string
+	// JetStream is the JetStream client to use for KV lookups
+	JetStream jetstream.JetStream
 }
 
 var DefaultOptions = Options{
@@ -139,7 +144,8 @@ func Resolve(root map[string]any, facts map[string]any, opts Options, log model.
 // The function decodes the YAML document and delegates processing to Resolve to perform merges and fact substitution.
 func ResolveYaml(data []byte, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
 	root := map[string]any{}
-	if err := yaml.Unmarshal(data, &root); err != nil {
+	err := yaml.Unmarshal(data, &root)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
@@ -150,8 +156,55 @@ func ResolveYaml(data []byte, facts map[string]any, opts Options, log model.Logg
 // The function decodes the JSON document and delegates processing to Resolve to perform merges and fact substitution.
 func ResolveJson(data []byte, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
 	root := map[string]any{}
-	if err := json.Unmarshal(data, &root); err != nil {
+	err := json.Unmarshal(data, &root)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	return Resolve(root, facts, opts, log)
+}
+
+// ResolveKeyValue consumes raw JSON bytes from a KV value and a map of facts to produce a final data map
+// The function decodes the JSON document and delegates processing to Resolve to perform merges and fact substitution.
+func ResolveKeyValue(ctx context.Context, bucket string, key string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+	if opts.JetStream == nil {
+		return nil, fmt.Errorf("jetstream is required")
+	}
+	js := opts.JetStream
+
+	log.Debug("Getting hiera data from JetStream KV", "key", key, "bucket", bucket)
+
+	kv, err := js.KeyValue(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	entry, err := kv.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if entry.Operation() != jetstream.KeyValuePut {
+		return nil, fmt.Errorf("kv %s#%s is not a put operation", bucket, key)
+	}
+
+	val := entry.Value()
+
+	if len(val) == 0 {
+		return nil, fmt.Errorf("kv %s#%s is empty", bucket, key)
+	}
+
+	root := map[string]any{}
+	if iu.IsJsonObject(val) {
+		err = json.Unmarshal(val, &root)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse JSON from kv %s#%s: %w", bucket, key, err)
+		}
+	} else {
+		err = yaml.Unmarshal(val, &root)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse JSON from kv %s#%s: %w", bucket, key, err)
+		}
 	}
 
 	return Resolve(root, facts, opts, log)
