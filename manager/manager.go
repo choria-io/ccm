@@ -317,6 +317,11 @@ func (m *CCM) Logger(args ...any) (model.Logger, error) {
 	return m.log.With(args...), nil
 }
 
+// UserLogger returns the user logger
+func (m *CCM) UserLogger() model.Logger {
+	return m.userLogger
+}
+
 // NewRunner creates a new command runner instance
 func (m *CCM) NewRunner() (model.CommandRunner, error) {
 	log, err := m.Logger("component", "runner")

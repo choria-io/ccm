@@ -43,8 +43,8 @@ func ParseNagiosExitCode(exitCode int, output string) *model.HealthCheckResult {
 // Execute runs a health check command and returns an error if the check fails.
 // If Tries > 1, the check will be retried up to Tries times with ParseTrySleep
 // delay between attempts until the check passes (returns OK status).
-func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck, log model.Logger) (*model.HealthCheckResult, error) {
-	if hc.Command == "" {
+func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck, userLogger model.Logger, log model.Logger) (*model.HealthCheckResult, error) {
+	if hc == nil || hc.Command == "" {
 		return nil, ErrCommandNotSpecified
 	}
 
@@ -102,6 +102,10 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 		// If check passed, return immediately
 		if result.Status == model.HealthCheckOK {
 			break
+		}
+
+		if userLogger != nil {
+			userLogger.Warn("Health check failed", "check", hc.Name, "try", attempt, "sleep", hc.ParseTrySleep, "status", result.Status)
 		}
 
 		// If this was the last attempt, return the result

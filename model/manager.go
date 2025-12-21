@@ -26,6 +26,7 @@ type Manager interface {
 	Data() map[string]any
 	SetData(data map[string]any) map[string]any
 	Logger(args ...any) (Logger, error)
+	UserLogger() Logger
 	NewRunner() (CommandRunner, error)
 	RecordEvent(event *TransactionEvent) error
 	ShouldRefresh(resourceType string, resourceName string) (bool, error)

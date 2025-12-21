@@ -47,7 +47,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 		return nil, err
 	}
 
-	logger, err := mgr.Logger("type", model.ServiceTypeName, "name", properties.Name)
+	loggerArgs := []any{"type", model.ServiceTypeName, "name", properties.Name}
+	logger, err := mgr.Logger(loggerArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +67,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 		Ensure:             properties.Ensure,
 		ResourceProperties: &properties,
 		Log:                logger,
+		UserLogger:         mgr.UserLogger().With(loggerArgs...),
 		Manager:            mgr,
 	}
 
