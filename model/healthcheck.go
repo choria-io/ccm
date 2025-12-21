@@ -7,6 +7,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/choria-io/fisk"
@@ -38,7 +39,8 @@ func (s HealthCheckStatus) String() string {
 }
 
 type CommonHealthCheck struct {
-	Command       string            `json:"command,omitempty" yaml:"command,omitempty"`
+	Command       string            `json:"command" yaml:"command"`
+	Name          string            `json:"name,omitempty" yaml:"name,omitempty"`
 	Timeout       string            `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Tries         int               `json:"tries,omitempty" yaml:"tries,omitempty"`
 	TrySleep      string            `json:"try_sleep,omitempty" yaml:"try_sleep,omitempty"`
@@ -79,6 +81,11 @@ func (c *CommonHealthCheck) UnmarshalJSON(data []byte) error {
 
 	if c.Format == "" {
 		c.Format = HealthCheckNagiosFormat
+	}
+
+	// TODO: once builtins come make this work
+	if c.Name == "" {
+		c.Name = filepath.Base(c.Command)
 	}
 
 	return nil

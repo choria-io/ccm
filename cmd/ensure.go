@@ -55,15 +55,15 @@ func (cmd *ensureCommand) manager() (model.Manager, error) {
 	return mgr, nil
 }
 
-func (cmd *ensureCommand) healthCheckProperties() *model.CommonHealthCheck {
+func (cmd *ensureCommand) healthCheckProperties() []model.CommonHealthCheck {
 	if cmd.healthCheckCommand == "" {
 		return nil
 	}
 
-	return &model.CommonHealthCheck{
+	return []model.CommonHealthCheck{{
 		Command:       cmd.healthCheckCommand,
 		Tries:         cmd.healthCheckTries,
 		ParseTrySleep: cmd.healthCheckSleep,
 		TrySleep:      cmd.healthCheckSleep.String(),
-	}
+	}}
 }

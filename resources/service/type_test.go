@@ -160,7 +160,7 @@ var _ = Describe("Service Type", func() {
 
 				event, err := svc.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("status failed"))
+				Expect(event.Errors).To(ContainElement("status failed"))
 			})
 
 			Context("when ensure is running", func() {
@@ -215,7 +215,7 @@ var _ = Describe("Service Type", func() {
 
 					event, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("start failed"))
+					Expect(event.Errors).To(ContainElement("start failed"))
 				})
 			})
 
@@ -269,7 +269,7 @@ var _ = Describe("Service Type", func() {
 
 					event, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("stop failed"))
+					Expect(event.Errors).To(ContainElement("stop failed"))
 				})
 			})
 
@@ -322,7 +322,7 @@ var _ = Describe("Service Type", func() {
 
 					event, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("enable failed"))
+					Expect(event.Errors).To(ContainElement("enable failed"))
 				})
 			})
 
@@ -375,7 +375,7 @@ var _ = Describe("Service Type", func() {
 
 					event, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("disable failed"))
+					Expect(event.Errors).To(ContainElement("disable failed"))
 				})
 			})
 
@@ -428,7 +428,7 @@ var _ = Describe("Service Type", func() {
 
 					event, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("restart failed"))
+					Expect(event.Errors).To(ContainElement("restart failed"))
 				})
 
 				It("Should fail if ShouldRefresh fails", func(ctx context.Context) {
@@ -442,7 +442,7 @@ var _ = Describe("Service Type", func() {
 
 					event, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("refresh check failed"))
+					Expect(event.Errors).To(ContainElement("refresh check failed"))
 				})
 			})
 
@@ -517,7 +517,7 @@ var _ = Describe("Service Type", func() {
 
 				event, err := svc.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("final status failed"))
+				Expect(event.Errors).To(ContainElement("final status failed"))
 			})
 
 			It("Should fail if desired state is not reached", func(ctx context.Context) {
@@ -536,14 +536,14 @@ var _ = Describe("Service Type", func() {
 
 				event, err := svc.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("failed to reach desired state"))
+				Expect(event.Errors).To(ContainElement("failed to reach desired state running"))
 			})
 
 			Context("with health check", func() {
 				It("Should succeed when health check passes", func(ctx context.Context) {
-					svc.prop.HealthCheck = &model.CommonHealthCheck{
+					svc.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
-					}
+					}}
 					state := &model.ServiceState{
 						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
 						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
@@ -556,13 +556,13 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeFalse())
-					Expect(result.Error).To(BeEmpty())
+					Expect(result.Errors).To(BeEmpty())
 				})
 
 				It("Should fail when health check returns warning", func(ctx context.Context) {
-					svc.prop.HealthCheck = &model.CommonHealthCheck{
+					svc.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
-					}
+					}}
 					state := &model.ServiceState{
 						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
 						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
@@ -575,15 +575,15 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeTrue())
-					Expect(result.Error).To(Equal("health check status \"WARNING\""))
-					Expect(result.HealthCheck).ToNot(BeNil())
-					Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckWarning))
+					Expect(result.Errors).To(ContainElement("health check status \"WARNING\""))
+					Expect(result.HealthChecks).To(HaveLen(1))
+					Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckWarning))
 				})
 
 				It("Should fail when health check returns critical", func(ctx context.Context) {
-					svc.prop.HealthCheck = &model.CommonHealthCheck{
+					svc.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
-					}
+					}}
 					state := &model.ServiceState{
 						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
 						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
@@ -596,15 +596,15 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeTrue())
-					Expect(result.Error).To(Equal("health check status \"CRITICAL\""))
-					Expect(result.HealthCheck).ToNot(BeNil())
-					Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckCritical))
+					Expect(result.Errors).To(ContainElement("health check status \"CRITICAL\""))
+					Expect(result.HealthChecks).To(HaveLen(1))
+					Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckCritical))
 				})
 
 				It("Should fail when health check command execution fails", func(ctx context.Context) {
-					svc.prop.HealthCheck = &model.CommonHealthCheck{
+					svc.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_http -H localhost",
-					}
+					}}
 					state := &model.ServiceState{
 						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
 						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
@@ -617,11 +617,11 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeTrue())
-					Expect(result.Error).To(ContainSubstring("command not found"))
+					Expect(result.Errors).To(ContainElement("command not found"))
 				})
 
 				It("Should not run health check when not configured", func(ctx context.Context) {
-					svc.prop.HealthCheck = nil
+					svc.prop.HealthChecks = nil
 					state := &model.ServiceState{
 						CommonResourceState: model.CommonResourceState{Name: "nginx", Ensure: model.ServiceEnsureRunning},
 						Metadata:            &model.ServiceMetadata{Name: "nginx", Running: true},
@@ -633,7 +633,7 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeFalse())
-					Expect(result.HealthCheck).To(BeNil())
+					Expect(result.HealthChecks).To(BeNil())
 				})
 			})
 		})

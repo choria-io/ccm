@@ -81,10 +81,10 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		Group: group,
 		Mode:  c.mode,
 		CommonResourceProperties: model.CommonResourceProperties{
-			Name:        c.name,
-			Ensure:      c.ensure,
-			Provider:    c.provider,
-			HealthCheck: c.parent.healthCheckProperties(),
+			Name:         c.name,
+			Ensure:       c.ensure,
+			Provider:     c.provider,
+			HealthChecks: c.parent.healthCheckProperties(),
 		},
 	}
 

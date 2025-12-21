@@ -83,7 +83,7 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 			execCtx, cancel = context.WithTimeout(ctx, hc.ParsedTimeout)
 		}
 
-		timer := prometheus.NewTimer(metrics.HealthCheckTime.WithLabelValues(hc.TypeName, hc.ResourceName))
+		timer := prometheus.NewTimer(metrics.HealthCheckTime.WithLabelValues(hc.TypeName, hc.ResourceName, hc.Name))
 		out, _, exitCode, err := runner.Execute(execCtx, cmd[0], args...)
 		timer.ObserveDuration()
 
@@ -124,7 +124,7 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 		}
 	}
 
-	metrics.HealthStatusCount.WithLabelValues(hc.TypeName, hc.ResourceName, result.Status.String()).Inc()
+	metrics.HealthStatusCount.WithLabelValues(hc.TypeName, hc.ResourceName, result.Status.String(), hc.Name).Inc()
 
 	return result, nil
 }

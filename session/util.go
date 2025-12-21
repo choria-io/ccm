@@ -28,7 +28,7 @@ func updateMetrics(event model.SessionEvent) {
 		metrics.ResourceStateRefreshed.WithLabelValues(e.ResourceType, e.Name).Inc()
 	case e.Failed:
 		metrics.ResourceStateFailed.WithLabelValues(e.ResourceType, e.Name).Inc()
-	case e.Error != "":
+	case len(e.Errors) > 0:
 		metrics.ResourceStateError.WithLabelValues(e.ResourceType, e.Name).Inc()
 	}
 }

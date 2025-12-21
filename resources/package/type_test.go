@@ -130,7 +130,7 @@ var _ = Describe("Package Type", func() {
 				pkg.prop.Ensure = ""
 				event, err := pkg.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("invalid value for ensure"))
+				Expect(event.Errors).To(ContainElement(ContainSubstring("invalid value for ensure")))
 			})
 
 			It("Should fail if initial status check fails", func(ctx context.Context) {
@@ -139,7 +139,7 @@ var _ = Describe("Package Type", func() {
 				event, err := pkg.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("status failed"))
+				Expect(event.Errors).To(ContainElement(ContainSubstring("status failed")))
 			})
 
 			Context("when ensure is present", func() {
@@ -182,7 +182,7 @@ var _ = Describe("Package Type", func() {
 
 					event, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("install failed"))
+					Expect(event.Errors).To(ContainElement("install failed"))
 				})
 			})
 
@@ -214,7 +214,7 @@ var _ = Describe("Package Type", func() {
 
 					event, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("uninstall failed"))
+					Expect(event.Errors).To(ContainElement("uninstall failed"))
 				})
 			})
 
@@ -245,7 +245,7 @@ var _ = Describe("Package Type", func() {
 
 					event, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(Equal("upgrade failed"))
+					Expect(event.Errors).To(ContainElement("upgrade failed"))
 				})
 			})
 
@@ -324,7 +324,7 @@ var _ = Describe("Package Type", func() {
 
 					event, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("upgrade failed"))
+					Expect(event.Errors).To(ContainElement("upgrade failed"))
 				})
 
 				It("Should fail if downgrade fails", func(ctx context.Context) {
@@ -336,7 +336,7 @@ var _ = Describe("Package Type", func() {
 
 					event, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("downgrade failed"))
+					Expect(event.Errors).To(ContainElement("downgrade failed"))
 				})
 			})
 
@@ -350,7 +350,7 @@ var _ = Describe("Package Type", func() {
 
 				event, err := pkg.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("final status failed"))
+				Expect(event.Errors).To(ContainElement("final status failed"))
 			})
 
 			It("Should fail if desired state is not reached", func(ctx context.Context) {
@@ -364,14 +364,14 @@ var _ = Describe("Package Type", func() {
 
 				event, err := pkg.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("failed to reach desired state"))
+				Expect(event.Errors).To(ContainElement("failed to reach desired state absent"))
 			})
 
 			Context("with health check", func() {
 				It("Should succeed when health check passes", func(ctx context.Context) {
-					pkg.prop.HealthCheck = &model.CommonHealthCheck{
+					pkg.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_disk -w 20%",
-					}
+					}}
 					state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
@@ -381,13 +381,13 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeFalse())
-					Expect(result.Error).To(BeEmpty())
+					Expect(result.Errors).To(BeEmpty())
 				})
 
 				It("Should fail when health check returns warning", func(ctx context.Context) {
-					pkg.prop.HealthCheck = &model.CommonHealthCheck{
+					pkg.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_disk -w 20%",
-					}
+					}}
 					state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
@@ -397,15 +397,15 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeTrue())
-					Expect(result.Error).To(Equal("health check status \"WARNING\""))
-					Expect(result.HealthCheck).ToNot(BeNil())
-					Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckWarning))
+					Expect(result.Errors).To(ContainElement("health check status \"WARNING\""))
+					Expect(result.HealthChecks).To(HaveLen(1))
+					Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckWarning))
 				})
 
 				It("Should fail when health check returns critical", func(ctx context.Context) {
-					pkg.prop.HealthCheck = &model.CommonHealthCheck{
+					pkg.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_disk -w 20%",
-					}
+					}}
 					state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
@@ -415,15 +415,15 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeTrue())
-					Expect(result.Error).To(Equal("health check status \"CRITICAL\""))
-					Expect(result.HealthCheck).ToNot(BeNil())
-					Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckCritical))
+					Expect(result.Errors).To(ContainElement("health check status \"CRITICAL\""))
+					Expect(result.HealthChecks).To(HaveLen(1))
+					Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckCritical))
 				})
 
 				It("Should fail when health check command execution fails", func(ctx context.Context) {
-					pkg.prop.HealthCheck = &model.CommonHealthCheck{
+					pkg.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/lib/nagios/plugins/check_disk -w 20%",
-					}
+					}}
 					state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
@@ -433,11 +433,11 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeTrue())
-					Expect(result.Error).To(ContainSubstring("command not found"))
+					Expect(result.Errors).To(ContainElement("command not found"))
 				})
 
 				It("Should not run health check when not configured", func(ctx context.Context) {
-					pkg.prop.HealthCheck = nil
+					pkg.prop.HealthChecks = []model.CommonHealthCheck{}
 					state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
@@ -446,7 +446,7 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeFalse())
-					Expect(result.HealthCheck).To(BeNil())
+					Expect(result.HealthChecks).To(HaveLen(0))
 				})
 			})
 		})

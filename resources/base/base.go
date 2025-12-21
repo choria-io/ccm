@@ -77,25 +77,24 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 		event.Duration = time.Since(start)
 		if err != nil {
 			event.Failed = true
-			event.Error = err.Error()
+			event.Errors = append(event.Errors, err.Error())
 		}
 	}
 
-	cp := b.ResourceProperties.CommonProperties()
+	// TODO: make helper in healthchecks
+	for _, hc := range b.ResourceProperties.CommonProperties().HealthChecks {
+		hc.TypeName = model.ServiceTypeName
+		hc.ResourceName = b.InstanceName
 
-	if cp.HealthCheck != nil {
-		cp.HealthCheck.TypeName = model.ServiceTypeName
-		cp.HealthCheck.ResourceName = b.InstanceName
-
-		res, err := healthcheck.Execute(ctx, b.Manager, cp.HealthCheck, b.Log)
-		event.HealthCheck = res
+		res, err := healthcheck.Execute(ctx, b.Manager, &hc, b.Log)
+		event.HealthChecks = append(event.HealthChecks, res)
 		if err != nil {
 			event.Failed = true
-			event.Error = err.Error()
+			event.Errors = append(event.Errors, err.Error())
 		} else {
 			if res.Status != model.HealthCheckOK {
 				event.Failed = true
-				event.Error = fmt.Sprintf("health check status %q", res.Status.String())
+				event.Errors = append(event.Errors, fmt.Sprintf("health check status %q", res.Status.String()))
 			}
 		}
 	}
