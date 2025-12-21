@@ -101,58 +101,58 @@ format: nagios`
 	})
 
 	Describe("Embedded in CommonResourceProperties", func() {
-		It("should parse health_check timeout from JSON", func() {
+		It("should parse health_checks timeout from JSON", func() {
 			jsonInput := `{
 				"name": "test",
 				"ensure": "present",
-				"health_check": {
+				"health_checks": [{
 					"command": "/bin/check",
 					"timeout": "1m30s"
-				}
+				}]
 			}`
 			var props CommonResourceProperties
 			err := json.Unmarshal([]byte(jsonInput), &props)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(props.HealthCheck).ToNot(BeNil())
-			Expect(props.HealthCheck.Command).To(Equal("/bin/check"))
-			Expect(props.HealthCheck.Timeout).To(Equal("1m30s"))
-			Expect(props.HealthCheck.ParsedTimeout).To(Equal(90 * time.Second))
+			Expect(props.HealthChecks).To(HaveLen(1))
+			Expect(props.HealthChecks[0].Command).To(Equal("/bin/check"))
+			Expect(props.HealthChecks[0].Timeout).To(Equal("1m30s"))
+			Expect(props.HealthChecks[0].ParsedTimeout).To(Equal(90 * time.Second))
 		})
 
-		It("should parse health_check timeout from YAML", func() {
+		It("should parse health_checks timeout from YAML", func() {
 			yamlInput := `name: test
 ensure: present
-health_check:
-  command: /bin/check
-  timeout: 1m30s`
+health_checks:
+  - command: /bin/check
+    timeout: 1m30s`
 			var props CommonResourceProperties
 			err := yaml.Unmarshal([]byte(yamlInput), &props)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(props.HealthCheck).ToNot(BeNil())
-			Expect(props.HealthCheck.Command).To(Equal("/bin/check"))
-			Expect(props.HealthCheck.Timeout).To(Equal("1m30s"))
-			Expect(props.HealthCheck.ParsedTimeout).To(Equal(90 * time.Second))
+			Expect(props.HealthChecks).To(HaveLen(1))
+			Expect(props.HealthChecks[0].Command).To(Equal("/bin/check"))
+			Expect(props.HealthChecks[0].Timeout).To(Equal("1m30s"))
+			Expect(props.HealthChecks[0].ParsedTimeout).To(Equal(90 * time.Second))
 		})
 
-		It("should handle nil health_check in JSON", func() {
+		It("should handle empty health_checks in JSON", func() {
 			jsonInput := `{"name": "test", "ensure": "present"}`
 			var props CommonResourceProperties
 			err := json.Unmarshal([]byte(jsonInput), &props)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(props.HealthCheck).To(BeNil())
+			Expect(props.HealthChecks).To(BeEmpty())
 		})
 
-		It("should handle nil health_check in YAML", func() {
+		It("should handle empty health_checks in YAML", func() {
 			yamlInput := `name: test
 ensure: present`
 			var props CommonResourceProperties
 			err := yaml.Unmarshal([]byte(yamlInput), &props)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(props.HealthCheck).To(BeNil())
+			Expect(props.HealthChecks).To(BeEmpty())
 		})
 	})
 })

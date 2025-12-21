@@ -116,19 +116,19 @@ var _ = Describe("Base", func() {
 		})
 
 		It("Should return non-failed event when no health check is configured", func(ctx context.Context) {
-			props.HealthCheck = nil
+			props.HealthChecks = nil
 
 			result, err := b.Healthcheck(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeFalse())
-			Expect(result.HealthCheck).To(BeNil())
+			Expect(result.HealthChecks).To(BeEmpty())
 			Expect(result.Changed).To(BeFalse())
 		})
 
 		It("Should succeed when health check passes", func(ctx context.Context) {
-			props.HealthCheck = &model.CommonHealthCheck{
+			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
-			}
+			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/test", "-f", "/tmp/testfile").
 				Return([]byte("OK"), []byte{}, 0, nil)
@@ -136,15 +136,15 @@ var _ = Describe("Base", func() {
 			result, err := b.Healthcheck(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeFalse())
-			Expect(result.HealthCheck).ToNot(BeNil())
-			Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckOK))
+			Expect(result.HealthChecks).To(HaveLen(1))
+			Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckOK))
 			Expect(result.Changed).To(BeFalse())
 		})
 
 		It("Should fail when health check fails", func(ctx context.Context) {
-			props.HealthCheck = &model.CommonHealthCheck{
+			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
-			}
+			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/test", "-f", "/tmp/testfile").
 				Return([]byte("CRITICAL"), []byte{}, 2, nil)
@@ -152,16 +152,16 @@ var _ = Describe("Base", func() {
 			result, err := b.Healthcheck(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeTrue())
-			Expect(result.Error).To(ContainSubstring("health check status"))
-			Expect(result.HealthCheck).ToNot(BeNil())
-			Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckCritical))
+			Expect(result.Errors).To(ContainElement(ContainSubstring("health check status")))
+			Expect(result.HealthChecks).To(HaveLen(1))
+			Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckCritical))
 			Expect(result.Changed).To(BeFalse())
 		})
 
 		It("Should fail when health check returns warning", func(ctx context.Context) {
-			props.HealthCheck = &model.CommonHealthCheck{
+			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/check_something",
-			}
+			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/check_something").
 				Return([]byte("WARNING: something is not quite right"), []byte{}, 1, nil)
@@ -169,15 +169,15 @@ var _ = Describe("Base", func() {
 			result, err := b.Healthcheck(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeTrue())
-			Expect(result.Error).To(ContainSubstring("health check status"))
-			Expect(result.HealthCheck).ToNot(BeNil())
-			Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckWarning))
+			Expect(result.Errors).To(ContainElement(ContainSubstring("health check status")))
+			Expect(result.HealthChecks).To(HaveLen(1))
+			Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckWarning))
 		})
 
 		It("Should fail when health check command execution fails", func(ctx context.Context) {
-			props.HealthCheck = &model.CommonHealthCheck{
+			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/nonexistent",
-			}
+			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/nonexistent").
 				Return(nil, nil, 0, fmt.Errorf("command not found"))
@@ -185,13 +185,13 @@ var _ = Describe("Base", func() {
 			result, err := b.Healthcheck(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeTrue())
-			Expect(result.Error).To(ContainSubstring("command not found"))
+			Expect(result.Errors).To(ContainElement(ContainSubstring("command not found")))
 		})
 
 		It("Should not call ApplyResource", func(ctx context.Context) {
 			// This test verifies that Healthcheck does NOT call apply logic
 			// The mockRes has no ApplyResource expectation set, so any call would fail
-			props.HealthCheck = nil
+			props.HealthChecks = nil
 
 			result, err := b.Healthcheck(ctx)
 			Expect(err).ToNot(HaveOccurred())
@@ -199,9 +199,9 @@ var _ = Describe("Base", func() {
 		})
 
 		It("Should capture health check output", func(ctx context.Context) {
-			props.HealthCheck = &model.CommonHealthCheck{
+			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/check_disk",
-			}
+			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/check_disk").
 				Return([]byte("DISK OK - free space: 50%"), []byte{}, 0, nil)
@@ -209,7 +209,7 @@ var _ = Describe("Base", func() {
 			result, err := b.Healthcheck(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeFalse())
-			Expect(result.HealthCheck.Output).To(Equal("DISK OK - free space: 50%"))
+			Expect(result.HealthChecks[0].Output).To(Equal("DISK OK - free space: 50%"))
 		})
 
 		It("Should return error when SelectProvider fails", func(ctx context.Context) {
@@ -241,7 +241,7 @@ var _ = Describe("Base", func() {
 		})
 
 		It("Should call ApplyResource and return state", func(ctx context.Context) {
-			props.HealthCheck = nil
+			props.HealthChecks = nil
 			state := &model.FileState{
 				CommonResourceState: model.CommonResourceState{
 					Ensure:  model.EnsurePresent,
@@ -259,20 +259,20 @@ var _ = Describe("Base", func() {
 		})
 
 		It("Should mark event as failed when ApplyResource fails", func(ctx context.Context) {
-			props.HealthCheck = nil
+			props.HealthChecks = nil
 
 			mockRes.EXPECT().ApplyResource(gomock.Any()).Return(nil, fmt.Errorf("apply failed"))
 
 			result, err := b.Apply(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeTrue())
-			Expect(result.Error).To(ContainSubstring("apply failed"))
+			Expect(result.Errors).To(ContainElement(ContainSubstring("apply failed")))
 		})
 
 		It("Should run health check after apply", func(ctx context.Context) {
-			props.HealthCheck = &model.CommonHealthCheck{
+			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
-			}
+			}}
 			state := &model.FileState{
 				CommonResourceState: model.CommonResourceState{
 					Ensure:  model.EnsurePresent,
@@ -289,14 +289,14 @@ var _ = Describe("Base", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeFalse())
 			Expect(result.Changed).To(BeTrue())
-			Expect(result.HealthCheck).ToNot(BeNil())
-			Expect(result.HealthCheck.Status).To(Equal(model.HealthCheckOK))
+			Expect(result.HealthChecks).To(HaveLen(1))
+			Expect(result.HealthChecks[0].Status).To(Equal(model.HealthCheckOK))
 		})
 
 		It("Should mark event as failed when health check fails after successful apply", func(ctx context.Context) {
-			props.HealthCheck = &model.CommonHealthCheck{
+			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
-			}
+			}}
 			state := &model.FileState{
 				CommonResourceState: model.CommonResourceState{
 					Ensure:  model.EnsurePresent,
@@ -312,12 +312,12 @@ var _ = Describe("Base", func() {
 			result, err := b.Apply(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Failed).To(BeTrue())
-			Expect(result.Error).To(ContainSubstring("health check status"))
+			Expect(result.Errors).To(ContainElement(ContainSubstring("health check status")))
 			Expect(result.Changed).To(BeTrue())
 		})
 
 		It("Should set noop fields from state", func(ctx context.Context) {
-			props.HealthCheck = nil
+			props.HealthChecks = nil
 			state := &model.FileState{
 				CommonResourceState: model.CommonResourceState{
 					Ensure:      model.EnsurePresent,

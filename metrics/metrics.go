@@ -28,13 +28,13 @@ var (
 	HealthCheckTime = prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Name: prometheus.BuildFQName(NameSpace, Subsystem, "healthcheck_duration_seconds"),
 		Help: "Time taken to health check a particular resource",
-	}, []string{"type", "name"})
+	}, []string{"type", "name", "check"})
 
 	// HealthStatusCount is how many checks are in a certain state
 	HealthStatusCount = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: prometheus.BuildFQName(NameSpace, Subsystem, "healthcheck_status_count"),
 		Help: "How many resources are in a certain state",
-	}, []string{"type", "name", "status"})
+	}, []string{"type", "name", "status", "check"})
 
 	// ResourceStateChanged counts how many resources were changed
 	ResourceStateChanged = prometheus.NewCounterVec(prometheus.CounterOpts{

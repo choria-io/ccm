@@ -7,6 +7,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/segmentio/ksuid"
@@ -38,26 +39,26 @@ const SessionStartEventProtocol = "io.choria.ccm.v1.session.start"
 
 // TransactionEvent represents a single event for a resource session
 type TransactionEvent struct {
-	Protocol     string             `json:"protocol" yaml:"protocol"`
-	EventID      string             `json:"event_id" yaml:"event_id"`
-	TimeStamp    time.Time          `json:"timestamp" yaml:"timestamp"`
-	ResourceType string             `json:"type" yaml:"type"`
-	Provider     string             `json:"provider" yaml:"provider"`
-	Name         string             `json:"name" yaml:"name"`
-	Ensure       string             `json:"ensure" yaml:"ensure"`               // Ensure is the requested ensure value
-	ActualEnsure string             `json:"actual_ensure" yaml:"actual_ensure"` // ActualEnsure is the actual `ensure` value after the session
-	Duration     time.Duration      `json:"duration" yaml:"duration"`
-	Properties   ResourceProperties `json:"properties" yaml:"properties"`
-	Status       ResourceState      `json:"status" yaml:"status"`
-	NoopMessage  string             `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
-	HealthCheck  *HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
+	Protocol     string               `json:"protocol" yaml:"protocol"`
+	EventID      string               `json:"event_id" yaml:"event_id"`
+	TimeStamp    time.Time            `json:"timestamp" yaml:"timestamp"`
+	ResourceType string               `json:"type" yaml:"type"`
+	Provider     string               `json:"provider" yaml:"provider"`
+	Name         string               `json:"name" yaml:"name"`
+	Ensure       string               `json:"ensure" yaml:"ensure"`               // Ensure is the requested ensure value
+	ActualEnsure string               `json:"actual_ensure" yaml:"actual_ensure"` // ActualEnsure is the actual `ensure` value after the session
+	Duration     time.Duration        `json:"duration" yaml:"duration"`
+	Properties   ResourceProperties   `json:"properties" yaml:"properties"`
+	Status       ResourceState        `json:"status" yaml:"status"`
+	NoopMessage  string               `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
+	HealthChecks []*HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 
-	Error     string `json:"error" yaml:"error"`
-	Changed   bool   `json:"changed" yaml:"changed"`
-	Refreshed bool   `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
-	Failed    bool   `json:"failed" yaml:"failed"`
-	Skipped   bool   `json:"skipped" yaml:"skipped"`
-	Noop      bool   `json:"noop" yaml:"noop"`
+	Errors    []string `json:"error" yaml:"error"`
+	Changed   bool     `json:"changed" yaml:"changed"`
+	Refreshed bool     `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
+	Failed    bool     `json:"failed" yaml:"failed"`
+	Skipped   bool     `json:"skipped" yaml:"skipped"`
+	Noop      bool     `json:"noop" yaml:"noop"`
 }
 
 type SessionStartEvent struct {
@@ -98,11 +99,6 @@ func (t *TransactionEvent) LogStatus(log Logger) {
 		"provider", t.Provider,
 	}
 
-	if t.HealthCheck != nil {
-		args = append(args, "checks", t.HealthCheck.Tries)
-		args = append(args, "status", t.HealthCheck.Status.String())
-	}
-
 	if t.Noop {
 		if t.NoopMessage != "" {
 			args = append(args, "noop", t.NoopMessage)
@@ -113,7 +109,7 @@ func (t *TransactionEvent) LogStatus(log Logger) {
 
 	switch {
 	case t.Failed:
-		log.Error(fmt.Sprintf("%s#%s failed", t.ResourceType, t.Name), append(args, "error", t.Error)...)
+		log.Error(fmt.Sprintf("%s#%s failed", t.ResourceType, t.Name), append(args, "errors", strings.Join(t.Errors, ", "))...)
 	case t.Skipped:
 		log.Warn(fmt.Sprintf("%s#%s skipped", t.ResourceType, t.Name), args...)
 	case t.Refreshed:
@@ -127,7 +123,7 @@ func (t *TransactionEvent) LogStatus(log Logger) {
 func (t *TransactionEvent) String() string {
 	switch {
 	case t.Failed:
-		return fmt.Sprintf("%s#%s failed ensure=%s runtime=%v error=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Error, t.Provider)
+		return fmt.Sprintf("%s#%s failed ensure=%s runtime=%v errors=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, strings.Join(t.Errors, ","), t.Provider)
 	case t.Skipped:
 		return fmt.Sprintf("%s#%s skipped ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
 	case t.Changed:
@@ -205,9 +201,9 @@ func BuildSessionSummary(events []SessionEvent) *SessionSummary {
 			summary.RefreshedCount++
 		}
 
-		if txEvent.HealthCheck != nil {
+		for _, hc := range txEvent.HealthChecks {
 			summary.HealthCheckedCount++
-			switch txEvent.HealthCheck.Status {
+			switch hc.Status {
 			case HealthCheckOK:
 				summary.HealthCheckOKCount++
 			case HealthCheckWarning:

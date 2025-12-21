@@ -33,7 +33,7 @@ var _ = Describe("SessionSummary", func() {
 			// Failed resource
 			failedEvent := NewTransactionEvent("service", "apache")
 			failedEvent.Failed = true
-			failedEvent.Error = "service not found"
+			failedEvent.Errors = append(failedEvent.Errors, "service not found")
 			failedEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 10, 0, time.UTC)
 			failedEvent.Duration = 2 * time.Second
 			events = append(events, failedEvent)

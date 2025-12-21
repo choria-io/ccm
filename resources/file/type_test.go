@@ -382,7 +382,7 @@ var _ = Describe("File Type", func() {
 
 				event, err := file.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("status failed"))
+				Expect(event.Errors).To(ContainElement(ContainSubstring("status failed")))
 			})
 
 			Context("when ensure is present", func() {
@@ -503,7 +503,7 @@ var _ = Describe("File Type", func() {
 
 					event, err := file.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("store failed"))
+					Expect(event.Errors).To(ContainElement(ContainSubstring("store failed")))
 				})
 			})
 
@@ -587,7 +587,7 @@ var _ = Describe("File Type", func() {
 
 					event, err := file.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(event.Error).To(ContainSubstring("mkdir failed"))
+					Expect(event.Errors).To(ContainElement(ContainSubstring("mkdir failed")))
 				})
 			})
 
@@ -604,7 +604,7 @@ var _ = Describe("File Type", func() {
 
 				event, err := file.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("final status failed"))
+				Expect(event.Errors).To(ContainElement(ContainSubstring("final status failed")))
 			})
 
 			It("Should fail if desired state is not reached", func(ctx context.Context) {
@@ -624,14 +624,14 @@ var _ = Describe("File Type", func() {
 
 				event, err := file.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Error).To(ContainSubstring("failed to reach desired state"))
+				Expect(event.Errors).To(ContainElement(ContainSubstring("failed to reach desired state")))
 			})
 
 			Context("with health check", func() {
 				It("Should succeed when health check passes", func(ctx context.Context) {
-					file.prop.HealthCheck = &model.CommonHealthCheck{
+					file.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/bin/test -f /tmp/testfile",
-					}
+					}}
 					state := &model.FileState{
 						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
 						Metadata: &model.FileMetadata{
@@ -652,9 +652,9 @@ var _ = Describe("File Type", func() {
 				})
 
 				It("Should fail when health check fails", func(ctx context.Context) {
-					file.prop.HealthCheck = &model.CommonHealthCheck{
+					file.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/bin/test -f /tmp/testfile",
-					}
+					}}
 					state := &model.FileState{
 						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
 						Metadata: &model.FileMetadata{
@@ -672,7 +672,7 @@ var _ = Describe("File Type", func() {
 					result, err := file.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Failed).To(BeTrue())
-					Expect(result.Error).To(ContainSubstring("health check status"))
+					Expect(result.Errors).To(ContainElement(ContainSubstring("health check status")))
 				})
 			})
 		})
