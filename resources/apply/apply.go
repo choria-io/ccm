@@ -29,11 +29,18 @@ import (
 
 // Apply represents a parsed and resolved manifest ready for execution
 type Apply struct {
+	source    string
 	resources []map[string]model.ResourceProperties
 	data      map[string]any
 
 	mu sync.Mutex
 }
+
+func (a *Apply) String() string {
+	return fmt.Sprintf("%s with %d resources", a.source, len(a.resources))
+}
+
+func (a *Apply) Source() string { return a.source }
 
 func (a *Apply) MarshalYAML() ([]byte, error) {
 	return yaml.Marshal(a.toMap())
@@ -98,6 +105,8 @@ func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, l
 		return nil, nil, "", err
 	}
 
+	apply.(*Apply).source = source
+
 	return res, apply, wd, nil
 }
 
@@ -155,6 +164,8 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 		return nil, nil, "", err
 	}
 
+	apply.(*Apply).source = fmt.Sprintf("obj://%s/%s", bucket, file)
+
 	log.Info("Using manifest from Object Store in temporary directory", "directory", td, "manifest", manifestPath, "bucket", bucket, "file", file)
 
 	return resolved, apply, td, nil
@@ -168,7 +179,14 @@ func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string
 	}
 	defer manifestFile.Close()
 
-	return ResolveManifestReader(ctx, mgr, manifestFile)
+	resolved, apply, err := ResolveManifestReader(ctx, mgr, manifestFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	apply.(*Apply).source = path
+
+	return resolved, apply, nil
 }
 
 // ResolveManifestReader reads and resolves a manifest using Hiera, returning the resolved data and parsed manifest
@@ -220,6 +238,8 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, manifest io.R
 		return nil, nil, err
 	}
 
+	apply.source = "reader"
+
 	return manifestData, apply, err
 }
 
@@ -227,12 +247,14 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 	timer := prometheus.NewTimer(metrics.ManifestApplyTime.WithLabelValues())
 	defer timer.ObserveDuration()
 
-	session, err := mgr.StartSession(a)
+	log, err := mgr.Logger("component", "apply")
 	if err != nil {
 		return nil, err
 	}
 
-	log, err := mgr.Logger("component", "apply")
+	userLog.Info("Executing manifest", "manifest", a.Source(), "resources", len(a.Resources()))
+
+	session, err := mgr.StartSession(a)
 	if err != nil {
 		return nil, err
 	}

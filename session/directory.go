@@ -65,11 +65,9 @@ func validateSessionDirectory(absPath string) error {
 }
 
 func (s *DirectorySessionStore) StartSession(manifest model.Apply) error {
+	s.log.Info("Creating new session record", "resources", len(manifest.Resources()), "store", "directory")
+
 	s.mu.Lock()
-
-	s.out.Info("Creating new session record", "resources", len(manifest.Resources()))
-
-	// Create a directory if it doesn't exist
 	err := os.MkdirAll(s.directory, 0755)
 	s.mu.Unlock()
 	if err != nil {

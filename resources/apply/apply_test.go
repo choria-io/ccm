@@ -39,6 +39,7 @@ var _ = Describe("Apply", func() {
 	BeforeEach(func() {
 		mockctl = gomock.NewController(GinkgoT())
 		logger = modelmocks.NewMockLogger(mockctl)
+		logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 	})
 
 	AfterEach(func() {
@@ -348,6 +349,7 @@ var _ = Describe("Apply", func() {
 			session = modelmocks.NewMockSessionStore(mockctl)
 
 			mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
+			userLogger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 
 			registry.Clear()
 		})
@@ -414,6 +416,7 @@ var _ = Describe("Apply", func() {
 
 			mgr.EXPECT().StartSession(apply).Return(session, nil)
 			mgrLogger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
+			mgrLogger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 
 			result, err := apply.Execute(ctx, mgr, false, userLogger)
 			Expect(err).To(HaveOccurred())

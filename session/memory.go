@@ -33,10 +33,10 @@ func NewMemorySessionStore(logger model.Logger, writer model.Logger) (*MemorySes
 // StartSession clears the event log and starts a new session for the given manifest
 func (s *MemorySessionStore) StartSession(manifest model.Apply) error {
 	s.mu.Lock()
-	s.out.Info("Creating new session record", "resources", len(manifest.Resources()))
 	s.events = make([]model.SessionEvent, 0)
 	s.mu.Unlock()
 
+	s.log.Info("Creating new session record", "resources", len(manifest.Resources()), "store", "memory")
 	start := model.NewSessionStartEvent()
 	s.start = start.TimeStamp
 

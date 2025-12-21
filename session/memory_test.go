@@ -63,7 +63,6 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should reset the session with empty manifest", func() {
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0)
 
 			store.StartSession(manifest)
 
@@ -73,8 +72,6 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should reset the session with resources", func() {
 			manifest := &apply.Apply{}
-			// Simulate 3 resources
-			writer.EXPECT().Info("Creating new session record", "resources", 0)
 
 			store.StartSession(manifest)
 
@@ -83,7 +80,6 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should clear existing events", func() {
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0).Times(2)
 
 			// First session with events
 			store.StartSession(manifest)
@@ -102,7 +98,6 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should update the start time", func() {
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0).Times(2)
 
 			store.StartSession(manifest)
 			firstStart := store.start
@@ -123,7 +118,6 @@ var _ = Describe("MemorySessionStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0)
 			store.StartSession(manifest)
 		})
 
@@ -183,7 +177,6 @@ var _ = Describe("MemorySessionStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0)
 			store.StartSession(manifest)
 
 			// Add test events
@@ -354,7 +347,6 @@ var _ = Describe("MemorySessionStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0)
 			store.StartSession(manifest)
 		})
 
@@ -384,7 +376,6 @@ var _ = Describe("MemorySessionStore", func() {
 
 		It("Should handle multiple resets without recording events", func() {
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0).Times(3)
 
 			store.StartSession(manifest)
 			store.StartSession(manifest)
@@ -401,7 +392,6 @@ var _ = Describe("MemorySessionStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			manifest := &apply.Apply{}
-			writer.EXPECT().Info("Creating new session record", "resources", 0)
 			store.StartSession(manifest)
 
 			// Add test events
