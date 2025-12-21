@@ -22,6 +22,8 @@ type Apply interface {
 	Resources() []map[string]ResourceProperties
 	Data() map[string]any
 	Execute(ctx context.Context, mgr Manager, healthCheckOnly bool, userLog Logger) (SessionStore, error)
+	Source() string
+	String() string
 }
 
 type SessionStore interface {

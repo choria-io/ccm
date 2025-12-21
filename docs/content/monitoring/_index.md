@@ -7,7 +7,7 @@ pre = "<b>6. </b>"
 
 Resources will check their health in the basic way that resources support - if you say a service should be running, if `systemd` says it's running then we assume it's healthy.
 
-In some cases, though, it makes sense to go deeper than that, for example check the web server is actually serving correct content.
+In some cases, though, it makes sense to go deeper than that, for example, check the web server is actually serving correct content.
 
 All resources support health checks.
 

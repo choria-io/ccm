@@ -138,6 +138,34 @@ func (mr *MockApplyMockRecorder) Resources() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resources", reflect.TypeOf((*MockApply)(nil).Resources))
 }
 
+// Source mocks base method.
+func (m *MockApply) Source() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Source")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Source indicates an expected call of Source.
+func (mr *MockApplyMockRecorder) Source() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Source", reflect.TypeOf((*MockApply)(nil).Source))
+}
+
+// String mocks base method.
+func (m *MockApply) String() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "String")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// String indicates an expected call of String.
+func (mr *MockApplyMockRecorder) String() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockApply)(nil).String))
+}
+
 // MockSessionStore is a mock of SessionStore interface.
 type MockSessionStore struct {
 	ctrl     *gomock.Controller

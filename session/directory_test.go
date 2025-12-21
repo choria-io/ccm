@@ -77,8 +77,6 @@ var _ = Describe("DirectorySessionStore", func() {
 			// Directory should not exist yet
 			Expect(newDir).ToNot(BeADirectory())
 
-			writer.EXPECT().Info("Creating new session record", gomock.Any(), gomock.Any()).Times(1)
-
 			// StartSession should create it
 			mockApply := modelmocks.NewMockApply(mockCtrl)
 			mockApply.EXPECT().Resources().Return([]map[string]model.ResourceProperties{}).Times(1)
