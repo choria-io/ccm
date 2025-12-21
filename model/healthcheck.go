@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/choria-io/fisk"
@@ -63,6 +64,12 @@ func (c *CommonHealthCheck) UnmarshalJSON(data []byte) error {
 
 	*c = CommonHealthCheck(alias)
 
+	return c.normalizeAfterUnmarshal()
+}
+
+func (c *CommonHealthCheck) normalizeAfterUnmarshal() error {
+	c.Command = strings.TrimSpace(c.Command)
+
 	if c.Timeout != "" {
 		d, err := fisk.ParseDuration(c.Timeout)
 		if err != nil {
@@ -100,30 +107,7 @@ func (c *CommonHealthCheck) UnmarshalYAML(data []byte) error {
 
 	*c = CommonHealthCheck(alias)
 
-	if c.Timeout != "" {
-		d, err := fisk.ParseDuration(c.Timeout)
-		if err != nil {
-			return fmt.Errorf("invalid timeout duration %q: %w", c.Timeout, err)
-		}
-		c.ParsedTimeout = d
-	}
-
-	if c.TrySleep == "" {
-		c.TrySleep = "1s"
-	}
-	if c.TrySleep != "" {
-		d, err := fisk.ParseDuration(c.TrySleep)
-		if err != nil {
-			return fmt.Errorf("invalid try sleep duration %q: %w", c.TrySleep, err)
-		}
-		c.ParseTrySleep = d
-	}
-
-	if c.Format == "" {
-		c.Format = HealthCheckNagiosFormat
-	}
-
-	return nil
+	return c.normalizeAfterUnmarshal()
 }
 
 // HealthCheckResult represents the outcome of a health check execution
