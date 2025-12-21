@@ -100,6 +100,51 @@ format: nagios`
 		})
 	})
 
+	Describe("Automatic Name from Command", func() {
+		DescribeTable("sets name from command basename via JSON",
+			func(jsonInput string, expectedName string) {
+				var hc CommonHealthCheck
+				err := json.Unmarshal([]byte(jsonInput), &hc)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hc.Name).To(Equal(expectedName))
+			},
+			Entry("full path command", `{"command": "/usr/lib/nagios/plugins/check_disk"}`, "check_disk"),
+			Entry("command with arguments", `{"command": "/usr/bin/check_http -H localhost"}`, "check_http -H localhost"),
+			Entry("simple command", `{"command": "check_memory"}`, "check_memory"),
+			Entry("relative path", `{"command": "./scripts/check_app.sh"}`, "check_app.sh"),
+		)
+
+		DescribeTable("sets name from command basename via YAML",
+			func(yamlInput string, expectedName string) {
+				var hc CommonHealthCheck
+				err := yaml.Unmarshal([]byte(yamlInput), &hc)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hc.Name).To(Equal(expectedName))
+			},
+			Entry("full path command", "command: /usr/lib/nagios/plugins/check_disk", "check_disk"),
+			Entry("command with arguments", "command: /usr/bin/check_http -H localhost", "check_http -H localhost"),
+			Entry("simple command", "command: check_memory", "check_memory"),
+			Entry("relative path", "command: ./scripts/check_app.sh", "check_app.sh"),
+		)
+
+		It("should preserve explicit name when provided via JSON", func() {
+			jsonInput := `{"command": "/usr/lib/nagios/plugins/check_disk", "name": "disk_space"}`
+			var hc CommonHealthCheck
+			err := json.Unmarshal([]byte(jsonInput), &hc)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hc.Name).To(Equal("disk_space"))
+		})
+
+		It("should preserve explicit name when provided via YAML", func() {
+			yamlInput := `command: /usr/lib/nagios/plugins/check_disk
+name: disk_space`
+			var hc CommonHealthCheck
+			err := yaml.Unmarshal([]byte(yamlInput), &hc)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hc.Name).To(Equal("disk_space"))
+		})
+	})
+
 	Describe("Embedded in CommonResourceProperties", func() {
 		It("should parse health_checks timeout from JSON", func() {
 			jsonInput := `{

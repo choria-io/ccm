@@ -20,10 +20,13 @@ service:
   health_checks:
     - tries: 5
       try_sleep: 1s
+      name: check_http
       command: |
         /usr/lib64/nagios/plugins/check_http -H localhost:80 --expect "Acme Inc"
 ```
 
 Here we check that the web server is serving the correct content - the output must include `Acme Inc`. If at first it is not doing that we will try again every 1 second for five times.
+
+When `name` is not set it will be set to base name of the command, this name will show up in logs etc.
 
 These options are also available on the `ccm ensure` commands via the `--check`, `--check-tries`, `--check-sleep` flags. While resources support multiple health checks the CLI `ensure` command supports adding only one.
