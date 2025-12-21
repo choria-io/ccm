@@ -71,7 +71,7 @@ var _ = Describe("Execute", func() {
 	It("should return error when command is empty", func(ctx context.Context) {
 		hc := &model.CommonHealthCheck{Command: ""}
 
-		result, err := Execute(ctx, mgr, hc, logger)
+		result, err := Execute(ctx, mgr, hc, logger, logger)
 
 		Expect(err).To(MatchError(ErrCommandNotSpecified))
 		Expect(result).To(BeNil())
@@ -84,7 +84,7 @@ var _ = Describe("Execute", func() {
 			runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_disk").
 				Return([]byte(output), []byte{}, exitCode, nil)
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).ToNot(BeNil())
@@ -115,7 +115,7 @@ var _ = Describe("Execute", func() {
 					Return([]byte("OK"), []byte{}, 0, nil)
 			}
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Status).To(Equal(model.HealthCheckOK))
@@ -134,7 +134,7 @@ var _ = Describe("Execute", func() {
 
 		hc := &model.CommonHealthCheck{Command: "/bin/true"}
 
-		result, err := Execute(ctx, mgr2, hc, logger)
+		result, err := Execute(ctx, mgr2, hc, logger, logger)
 
 		Expect(err).To(MatchError(expectedErr))
 		Expect(result).To(BeNil())
@@ -147,7 +147,7 @@ var _ = Describe("Execute", func() {
 		runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_disk").
 			Return(nil, nil, 0, expectedErr)
 
-		result, err := Execute(ctx, mgr, hc, logger)
+		result, err := Execute(ctx, mgr, hc, logger, logger)
 
 		Expect(err).To(MatchError(expectedErr))
 		Expect(result).To(BeNil())
@@ -164,7 +164,7 @@ var _ = Describe("Execute", func() {
 				runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_disk").
 					Return([]byte("DISK CRITICAL"), []byte{}, finalExitCode, nil).Times(expectedCalls)
 
-				result, err := Execute(ctx, mgr, hc, logger)
+				result, err := Execute(ctx, mgr, hc, logger, logger)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.Status).To(Equal(expectedStatus))
@@ -188,7 +188,7 @@ var _ = Describe("Execute", func() {
 					Return([]byte("DISK OK"), []byte{}, 0, nil),
 			)
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Status).To(Equal(model.HealthCheckOK))
@@ -210,7 +210,7 @@ var _ = Describe("Execute", func() {
 					Return([]byte("DISK OK"), []byte{}, 0, nil),
 			)
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Status).To(Equal(model.HealthCheckOK))
@@ -231,7 +231,7 @@ var _ = Describe("Execute", func() {
 					Return([]byte("DISK WARNING - attempt 3"), []byte{}, 1, nil),
 			)
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result.Status).To(Equal(model.HealthCheckWarning))
@@ -248,7 +248,7 @@ var _ = Describe("Execute", func() {
 			runner.EXPECT().Execute(gomock.Any(), "/usr/lib/nagios/plugins/check_disk").
 				Return(nil, nil, 0, expectedErr).Times(1)
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).To(MatchError(expectedErr))
 			Expect(result).To(BeNil())
@@ -267,7 +267,7 @@ var _ = Describe("Execute", func() {
 					return []byte("DISK CRITICAL"), []byte{}, 2, nil
 				}).Times(1)
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).To(MatchError(context.Canceled))
 			Expect(result).To(BeNil())
@@ -282,7 +282,7 @@ var _ = Describe("Execute", func() {
 				Tries:   3,
 			}
 
-			result, err := Execute(ctx, mgr, hc, logger)
+			result, err := Execute(ctx, mgr, hc, logger, logger)
 
 			Expect(err).To(MatchError(context.Canceled))
 			Expect(result).To(BeNil())

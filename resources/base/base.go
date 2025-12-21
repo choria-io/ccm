@@ -30,6 +30,7 @@ type Base struct {
 	Ensure             string
 	ResourceProperties model.ResourceProperties
 	Log                model.Logger
+	UserLogger         model.Logger
 	Manager            model.Manager
 
 	sync.Mutex
@@ -86,7 +87,7 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 		hc.TypeName = model.ServiceTypeName
 		hc.ResourceName = b.InstanceName
 
-		res, err := healthcheck.Execute(ctx, b.Manager, &hc, b.Log)
+		res, err := healthcheck.Execute(ctx, b.Manager, &hc, b.UserLogger, b.Log)
 		event.HealthChecks = append(event.HealthChecks, res)
 		if err != nil {
 			event.Failed = true

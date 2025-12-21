@@ -378,6 +378,20 @@ func (mr *MockManagerMockRecorder) TemplateEnvironment(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TemplateEnvironment", reflect.TypeOf((*MockManager)(nil).TemplateEnvironment), ctx)
 }
 
+// UserLogger mocks base method.
+func (m *MockManager) UserLogger() model.Logger {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UserLogger")
+	ret0, _ := ret[0].(model.Logger)
+	return ret0
+}
+
+// UserLogger indicates an expected call of UserLogger.
+func (mr *MockManagerMockRecorder) UserLogger() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserLogger", reflect.TypeOf((*MockManager)(nil).UserLogger))
+}
+
 // WorkingDirectory mocks base method.
 func (m *MockManager) WorkingDirectory() string {
 	m.ctrl.T.Helper()

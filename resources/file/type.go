@@ -48,7 +48,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 		return nil, err
 	}
 
-	logger, err := mgr.Logger("type", model.FileTypeName, "name", properties.Name, "working_dir", mgr.WorkingDirectory())
+	loggerArgs := []any{"type", model.FileTypeName, "name", properties.Name, "working_dir", mgr.WorkingDirectory()}
+	logger, err := mgr.Logger(loggerArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +68,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 		Ensure:             properties.Ensure,
 		ResourceProperties: &properties,
 		Log:                logger,
+		UserLogger:         mgr.UserLogger().With(loggerArgs...),
 		Manager:            mgr,
 	}
 
