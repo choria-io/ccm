@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/resources/apply"
 	"github.com/choria-io/fisk"
 	"github.com/goccy/go-yaml"
@@ -23,15 +24,19 @@ type applyCommand struct {
 	noop        bool
 	monitorOnly bool
 	natsContext string
+	facts       map[string]string
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
-	cmd := &applyCommand{}
+	cmd := &applyCommand{
+		facts: make(map[string]string),
+	}
 
 	apply := ccm.Command("apply", "Apply a manifest").Action(cmd.applyAction)
 	apply.Arg("manifest", "Path to manifest to apply").StringVar(&cmd.manifest)
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
+	apply.Flag("fact", "Set additional facts to merge with the system facts").StringMapVar(&cmd.facts)
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
 	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
@@ -40,7 +45,7 @@ func registerApplyCommand(ccm *fisk.Application) {
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
-	mgr, userLogger, err := newManager("", c.hieraFile, c.natsContext, c.readEnv, c.noop)
+	mgr, userLogger, err := newManager("", c.hieraFile, c.natsContext, c.readEnv, c.noop, iu.MapStringsToMapStringAny(c.facts))
 	if err != nil {
 		return err
 	}

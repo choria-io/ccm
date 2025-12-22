@@ -402,6 +402,146 @@ var _ = Describe("Facts", func() {
 
 		Expect(result1).To(Equal(result2))
 	})
+
+	It("gathers and caches facts when not pre-set", func() {
+		// Without calling SetFacts, Facts() should gather system facts
+		result, err := mgr.Facts(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+
+		// Subsequent calls should return cached facts (same map)
+		result2, err := mgr.Facts(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result2).To(Equal(result))
+	})
+
+	It("SetFacts updates the cached facts", func() {
+		// First set some facts
+		initialFacts := map[string]any{"initial": "value"}
+		mgr.SetFacts(initialFacts)
+
+		result1, err := mgr.Facts(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result1).To(Equal(initialFacts))
+
+		// Update with new facts
+		updatedFacts := map[string]any{"updated": "data"}
+		mgr.SetFacts(updatedFacts)
+
+		result2, err := mgr.Facts(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result2).To(Equal(updatedFacts))
+		Expect(result2).NotTo(Equal(initialFacts))
+	})
+})
+
+var _ = Describe("MergeFacts", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+		mgr     *CCM
+		ctx     context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+		ctx = context.Background()
+
+		var err error
+		mgr, err = NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("merges provided facts with cached facts", func() {
+		// Set base facts
+		baseFacts := map[string]any{
+			"hostname": "test-host",
+			"os":       "linux",
+		}
+		mgr.SetFacts(baseFacts)
+
+		// Merge additional facts
+		additionalFacts := map[string]any{
+			"custom_key": "custom_value",
+		}
+
+		result, err := mgr.MergeFacts(ctx, additionalFacts)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Result should contain both base and additional facts
+		Expect(result["hostname"]).To(Equal("test-host"))
+		Expect(result["os"]).To(Equal("linux"))
+		Expect(result["custom_key"]).To(Equal("custom_value"))
+	})
+
+	It("provided facts override system facts with same key", func() {
+		// Set base facts (these are the "system" facts)
+		baseFacts := map[string]any{
+			"hostname": "system-host",
+			"version":  "1.0",
+		}
+		mgr.SetFacts(baseFacts)
+
+		// Merge facts with conflicting key
+		providedFacts := map[string]any{
+			"hostname": "user-host", // This should override system facts
+			"custom":   "value",
+		}
+
+		result, err := mgr.MergeFacts(ctx, providedFacts)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Provided facts override system facts
+		Expect(result["hostname"]).To(Equal("user-host"))
+		Expect(result["version"]).To(Equal("1.0"))
+		Expect(result["custom"]).To(Equal("value"))
+	})
+
+	It("updates the internal facts cache", func() {
+		baseFacts := map[string]any{"base": "value"}
+		mgr.SetFacts(baseFacts)
+
+		additionalFacts := map[string]any{"additional": "data"}
+		_, err := mgr.MergeFacts(ctx, additionalFacts)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Subsequent Facts() call should return the merged result
+		result, err := mgr.Facts(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result["base"]).To(Equal("value"))
+		Expect(result["additional"]).To(Equal("data"))
+	})
+
+	It("deep merges nested maps", func() {
+		baseFacts := map[string]any{
+			"nested": map[string]any{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		}
+		mgr.SetFacts(baseFacts)
+
+		additionalFacts := map[string]any{
+			"nested": map[string]any{
+				"key3": "value3",
+			},
+		}
+
+		result, err := mgr.MergeFacts(ctx, additionalFacts)
+		Expect(err).NotTo(HaveOccurred())
+
+		nested := result["nested"].(map[string]any)
+		Expect(nested["key1"]).To(Equal("value1"))
+		Expect(nested["key2"]).To(Equal("value2"))
+		Expect(nested["key3"]).To(Equal("value3"))
+	})
 })
 
 var _ = Describe("FactsRaw", func() {

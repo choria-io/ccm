@@ -25,11 +25,13 @@ func ExecutableInPath(file string) (string, bool, error) {
 	return f, err == nil, err
 }
 
+// FileExists determines if a file exists regardless of type
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
+// IsDirectory determines if a path is a directory
 func IsDirectory(path string) bool {
 	stat, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -221,6 +223,7 @@ func IsJsonObject(data []byte) bool {
 	return strings.HasPrefix(trimmed, "{") || strings.HasPrefix(string(trimmed), "[")
 }
 
+// UntarGz extracts a tar.gz file into a target directory
 func UntarGz(s io.Reader, td string) ([]string, error) {
 	uncompressed, err := gzip.NewReader(s)
 	if err != nil {
@@ -274,4 +277,14 @@ func UntarGz(s io.Reader, td string) ([]string, error) {
 	}
 
 	return files, nil
+}
+
+// MapStringsToMapStringAny converts a map[string]string to a map[string]any
+func MapStringsToMapStringAny(m map[string]string) map[string]any {
+	res := make(map[string]any, len(m))
+	for k, v := range m {
+		res[k] = v
+	}
+
+	return res
 }

@@ -5,6 +5,9 @@
 package util
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"os"
 	"path/filepath"
 	"testing"
@@ -266,5 +269,379 @@ var _ = Describe("ShallowMerge", func() {
 
 		result2 := ShallowMerge(source, map[string]any{})
 		Expect(result2).To(Equal(map[string]any{"a": 1}))
+	})
+})
+
+var _ = Describe("MapStringsToMapStringAny", func() {
+	It("converts map[string]string to map[string]any", func() {
+		input := map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+		}
+
+		result := MapStringsToMapStringAny(input)
+
+		Expect(result).To(Equal(map[string]any{
+			"key1": "value1",
+			"key2": "value2",
+		}))
+	})
+
+	It("handles empty map", func() {
+		input := map[string]string{}
+
+		result := MapStringsToMapStringAny(input)
+
+		Expect(result).To(BeEmpty())
+		Expect(result).NotTo(BeNil())
+	})
+
+	It("handles nil map", func() {
+		var input map[string]string
+
+		result := MapStringsToMapStringAny(input)
+
+		Expect(result).To(BeEmpty())
+		Expect(result).NotTo(BeNil())
+	})
+
+	It("preserves empty string values", func() {
+		input := map[string]string{
+			"empty": "",
+			"space": " ",
+		}
+
+		result := MapStringsToMapStringAny(input)
+
+		Expect(result["empty"]).To(Equal(""))
+		Expect(result["space"]).To(Equal(" "))
+	})
+})
+
+var _ = Describe("ExecutableInPath", func() {
+	It("finds executables that exist in PATH", func() {
+		// "ls" or "sh" should exist on any Unix system
+		path, found, err := ExecutableInPath("sh")
+		Expect(found).To(BeTrue())
+		Expect(path).NotTo(BeEmpty())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("returns false for non-existent executables", func() {
+		_, found, err := ExecutableInPath("nonexistent-command-12345")
+		Expect(found).To(BeFalse())
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("FileExists", func() {
+	It("returns true for existing files", func() {
+		tempDir := GinkgoT().TempDir()
+		testFile := filepath.Join(tempDir, "exists.txt")
+		err := os.WriteFile(testFile, []byte("content"), 0644)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(FileExists(testFile)).To(BeTrue())
+	})
+
+	It("returns true for existing directories", func() {
+		tempDir := GinkgoT().TempDir()
+		Expect(FileExists(tempDir)).To(BeTrue())
+	})
+
+	It("returns false for non-existent paths", func() {
+		Expect(FileExists("/nonexistent/path/to/file")).To(BeFalse())
+	})
+})
+
+var _ = Describe("IsDirectory", func() {
+	It("returns true for directories", func() {
+		tempDir := GinkgoT().TempDir()
+		Expect(IsDirectory(tempDir)).To(BeTrue())
+	})
+
+	It("returns false for files", func() {
+		tempDir := GinkgoT().TempDir()
+		testFile := filepath.Join(tempDir, "file.txt")
+		err := os.WriteFile(testFile, []byte("content"), 0644)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(IsDirectory(testFile)).To(BeFalse())
+	})
+
+	It("returns false for non-existent paths", func() {
+		Expect(IsDirectory("/nonexistent/path")).To(BeFalse())
+	})
+})
+
+var _ = Describe("IsJsonObject", func() {
+	It("returns true for JSON objects", func() {
+		Expect(IsJsonObject([]byte(`{"key": "value"}`))).To(BeTrue())
+		Expect(IsJsonObject([]byte(`  {"key": "value"}`))).To(BeTrue())
+		Expect(IsJsonObject([]byte(`
+		{"key": "value"}`))).To(BeTrue())
+	})
+
+	It("returns true for JSON arrays", func() {
+		Expect(IsJsonObject([]byte(`[1, 2, 3]`))).To(BeTrue())
+		Expect(IsJsonObject([]byte(`  [1, 2, 3]`))).To(BeTrue())
+	})
+
+	It("returns false for non-JSON content", func() {
+		Expect(IsJsonObject([]byte(`plain text`))).To(BeFalse())
+		Expect(IsJsonObject([]byte(`key: value`))).To(BeFalse())
+		Expect(IsJsonObject([]byte(`<xml>content</xml>`))).To(BeFalse())
+	})
+
+	It("returns false for empty content", func() {
+		Expect(IsJsonObject([]byte(``))).To(BeFalse())
+		Expect(IsJsonObject([]byte(`   `))).To(BeFalse())
+	})
+})
+
+var _ = Describe("UntarGz", func() {
+	// Helper to create a tar.gz archive in memory
+	createTarGz := func(files map[string][]byte, dirs []string) *bytes.Buffer {
+		var buf bytes.Buffer
+		gzWriter := gzip.NewWriter(&buf)
+		tarWriter := tar.NewWriter(gzWriter)
+
+		for _, dir := range dirs {
+			hdr := &tar.Header{
+				Name:     dir,
+				Mode:     0755,
+				Typeflag: tar.TypeDir,
+			}
+			Expect(tarWriter.WriteHeader(hdr)).To(Succeed())
+		}
+
+		for name, content := range files {
+			hdr := &tar.Header{
+				Name: name,
+				Mode: 0644,
+				Size: int64(len(content)),
+			}
+			Expect(tarWriter.WriteHeader(hdr)).To(Succeed())
+			_, err := tarWriter.Write(content)
+			Expect(err).ToNot(HaveOccurred())
+		}
+
+		Expect(tarWriter.Close()).To(Succeed())
+		Expect(gzWriter.Close()).To(Succeed())
+		return &buf
+	}
+
+	It("extracts files from a tar.gz archive", func() {
+		tempDir := GinkgoT().TempDir()
+		archive := createTarGz(map[string][]byte{
+			"file1.txt": []byte("content1"),
+			"file2.txt": []byte("content2"),
+		}, nil)
+
+		files, err := UntarGz(archive, tempDir)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(files).To(HaveLen(2))
+
+		content1, err := os.ReadFile(filepath.Join(tempDir, "file1.txt"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(string(content1)).To(Equal("content1"))
+
+		content2, err := os.ReadFile(filepath.Join(tempDir, "file2.txt"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(string(content2)).To(Equal("content2"))
+	})
+
+	It("creates directories from archive", func() {
+		tempDir := GinkgoT().TempDir()
+		archive := createTarGz(nil, []string{"subdir/"})
+
+		_, err := UntarGz(archive, tempDir)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(filepath.Join(tempDir, "subdir")).To(BeADirectory())
+	})
+
+	It("rejects archives with path traversal attempts", func() {
+		var buf bytes.Buffer
+		gzWriter := gzip.NewWriter(&buf)
+		tarWriter := tar.NewWriter(gzWriter)
+
+		hdr := &tar.Header{
+			Name: "../escape.txt",
+			Mode: 0644,
+			Size: 4,
+		}
+		Expect(tarWriter.WriteHeader(hdr)).To(Succeed())
+		_, err := tarWriter.Write([]byte("evil"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(tarWriter.Close()).To(Succeed())
+		Expect(gzWriter.Close()).To(Succeed())
+
+		tempDir := GinkgoT().TempDir()
+		_, err = UntarGz(&buf, tempDir)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("invalid tar file"))
+	})
+
+	It("rejects archives with unsupported file types", func() {
+		var buf bytes.Buffer
+		gzWriter := gzip.NewWriter(&buf)
+		tarWriter := tar.NewWriter(gzWriter)
+
+		hdr := &tar.Header{
+			Name:     "symlink",
+			Mode:     0644,
+			Typeflag: tar.TypeSymlink,
+			Linkname: "/etc/passwd",
+		}
+		Expect(tarWriter.WriteHeader(hdr)).To(Succeed())
+		Expect(tarWriter.Close()).To(Succeed())
+		Expect(gzWriter.Close()).To(Succeed())
+
+		tempDir := GinkgoT().TempDir()
+		_, err := UntarGz(&buf, tempDir)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("only regular files and directories"))
+	})
+
+	It("returns error for invalid gzip data", func() {
+		tempDir := GinkgoT().TempDir()
+		_, err := UntarGz(bytes.NewReader([]byte("not gzip data")), tempDir)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("unzip failed"))
+	})
+})
+
+var _ = Describe("VersionCmp edge cases", func() {
+	It("compares versions with leading zeros lexically", func() {
+		// When either has a leading zero, compare as strings
+		Expect(VersionCmp("01", "1", false)).To(Equal(-1)) // "01" < "1" lexically
+		Expect(VersionCmp("1", "01", false)).To(Equal(1))  // "1" > "01" lexically
+	})
+
+	It("compares non-numeric version parts case-insensitively", func() {
+		Expect(VersionCmp("1.0.alpha", "1.0.beta", false)).To(Equal(-1))
+		Expect(VersionCmp("1.0.ALPHA", "1.0.alpha", false)).To(Equal(0))
+	})
+
+	It("handles version a being longer than version b", func() {
+		Expect(VersionCmp("1.2.3", "1.2", false)).To(Equal(1))
+	})
+
+	It("handles version b being longer than version a", func() {
+		Expect(VersionCmp("1.2", "1.2.3", false)).To(Equal(-1))
+	})
+
+	It("handles dash vs dot precedence", func() {
+		// Dash comes before dot in version comparison
+		Expect(VersionCmp("1-0", "1.0", false)).To(Equal(-1))
+		Expect(VersionCmp("1.0", "1-0", false)).To(Equal(1))
+	})
+
+	It("compares equal versions", func() {
+		Expect(VersionCmp("1.2.3", "1.2.3", false)).To(Equal(0))
+	})
+})
+
+var _ = Describe("DeepMergeMap edge cases", func() {
+	It("handles type mismatch when target has map but source has non-map", func() {
+		target := map[string]any{
+			"key": map[string]any{"nested": "value"},
+		}
+		source := map[string]any{
+			"key": "string value",
+		}
+
+		result := DeepMergeMap(target, source)
+		Expect(result["key"]).To(Equal("string value"))
+	})
+
+	It("handles type mismatch when target has slice but source has non-slice", func() {
+		target := map[string]any{
+			"key": []any{1, 2, 3},
+		}
+		source := map[string]any{
+			"key": "string value",
+		}
+
+		result := DeepMergeMap(target, source)
+		Expect(result["key"]).To(Equal("string value"))
+	})
+
+	It("adds new keys from source", func() {
+		target := map[string]any{
+			"existing": "value",
+		}
+		source := map[string]any{
+			"new": "new value",
+		}
+
+		result := DeepMergeMap(target, source)
+		Expect(result["existing"]).To(Equal("value"))
+		Expect(result["new"]).To(Equal("new value"))
+	})
+
+	It("handles empty maps", func() {
+		target := map[string]any{}
+		source := map[string]any{"a": 1}
+
+		result := DeepMergeMap(target, source)
+		Expect(result).To(Equal(map[string]any{"a": 1}))
+
+		result2 := DeepMergeMap(source, map[string]any{})
+		Expect(result2).To(Equal(map[string]any{"a": 1}))
+	})
+
+	It("recursively merges deeply nested maps", func() {
+		target := map[string]any{
+			"level1": map[string]any{
+				"level2": map[string]any{
+					"key1": "value1",
+				},
+			},
+		}
+		source := map[string]any{
+			"level1": map[string]any{
+				"level2": map[string]any{
+					"key2": "value2",
+				},
+			},
+		}
+
+		result := DeepMergeMap(target, source)
+		level2 := result["level1"].(map[string]any)["level2"].(map[string]any)
+		Expect(level2["key1"]).To(Equal("value1"))
+		Expect(level2["key2"]).To(Equal("value2"))
+	})
+})
+
+var _ = Describe("isDigits", func() {
+	It("returns true for digit strings", func() {
+		Expect(isDigits("123")).To(BeTrue())
+		Expect(isDigits("0")).To(BeTrue())
+	})
+
+	It("returns false for empty string", func() {
+		Expect(isDigits("")).To(BeFalse())
+	})
+
+	It("returns false for non-digit strings", func() {
+		Expect(isDigits("abc")).To(BeFalse())
+		Expect(isDigits("12a3")).To(BeFalse())
+	})
+})
+
+var _ = Describe("normalize", func() {
+	It("removes trailing zeros from version strings", func() {
+		Expect(normalize("1.0.0")).To(Equal("1"))
+		Expect(normalize("1.2.0")).To(Equal("1.2"))
+	})
+
+	It("handles versions with dashes", func() {
+		Expect(normalize("1.0-rc1")).To(Equal("1-rc1"))
+	})
+
+	It("handles empty string", func() {
+		Expect(normalize("")).To(Equal(""))
 	})
 })

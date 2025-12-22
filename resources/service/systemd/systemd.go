@@ -29,6 +29,14 @@ func NewSystemdProvider(log model.Logger, runner model.CommandRunner) (*Provider
 	return &Provider{log: log, runner: runner}, nil
 }
 
+// We ensure that any user of this provider in the same process will not call systemd multiple times
+func (p *Provider) execute(ctx context.Context, cmd string, args ...string) (stdout []byte, stderr []byte, exitCode int, err error) {
+	model.ServiceGlobalLock.Lock()
+	defer model.ServiceGlobalLock.Unlock()
+
+	return p.runner.Execute(ctx, cmd, args...)
+}
+
 func (p *Provider) Name() string {
 	return ProviderName
 }
@@ -39,7 +47,7 @@ func (p *Provider) Enable(ctx context.Context, service string) error {
 		return err
 	}
 
-	_, _, _, err = p.runner.Execute(ctx, "systemctl", "enable", "--system", service)
+	_, _, _, err = p.execute(ctx, "systemctl", "enable", "--system", service)
 	return err
 }
 
@@ -49,7 +57,7 @@ func (p *Provider) Disable(ctx context.Context, service string) error {
 		return err
 	}
 
-	_, _, _, err = p.runner.Execute(ctx, "systemctl", "disable", "--system", service)
+	_, _, _, err = p.execute(ctx, "systemctl", "disable", "--system", service)
 
 	return err
 }
@@ -60,7 +68,7 @@ func (p *Provider) Restart(ctx context.Context, service string) error {
 		return err
 	}
 
-	_, _, _, err = p.runner.Execute(ctx, "systemctl", "restart", "--system", service)
+	_, _, _, err = p.execute(ctx, "systemctl", "restart", "--system", service)
 
 	return err
 }
@@ -71,7 +79,7 @@ func (p *Provider) Start(ctx context.Context, service string) error {
 		return err
 	}
 
-	_, _, _, err = p.runner.Execute(ctx, "systemctl", "start", "--system", service)
+	_, _, _, err = p.execute(ctx, "systemctl", "start", "--system", service)
 
 	return err
 }
@@ -82,7 +90,7 @@ func (p *Provider) Stop(ctx context.Context, service string) error {
 		return err
 	}
 
-	_, _, _, err = p.runner.Execute(ctx, "systemctl", "stop", "--system", service)
+	_, _, _, err = p.execute(ctx, "systemctl", "stop", "--system", service)
 
 	return err
 }
@@ -95,7 +103,7 @@ func (p *Provider) maybeReload(ctx context.Context) error {
 		return nil
 	}
 
-	_, _, _, err := p.runner.Execute(ctx, "systemctl", "daemon-reload")
+	_, _, _, err := p.execute(ctx, "systemctl", "daemon-reload")
 	return err
 }
 
@@ -132,7 +140,7 @@ func (p *Provider) Status(ctx context.Context, service string) (*model.ServiceSt
 }
 
 func (p *Provider) isEnabled(ctx context.Context, service string) (bool, error) {
-	stdout, _, _, err := p.runner.Execute(ctx, "systemctl", "is-enabled", "--system", service)
+	stdout, _, _, err := p.execute(ctx, "systemctl", "is-enabled", "--system", service)
 	if err != nil {
 		return false, err
 	}
@@ -150,7 +158,7 @@ func (p *Provider) isEnabled(ctx context.Context, service string) (bool, error) 
 }
 
 func (p *Provider) isActive(ctx context.Context, service string) (bool, error) {
-	stdout, _, _, err := p.runner.Execute(ctx, "systemctl", "is-active", "--system", service)
+	stdout, _, _, err := p.execute(ctx, "systemctl", "is-active", "--system", service)
 	if err != nil {
 		return false, err
 	}

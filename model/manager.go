@@ -23,6 +23,9 @@ type Logger interface {
 type Manager interface {
 	FactsRaw(ctx context.Context) (json.RawMessage, error)
 	Facts(ctx context.Context) (map[string]any, error)
+	MergeFacts(ctx context.Context, facts map[string]any) (map[string]any, error)
+	SetFacts(facts map[string]any)
+	SystemFacts(ctx context.Context) (map[string]any, error)
 	Data() map[string]any
 	SetData(data map[string]any) map[string]any
 	Logger(args ...any) (Logger, error)

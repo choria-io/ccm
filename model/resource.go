@@ -139,21 +139,17 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 	switch typeName {
 	case PackageTypeName:
 		prop, err = NewPackageResourcePropertiesFromYaml(rawProperties)
-		if err != nil {
-			return nil, err
-		}
 	case ServiceTypeName:
 		prop, err = NewServiceResourcePropertiesFromYaml(rawProperties)
-		if err != nil {
-			return nil, err
-		}
 	case FileTypeName:
 		prop, err = NewFileResourcePropertiesFromYaml(rawProperties)
-		if err != nil {
-			return nil, err
-		}
+	case ExecTypeName:
+		prop, err = NewExecResourcePropertiesFromYaml(rawProperties)
 	default:
 		return nil, fmt.Errorf("%w: %s %s", ErrResourceInvalid, ErrUnknownType, typeName)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	err = prop.ResolveTemplates(env)

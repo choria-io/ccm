@@ -34,6 +34,14 @@ func NewDnfProvider(log model.Logger, runner model.CommandRunner) (*Provider, er
 	return &Provider{log: log, runner: runner}, nil
 }
 
+// We ensure that any user of this provider in the same process will not call dnf multiple times
+func (p *Provider) execute(ctx context.Context, cmd string, args ...string) (stdout []byte, stderr []byte, exitCode int, err error) {
+	model.PackageGlobalLock.Lock()
+	defer model.PackageGlobalLock.Unlock()
+
+	return p.runner.Execute(ctx, cmd, args...)
+}
+
 // Name returns the provider name
 func (p *Provider) Name() string {
 	return ProviderName
@@ -52,7 +60,7 @@ func (p *Provider) Install(ctx context.Context, pkg string, version string) erro
 		pkgVersion = fmt.Sprintf("%s-%s", pkg, version)
 	}
 
-	_, _, exitcode, err := p.runner.Execute(ctx, "dnf", "install", "-y", pkgVersion)
+	_, _, exitcode, err := p.execute(ctx, "dnf", "install", "-y", pkgVersion)
 	if err != nil {
 		return err
 	}
@@ -71,7 +79,7 @@ func (p *Provider) Upgrade(ctx context.Context, pkg string, version string) erro
 
 // Downgrade downgrades a package to a specific version using DNF
 func (p *Provider) Downgrade(ctx context.Context, pkg string, version string) error {
-	_, _, exitcode, err := p.runner.Execute(ctx, "dnf", "downgrade", "-y", fmt.Sprintf("%s-%s", pkg, version))
+	_, _, exitcode, err := p.execute(ctx, "dnf", "downgrade", "-y", fmt.Sprintf("%s-%s", pkg, version))
 	if err != nil {
 		return err
 	}
@@ -86,7 +94,7 @@ func (p *Provider) Downgrade(ctx context.Context, pkg string, version string) er
 
 // Uninstall removes a package using DNF
 func (p *Provider) Uninstall(ctx context.Context, pkg string) error {
-	_, _, exitcode, err := p.runner.Execute(ctx, "dnf", "remove", "-y", pkg)
+	_, _, exitcode, err := p.execute(ctx, "dnf", "remove", "-y", pkg)
 	if err != nil {
 		return err
 	}
@@ -100,7 +108,7 @@ func (p *Provider) Uninstall(ctx context.Context, pkg string) error {
 
 // Status returns the current installation status of a package
 func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState, error) {
-	stdout, _, exitcode, err := p.runner.Execute(ctx, "rpm", "-q", pkg, "--queryformat", dnfNevraQueryFormat)
+	stdout, _, exitcode, err := p.execute(ctx, "rpm", "-q", pkg, "--queryformat", dnfNevraQueryFormat)
 	if err != nil {
 		return nil, err
 	}

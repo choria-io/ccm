@@ -100,7 +100,7 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 		logger = manager.NewSlogLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	}
 
-	mgr, _, err := newManager("", "", cmd.natsContext, false, true)
+	mgr, _, err := newManager("", "", cmd.natsContext, false, true, nil)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (cmd *hieraCommand) resolveFacts() (map[string]any, error) {
 	facts := make(map[string]any)
 
 	if cmd.sysFacts {
-		mgr, _, err := newManager("", "", "", false, true)
+		mgr, _, err := newManager("", "", "", false, true, nil)
 		if err != nil {
 			return nil, err
 		}
