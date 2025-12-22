@@ -11,10 +11,9 @@ import (
 )
 
 type packageCommand struct {
-	name     string
-	ensure   string
-	provider string
-	parent   *ensureCommand
+	name   string
+	ensure string
+	parent *ensureCommand
 }
 
 func registerEnsurePackageCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
@@ -23,7 +22,7 @@ func registerEnsurePackageCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	pkg := ccm.Command("package", "Package management").Alias("pkg").Action(cmd.packageAction)
 	pkg.Arg("name", "Package name to manage").Required().StringVar(&cmd.name)
 	pkg.Arg("ensure", "Ensure value").Default(model.EnsurePresent).StringVar(&cmd.ensure)
-	pkg.Flag("provider", "Package provider").StringVar(&cmd.provider)
+	parent.addCommonFlags(pkg)
 }
 
 func (c *packageCommand) packageAction(_ *fisk.ParseContext) error {
@@ -36,7 +35,7 @@ func (c *packageCommand) packageAction(_ *fisk.ParseContext) error {
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:         c.name,
 			Ensure:       c.ensure,
-			Provider:     c.provider,
+			Provider:     c.parent.provider,
 			HealthChecks: c.parent.healthCheckProperties(),
 		},
 	})

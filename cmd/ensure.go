@@ -21,7 +21,8 @@ type ensureCommand struct {
 	healthCheckTries   int
 	healthCheckSleep   time.Duration
 
-	noop bool
+	noop     bool
+	provider string
 
 	out model.Logger
 }
@@ -30,9 +31,6 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	cmd := &ensureCommand{}
 
 	ens := ccm.Command("ensure", "Manage individual resources")
-	ens.Flag("check", "Command to execute for additional health checks").StringVar(&cmd.healthCheckCommand)
-	ens.Flag("check-tries", "Number of times to execute the health check command").Default("5").IntVar(&cmd.healthCheckTries)
-	ens.Flag("check-sleep", "Time to sleep between health check tries").Default("1s").DurationVar(&cmd.healthCheckSleep)
 	ens.Flag("noop", "Do not make any changes to the system").BoolVar(&cmd.noop)
 	ens.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").PlaceHolder("DIRECTORY").StringVar(&cmd.session)
 	ens.Flag("hiera", "Hiera data file to use as data source").Default(".hiera").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
@@ -44,8 +42,16 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	registerEnsureServiceCommand(ens, cmd)
 }
 
+// we do it like this in each child so it shows up in the main sub command help without needing explicit --help
+func (cmd *ensureCommand) addCommonFlags(app *fisk.CmdClause) {
+	app.Flag("check", "Command to execute for additional health checks").PlaceHolder("COMMAND").StringVar(&cmd.healthCheckCommand)
+	app.Flag("check-tries", "Number of times to execute the health check command").Default("5").IntVar(&cmd.healthCheckTries)
+	app.Flag("check-sleep", "Time to sleep between health check tries").Default("1s").DurationVar(&cmd.healthCheckSleep)
+	app.Flag("provider", "Resource provider").PlaceHolder("NAME").StringVar(&cmd.provider)
+}
+
 func (cmd *ensureCommand) manager() (model.Manager, error) {
-	mgr, out, err := newManager(cmd.session, cmd.hieraFile, cmd.natsContext, cmd.readEnv, cmd.noop)
+	mgr, out, err := newManager(cmd.session, cmd.hieraFile, cmd.natsContext, cmd.readEnv, cmd.noop, nil)
 	if err != nil {
 		return nil, err
 	}

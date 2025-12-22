@@ -234,6 +234,21 @@ func (mr *MockManagerMockRecorder) Logger(args ...any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockManager)(nil).Logger), args...)
 }
 
+// MergeFacts mocks base method.
+func (m *MockManager) MergeFacts(ctx context.Context, facts map[string]any) (map[string]any, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MergeFacts", ctx, facts)
+	ret0, _ := ret[0].(map[string]any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MergeFacts indicates an expected call of MergeFacts.
+func (mr *MockManagerMockRecorder) MergeFacts(ctx, facts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeFacts", reflect.TypeOf((*MockManager)(nil).MergeFacts), ctx, facts)
+}
+
 // NewRunner mocks base method.
 func (m *MockManager) NewRunner() (model.CommandRunner, error) {
 	m.ctrl.T.Helper()
@@ -321,6 +336,18 @@ func (mr *MockManagerMockRecorder) SetData(data any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetData", reflect.TypeOf((*MockManager)(nil).SetData), data)
 }
 
+// SetFacts mocks base method.
+func (m *MockManager) SetFacts(facts map[string]any) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetFacts", facts)
+}
+
+// SetFacts indicates an expected call of SetFacts.
+func (mr *MockManagerMockRecorder) SetFacts(facts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFacts", reflect.TypeOf((*MockManager)(nil).SetFacts), facts)
+}
+
 // SetWorkingDirectory mocks base method.
 func (m *MockManager) SetWorkingDirectory(dir string) {
 	m.ctrl.T.Helper()
@@ -361,6 +388,21 @@ func (m *MockManager) StartSession(arg0 model.Apply) (model.SessionStore, error)
 func (mr *MockManagerMockRecorder) StartSession(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSession", reflect.TypeOf((*MockManager)(nil).StartSession), arg0)
+}
+
+// SystemFacts mocks base method.
+func (m *MockManager) SystemFacts(ctx context.Context) (map[string]any, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SystemFacts", ctx)
+	ret0, _ := ret[0].(map[string]any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SystemFacts indicates an expected call of SystemFacts.
+func (mr *MockManagerMockRecorder) SystemFacts(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SystemFacts", reflect.TypeOf((*MockManager)(nil).SystemFacts), ctx)
 }
 
 // TemplateEnvironment mocks base method.

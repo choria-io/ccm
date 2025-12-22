@@ -14,7 +14,6 @@ type ensureServiceCommand struct {
 	name      string
 	ensure    string
 	enable    *bool
-	provider  string
 	subscribe []string
 	parent    *ensureCommand
 }
@@ -22,12 +21,12 @@ type ensureServiceCommand struct {
 func registerEnsureServiceCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	cmd := &ensureServiceCommand{parent: parent}
 
-	svc := ccm.Command("service", "Service management").Alias("pkg").Action(cmd.serviceAction)
+	svc := ccm.Command("service", "Service management").Alias("svc").Action(cmd.serviceAction)
 	svc.Arg("name", "Service name to manage").Required().StringVar(&cmd.name)
 	svc.Arg("ensure", "Ensure value").Default(model.ServiceEnsureRunning).StringVar(&cmd.ensure)
 	cmd.enable = svc.Flag("enable", "Enable the service").Default("true").Bool()
-	svc.Flag("provider", "Service provider").StringVar(&cmd.provider)
-	svc.Flag("subscribe", "Subscribe to changes in other resources").Short('S').StringsVar(&cmd.subscribe)
+	svc.Flag("subscribe", "Subscribe to changes in other resources (type#name)").PlaceHolder("RESOURCE").Short('S').StringsVar(&cmd.subscribe)
+	parent.addCommonFlags(svc)
 }
 
 func (c *ensureServiceCommand) serviceAction(_ *fisk.ParseContext) error {
@@ -41,7 +40,7 @@ func (c *ensureServiceCommand) serviceAction(_ *fisk.ParseContext) error {
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:         c.name,
 			Ensure:       c.ensure,
-			Provider:     c.provider,
+			Provider:     c.parent.provider,
 			HealthChecks: c.parent.healthCheckProperties(),
 		},
 	}

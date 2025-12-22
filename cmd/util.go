@@ -16,7 +16,7 @@ import (
 	"github.com/choria-io/ccm/model"
 )
 
-func newManager(session string, hieraSource string, natsContext string, readEnv bool, noop bool) (model.Manager, model.Logger, error) {
+func newManager(session string, hieraSource string, natsContext string, readEnv bool, noop bool, facts map[string]any) (model.Manager, model.Logger, error) {
 	var opts []manager.Option
 
 	if session != "" {
@@ -44,6 +44,10 @@ func newManager(session string, hieraSource string, natsContext string, readEnv 
 	mgr, err := manager.NewManager(logger, out, opts...)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if len(facts) > 0 {
+		mgr.MergeFacts(ctx, facts)
 	}
 
 	if hieraSource != "" {

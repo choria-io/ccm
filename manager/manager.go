@@ -266,6 +266,8 @@ func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, err
 		return m.infoServiceResource(ctx, prop.(*model.ServiceResourceProperties))
 	case model.PackageTypeName:
 		return m.infoPackageResource(ctx, prop.(*model.PackageResourceProperties))
+	case model.ExecTypeName:
+		return nil, fmt.Errorf("exec resources do not support retrieving info")
 	default:
 		return nil, fmt.Errorf("unsupported resource type %s", typeName)
 	}
@@ -293,7 +295,38 @@ func (m *CCM) SetFacts(facts map[string]any) {
 	m.facts = facts
 }
 
-// Facts gathers and returns the system facts
+// MergeFacts merges the provided facts with the facts as gathered by Facts(), which may have been set by SetFacts()
+func (m *CCM) MergeFacts(ctx context.Context, facts map[string]any) (map[string]any, error) {
+	sf, err := m.Facts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.facts = iu.DeepMergeMap(sf, facts)
+
+	return m.facts, nil
+}
+
+// SystemFacts returns the system facts, without caching
+func (m *CCM) SystemFacts(ctx context.Context) (map[string]any, error) {
+	var to context.Context
+	var cancel context.CancelFunc
+
+	_, ok := ctx.Deadline()
+	if ok {
+		to = ctx
+	} else {
+		to, cancel = context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+	}
+
+	return facts.StandardFacts(to)
+}
+
+// Facts gather system facts, cache them, and return them, if already cached return the cache
 func (m *CCM) Facts(ctx context.Context) (map[string]any, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -302,10 +335,14 @@ func (m *CCM) Facts(ctx context.Context) (map[string]any, error) {
 		return m.facts, nil
 	}
 
-	to, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
+	f, err := m.SystemFacts(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	return facts.StandardFacts(to)
+	m.facts = f
+
+	return f, nil
 }
 
 // Logger creates a new logger with the provided key-value pairs added to the context

@@ -19,7 +19,6 @@ import (
 type ensureFileCommand struct {
 	name         string
 	ensure       string
-	provider     string
 	contentsFile string
 	contents     string
 	source       string
@@ -31,15 +30,15 @@ type ensureFileCommand struct {
 func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	cmd := &ensureFileCommand{parent: parent}
 
-	pkg := ccm.Command("file", "File management").Alias("pkg").Action(cmd.fileAction)
-	pkg.Arg("name", "File name to manage").Required().StringVar(&cmd.name)
-	pkg.Arg("ensure", "Ensure value").Default(model.EnsurePresent).StringVar(&cmd.ensure)
-	pkg.Flag("owner", "File owner:group").StringVar(&cmd.owner)
-	pkg.Flag("mode", "File mode (octal)").Default("0644").StringVar(&cmd.mode)
-	pkg.Flag("contents", "Contents of the file, will be template parsed").StringVar(&cmd.contents)
-	pkg.Flag("contents-file", "File containing the contents of the file, will be template parsed").ExistingFileVar(&cmd.contentsFile)
-	pkg.Flag("source", "File to copy in place").ExistingFileVar(&cmd.source)
-	pkg.Flag("provider", "File provider").StringVar(&cmd.provider)
+	file := ccm.Command("file", "File management").Action(cmd.fileAction)
+	file.Arg("name", "File name to manage").Required().StringVar(&cmd.name)
+	file.Arg("ensure", "Ensure value").Default(model.EnsurePresent).StringVar(&cmd.ensure)
+	file.Flag("owner", "File and group (owner:group)").StringVar(&cmd.owner)
+	file.Flag("mode", "File mode (octal)").Default("0644").StringVar(&cmd.mode)
+	file.Flag("contents", "Contents of the file, will be template parsed").PlaceHolder("STRING").StringVar(&cmd.contents)
+	file.Flag("contents-file", "File containing the contents of the file, will be template parsed").PlaceHolder("FILE").ExistingFileVar(&cmd.contentsFile)
+	file.Flag("source", "File to copy in place verbatim").PlaceHolder("FILE").ExistingFileVar(&cmd.source)
+	parent.addCommonFlags(file)
 }
 
 func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
@@ -83,7 +82,7 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:         c.name,
 			Ensure:       c.ensure,
-			Provider:     c.provider,
+			Provider:     c.parent.provider,
 			HealthChecks: c.parent.healthCheckProperties(),
 		},
 	}
