@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
+
+	"github.com/choria-io/ccm/templates"
 )
 
 const (
@@ -23,14 +24,14 @@ const (
 	FileEnsureDirectory = "directory"
 )
 
+// FileResourceProperties defines the properties for a file resource
 type FileResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
-	Contents                 string    `json:"content,omitempty" yaml:"content,omitempty"`
-	Source                   string    `json:"source,omitempty" yaml:"source,omitempty"`
-	Owner                    string    `json:"owner" yaml:"owner"`
-	Group                    string    `json:"group" yaml:"group"`
-	Mode                     string    `json:"mode" yaml:"mode"`
-	MTime                    time.Time `json:"mtime,omitempty" yaml:"mtime,omitempty"`
+	Contents                 string `json:"content,omitempty" yaml:"content,omitempty"` // Contents specifies the desired file contents as a string; mutually exclusive with Source
+	Source                   string `json:"source,omitempty" yaml:"source,omitempty"`   // Source specifies a local file path to use as the source for the file contents; mutually exclusive with Contents
+	Owner                    string `json:"owner" yaml:"owner"`                         // Owner specifies the user that should own the file
+	Group                    string `json:"group" yaml:"group"`                         // Group specifies the group that should own the file
+	Mode                     string `json:"mode" yaml:"mode"`                           // Mode specifies the file permissions in octal notation (e.g., "0644")
 }
 
 // FileMetadata contains detailed metadata about a file

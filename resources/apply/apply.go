@@ -15,16 +15,18 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/goccy/go-yaml"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/choria-io/ccm/hiera"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
+	execresource "github.com/choria-io/ccm/resources/exec"
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	serviceresource "github.com/choria-io/ccm/resources/service"
 	"github.com/choria-io/ccm/templates"
-	"github.com/goccy/go-yaml"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Apply represents a parsed and resolved manifest ready for execution
@@ -275,6 +277,8 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 				resource, err = serviceresource.New(ctx, mgr, *rprop)
 			case *model.FileResourceProperties:
 				resource, err = fileresource.New(ctx, mgr, *rprop)
+			case *model.ExecResourceProperties:
+				resource, err = execresource.New(ctx, mgr, *rprop)
 			default:
 				return nil, fmt.Errorf("unsupported resource property type %T", rprop)
 			}

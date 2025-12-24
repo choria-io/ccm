@@ -102,12 +102,12 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		properties.Source = c.source
 	}
 
-	pkg, err := fileresource.New(ctx, mgr, properties)
+	file, err := fileresource.New(ctx, mgr, properties)
 	if err != nil {
 		return err
 	}
 
-	status, err := pkg.Apply(ctx)
+	status, err := file.Apply(ctx)
 	if err != nil {
 		return err
 	}

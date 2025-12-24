@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	model "github.com/choria-io/ccm/model"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -62,4 +63,21 @@ func (mr *MockCommandRunnerMockRecorder) Execute(ctx, cmd any, args ...any) *gom
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, cmd}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockCommandRunner)(nil).Execute), varargs...)
+}
+
+// ExecuteWithOptions mocks base method.
+func (m *MockCommandRunner) ExecuteWithOptions(ctx context.Context, opts model.ExtendedExecOptions) ([]byte, []byte, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteWithOptions", ctx, opts)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].([]byte)
+	ret2, _ := ret[2].(int)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// ExecuteWithOptions indicates an expected call of ExecuteWithOptions.
+func (mr *MockCommandRunnerMockRecorder) ExecuteWithOptions(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteWithOptions", reflect.TypeOf((*MockCommandRunner)(nil).ExecuteWithOptions), ctx, opts)
 }

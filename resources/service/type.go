@@ -100,7 +100,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	if len(t.prop.Subscribe) > 0 {
+	if len(properties.Subscribe) > 0 {
 		shouldRefreshViaSubscribe, refreshResource, err = t.shouldRefresh()
 		if err != nil {
 			return nil, err
@@ -228,6 +228,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		finalStatus.Changed = refreshState
 	}
 	finalStatus.Refreshed = shouldRefreshViaSubscribe
+	finalStatus.Stable = !refreshState
 
 	return finalStatus, nil
 }

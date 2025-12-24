@@ -12,6 +12,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/goccy/go-yaml"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/synadia-io/orbit.go/natscontext"
+
 	"github.com/choria-io/ccm/internal/cmdrunner"
 	"github.com/choria-io/ccm/internal/facts"
 	iu "github.com/choria-io/ccm/internal/util"
@@ -21,10 +26,6 @@ import (
 	serviceresource "github.com/choria-io/ccm/resources/service"
 	"github.com/choria-io/ccm/session"
 	"github.com/choria-io/ccm/templates"
-	"github.com/goccy/go-yaml"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/synadia-io/orbit.go/natscontext"
 )
 
 // CCM is the main configuration and change management orchestrator
@@ -267,7 +268,7 @@ func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, err
 	case model.PackageTypeName:
 		return m.infoPackageResource(ctx, prop.(*model.PackageResourceProperties))
 	case model.ExecTypeName:
-		return nil, fmt.Errorf("exec resources do not support retrieving info")
+		return nil, fmt.Errorf("exec resources do not support retrieving status")
 	default:
 		return nil, fmt.Errorf("unsupported resource type %s", typeName)
 	}

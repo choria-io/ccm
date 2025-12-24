@@ -37,6 +37,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	ens.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	ens.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").StringVar(&cmd.natsContext)
 
+	registerEnsureExecCommand(ens, cmd)
 	registerEnsureFileCommand(ens, cmd)
 	registerEnsurePackageCommand(ens, cmd)
 	registerEnsureServiceCommand(ens, cmd)

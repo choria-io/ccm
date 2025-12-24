@@ -7,9 +7,11 @@ package model
 import (
 	"fmt"
 	"slices"
+	"strings"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/choria-io/ccm/templates"
-	"github.com/goccy/go-yaml"
 )
 
 const (
@@ -25,8 +27,8 @@ const (
 // ServiceResourceProperties defines the properties for a service resource
 type ServiceResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
-	Enable                   *bool    `json:"enable,omitempty" yaml:"enable,omitempty"`
-	Subscribe                []string `json:"subscribe,omitempty" yaml:"subscribe,omitempty"`
+	Enable                   *bool    `json:"enable,omitempty" yaml:"enable,omitempty"`       // Enable indicates the service should be enabled on boot
+	Subscribe                []string `json:"subscribe,omitempty" yaml:"subscribe,omitempty"` // Subscribe lists resource statusses to subscribe to in format type#name
 }
 
 // ServiceMetadata contains detailed metadata about a service
@@ -69,13 +71,20 @@ func (p *ServiceResourceProperties) Validate() error {
 		return fmt.Errorf("invalid service ensure property %q expects %q or %q", p.Ensure, ServiceEnsureRunning, ServiceEnsureStopped)
 	}
 
-	// Validate package name to prevent shell injection
+	// Validate service name to prevent shell injection
 	if dangerousCharsRegex.MatchString(p.Name) {
 		return fmt.Errorf("service name contains dangerous characters: %q", p.Name)
 	}
 
 	if !commonNameRegex.MatchString(p.Name) {
 		return fmt.Errorf("service name contains invalid characters: %q (allowed: alphanumeric, ._+:~-)", p.Name)
+	}
+
+	for _, sub := range p.Subscribe {
+		parts := strings.Split(sub, "#")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid subscribe format %s", sub)
+		}
 	}
 
 	return nil
