@@ -115,5 +115,34 @@ var _ = Describe("ServiceResourceProperties", func() {
 			Entry("explicit running is preserved", ServiceEnsureRunning, ServiceEnsureRunning),
 			Entry("explicit stopped is preserved", ServiceEnsureStopped, ServiceEnsureStopped),
 		)
+
+		DescribeTable("subscribe validation",
+			func(subscribe []string, errorText string) {
+				prop := &ServiceResourceProperties{
+					CommonResourceProperties: CommonResourceProperties{
+						Name:   "nginx",
+						Ensure: ServiceEnsureRunning,
+					},
+					Subscribe: subscribe,
+				}
+
+				err := prop.Validate()
+
+				if errorText != "" {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(errorText))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+			},
+
+			Entry("valid subscribe format", []string{"file#/etc/nginx/nginx.conf"}, ""),
+			Entry("valid multiple subscribes", []string{"file#/etc/nginx/nginx.conf", "file#/etc/nginx/conf.d/default.conf"}, ""),
+			Entry("empty subscribe array", []string{}, ""),
+			Entry("invalid subscribe without hash", []string{"file:/etc/nginx/nginx.conf"}, "invalid subscribe format"),
+			Entry("invalid subscribe with multiple hashes", []string{"file#name#extra"}, "invalid subscribe format"),
+			Entry("invalid subscribe empty string", []string{""}, "invalid subscribe format"),
+			Entry("mixed valid and invalid", []string{"file#/etc/nginx/nginx.conf", "invalid"}, "invalid subscribe format"),
+		)
 	})
 })

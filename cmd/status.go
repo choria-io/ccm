@@ -8,8 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/choria-io/fisk"
 	"github.com/goccy/go-yaml"
+
+	"github.com/choria-io/fisk"
 )
 
 type statusCommand struct {
@@ -22,7 +23,7 @@ func registerStatusCommand(ccm *fisk.Application) {
 	cmd := &statusCommand{}
 
 	status := ccm.Command("status", "Get resource status").Alias("info").Action(cmd.statusAction)
-	status.Arg("type", "Type to get status for").Required().EnumVar(&cmd.typeName, "file", "package", "service")
+	status.Arg("type", "Type to get status for").Required().EnumVar(&cmd.typeName, "file", "package", "service", "exec") // TODO: get this from the registry
 	status.Arg("name", "Resource name to get status for").Required().StringVar(&cmd.name)
 	status.Flag("json", "Output status in JSON format").UnNegatableBoolVar(&cmd.json)
 }

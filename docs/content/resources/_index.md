@@ -13,6 +13,53 @@ Each resource has a type and a unique name followed by some resource-specific pr
 
 Resources can all have additional monitoring / health checks associated with them. See the [Monitoring page](../monitoring/) for more information.
 
+## Exec
+
+When you manage an exec resource, you describe a command that should be executed to bring the system into the desired state. The exec resource is idempotent when used with the `creates` property or `refreshonly` mode.
+
+> [!info] Warning
+> Commands should be specified with their full path, or use the `path` property to specify the search path
+
+In a manifest:
+
+```yaml
+exec:
+  name: /usr/bin/touch /tmp/hello
+  ensure: present
+  creates: /tmp/hello
+  timeout: 30s
+  cwd: /tmp
+```
+
+On the CLI:
+
+```nohighlight
+$ ccm ensure exec "/usr/bin/touch /tmp/hello" --creates /tmp/hello --timeout 30s
+```
+
+This will run the command only if `/tmp/hello` does not exist.
+
+### Ensure Values
+
+The `ensure` property does not have meaning for the exec resource.
+
+### Properties
+
+| Property                |                                                                                                |
+|-------------------------|------------------------------------------------------------------------------------------------|
+| `name`                  | The command to execute                                                                         |
+| `ensure`                | The desired state                                                                              |
+| `cwd`                   | The working directory from which to run the command                                            |
+| `environment` (array)   | Additional environment variables in KEY=VALUE format                                           |
+| `path`                  | The search path for executables, as a colon-separated list (e.g., `/usr/bin:/bin`)             |
+| `returns` (array)       | Expected exit codes indicating success; defaults to 0                                          |
+| `timeout`               | Maximum time the command is allowed to run (e.g., `30s`, `5m`); command is killed if exceeded  |
+| `creates`               | A file that the command creates; if this file exists the command will not run                  |
+| `refreshonly` (boolean) | Only run the command when notified by a subscribed resource                                    |
+| `subscribe` (array)     | Resources to subscribe to for refresh notifications in the format `type#name`                  |
+| `logoutput` (boolean)   | Whether to log the command's output                                                            |
+| `provider`              | Force a specific provider to be used, only `posix` supported                                   |
+
 ## File
 
 When managing a file you have to state the content, owner, group and mode the file should be. 
