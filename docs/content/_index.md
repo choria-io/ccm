@@ -25,7 +25,7 @@ This then is a new system designed for small-scale Configuration Management desi
  
 ## Status
 
-This is an experimental work in progress, there are only `file` (very basic), `service` and `package` resources implemented so far, they support only `dnf` and `systemd`.
+This is an experimental work in progress, there are only `exec`, `file` (very basic), `service` and `package` resources implemented so far, they support only `dnf` and `systemd`.
 
 We're focusing on the plumbing for sessions, transactions, plugins, embeddability and experimenting with the CLI interaction model.
 
@@ -34,9 +34,6 @@ At this point we think the idea has legs and will keep working on it. Keeping in
 We're also only likely to support only the key Linux distros in common use.
 
 ## Examples
-
-> [!info] Note
-> These examples are hypothetical as we do not yet have a file resource
 
 ### Shell Example
 
@@ -90,7 +87,8 @@ ccm:
         name: "{{ Data.service_name }}"
         ensure: running
         enable: true
-        subscribe: file#/etc/httpd/conf.d/listen.conf
+        subscribe: 
+          - file#/etc/httpd/conf.d/listen.conf
 
 hierarchy:
   order:

@@ -91,6 +91,22 @@ var _ = Describe("Package Type", func() {
 			})
 			Expect(err).To(MatchError(model.ErrResourceEnsureRequired))
 		})
+
+		It("Should set alias from properties", func(ctx context.Context) {
+			pkg, err := New(ctx, mgr, model.PackageResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   "nginx-mainline",
+					Ensure: model.EnsurePresent,
+					Alias:  "webserver",
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pkg).ToNot(BeNil())
+			Expect(pkg.Base.InstanceAlias).To(Equal("webserver"))
+
+			event := pkg.NewTransactionEvent()
+			Expect(event.Alias).To(Equal("webserver"))
+		})
 	})
 
 	Context("with a prepared provider", func() {

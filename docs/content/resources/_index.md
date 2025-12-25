@@ -13,6 +13,8 @@ Each resource has a type and a unique name followed by some resource-specific pr
 
 Resources can all have additional monitoring / health checks associated with them. See the [Monitoring page](../monitoring/) for more information.
 
+All resources can have an `alias` set which will be used in logging and to find resources for `subscribe` etc
+
 ## Exec
 
 When you manage an exec resource, you describe a command that should be executed to bring the system into the desired state. The exec resource is idempotent when used with the `creates` property or `refreshonly` mode.
@@ -45,20 +47,20 @@ The `ensure` property does not have meaning for the exec resource.
 
 ### Properties
 
-| Property                |                                                                                                |
-|-------------------------|------------------------------------------------------------------------------------------------|
-| `name`                  | The command to execute                                                                         |
-| `ensure`                | The desired state                                                                              |
-| `cwd`                   | The working directory from which to run the command                                            |
-| `environment` (array)   | Additional environment variables in KEY=VALUE format                                           |
-| `path`                  | The search path for executables, as a colon-separated list (e.g., `/usr/bin:/bin`)             |
-| `returns` (array)       | Expected exit codes indicating success; defaults to 0                                          |
-| `timeout`               | Maximum time the command is allowed to run (e.g., `30s`, `5m`); command is killed if exceeded  |
-| `creates`               | A file that the command creates; if this file exists the command will not run                  |
-| `refreshonly` (boolean) | Only run the command when notified by a subscribed resource                                    |
-| `subscribe` (array)     | Resources to subscribe to for refresh notifications in the format `type#name`                  |
-| `logoutput` (boolean)   | Whether to log the command's output                                                            |
-| `provider`              | Force a specific provider to be used, only `posix` supported                                   |
+| Property                |                                                                                               |
+|-------------------------|-----------------------------------------------------------------------------------------------|
+| `name`                  | The command to execute                                                                        |
+| `ensure`                | The desired state                                                                             |
+| `cwd`                   | The working directory from which to run the command                                           |
+| `environment` (array)   | Additional environment variables in KEY=VALUE format                                          |
+| `path`                  | The search path for executables, as a colon-separated list (e.g., `/usr/bin:/bin`)            |
+| `returns` (array)       | Expected exit codes indicating success; defaults to 0                                         |
+| `timeout`               | Maximum time the command is allowed to run (e.g., `30s`, `5m`); command is killed if exceeded |
+| `creates`               | A file that the command creates; if this file exists the command will not run                 |
+| `refreshonly` (boolean) | Only run the command when notified by a subscribed resource                                   |
+| `subscribe` (array)     | Resources to subscribe to for refresh notifications in the format `type#name` or `type#alias` |
+| `logoutput` (boolean)   | Whether to log the command's output                                                           |
+| `provider`              | Force a specific provider to be used, only `posix` supported                                  |
 
 ## File
 
@@ -189,10 +191,10 @@ $ ccm ensure service httpd running --enable --subscribe package#httpd
 
 ### Properties
 
-| Ensure Values       |                                                                                                                  |
-|---------------------|------------------------------------------------------------------------------------------------------------------|
-| `name`              | The resource name match the service name exactly                                                                 |
-| `ensure`            | The desired state                                                                                                |
-| `enable` (boolean)  | Enables the service to start at boot time                                                                        |
-| `subscribe` (array) | When the service is set to be running, and it's already running, restart it when the referenced resource changes |
-| `provider`          | Force a specific provider to be used, only `systemd` supported                                                   |
+| Ensure Values       |                                                                                                                                                             |
+|---------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`              | The resource name match the service name exactly                                                                                                            |
+| `ensure`            | The desired state                                                                                                                                           |
+| `enable` (boolean)  | Enables the service to start at boot time                                                                                                                   |
+| `subscribe` (array) | When the service is set to be running, and it's already running, restart it when the referenced resource changes. In the format `type#name` or `type#alias` |
+| `provider`          | Force a specific provider to be used, only `systemd` supported                                                                                              |

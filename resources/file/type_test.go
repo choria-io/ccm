@@ -66,6 +66,26 @@ var _ = Describe("File Type", func() {
 			Expect(err).To(MatchError(model.ErrResourceEnsureRequired))
 		})
 
+		It("Should set alias from properties", func(ctx context.Context) {
+			file, err := New(ctx, mgr, model.FileResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   "/etc/motd",
+					Ensure: model.EnsurePresent,
+					Alias:  "motd",
+				},
+				Owner:    "root",
+				Group:    "root",
+				Mode:     "0644",
+				Contents: "Welcome",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(file).ToNot(BeNil())
+			Expect(file.Base.InstanceAlias).To(Equal("motd"))
+
+			event := file.NewTransactionEvent()
+			Expect(event.Alias).To(Equal("motd"))
+		})
+
 		It("Should validate mode is valid octal", func(ctx context.Context) {
 			_, err := New(ctx, mgr, model.FileResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{

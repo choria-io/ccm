@@ -69,6 +69,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 		Resource:           t,
 		TypeName:           model.PackageTypeName,
 		InstanceName:       properties.Name,
+		InstanceAlias:      properties.Alias,
 		Ensure:             properties.Ensure,
 		ResourceProperties: &properties,
 		Log:                logger,

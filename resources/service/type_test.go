@@ -121,6 +121,22 @@ var _ = Describe("Service Type", func() {
 			Expect(svc.prop.Subscribe[0]).To(Equal("package#nginx"))
 			Expect(svc.prop.Subscribe[1]).To(Equal("file#/etc/nginx/nginx.conf"))
 		})
+
+		It("Should set alias from properties", func(ctx context.Context) {
+			svc, err := New(ctx, mgr, model.ServiceResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   "nginx",
+					Ensure: model.ServiceEnsureRunning,
+					Alias:  "webserver",
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(svc).ToNot(BeNil())
+			Expect(svc.Base.InstanceAlias).To(Equal("webserver"))
+
+			event := svc.NewTransactionEvent()
+			Expect(event.Alias).To(Equal("webserver"))
+		})
 	})
 
 	Context("with a prepared provider", func() {

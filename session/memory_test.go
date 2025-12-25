@@ -9,12 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
-	"github.com/choria-io/ccm/resources/apply"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
+	"github.com/choria-io/ccm/resources/apply"
 )
 
 func TestSession(t *testing.T) {
@@ -466,30 +467,6 @@ var _ = Describe("MemorySessionStore", func() {
 			events, err := newStore.EventsForResource("package", "test")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(events).To(BeEmpty())
-		})
-
-		It("Should handle empty resourceType", func() {
-			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			store.RecordEvent(&model.TransactionEvent{
-				Name:         "test",
-				ResourceType: "",
-			})
-
-			events, err := store.EventsForResource("", "test")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(events).To(HaveLen(1))
-		})
-
-		It("Should handle empty resourceName", func() {
-			writer.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
-			Expect(store.RecordEvent(&model.TransactionEvent{
-				Name:         "",
-				ResourceType: "package",
-			})).ToNot(HaveOccurred())
-
-			events, err := store.EventsForResource("package", "")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(events).To(HaveLen(1))
 		})
 	})
 })

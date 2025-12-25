@@ -690,6 +690,26 @@ var _ = Describe("RecordEvent", func() {
 		err := mgr.RecordEvent(event)
 		Expect(err).To(MatchError("no session store available"))
 	})
+
+	It("returns an error when event name is empty", func() {
+		event := &model.TransactionEvent{
+			ResourceType: "file",
+			Name:         "",
+		}
+
+		err := mgr.RecordEvent(event)
+		Expect(err).To(MatchError("event name cannot be empty"))
+	})
+
+	It("returns an error when resource type is empty", func() {
+		event := &model.TransactionEvent{
+			ResourceType: "",
+			Name:         "/tmp/test",
+		}
+
+		err := mgr.RecordEvent(event)
+		Expect(err).To(MatchError("resource type cannot be empty"))
+	})
 })
 
 var _ = Describe("ShouldRefresh", func() {

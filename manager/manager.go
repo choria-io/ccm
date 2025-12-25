@@ -378,6 +378,12 @@ func (m *CCM) RecordEvent(event *model.TransactionEvent) error {
 	if m.session == nil {
 		return fmt.Errorf("no session store available")
 	}
+	if event.Name == "" {
+		return fmt.Errorf("event name cannot be empty")
+	}
+	if event.ResourceType == "" {
+		return fmt.Errorf("resource type cannot be empty")
+	}
 
 	return m.session.RecordEvent(event)
 }

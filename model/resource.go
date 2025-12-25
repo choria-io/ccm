@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
+
+	"github.com/choria-io/ccm/templates"
 )
 
 const (
@@ -47,6 +48,7 @@ type ResourceProperties interface {
 type CommonResourceProperties struct {
 	Type         string              `json:"-" yaml:"-"`
 	Name         string              `json:"name" yaml:"name"`
+	Alias        string              `json:"alias,omitempty" yaml:"alias,omitempty"`
 	Ensure       string              `json:"ensure,omitempty" yaml:"ensure"`
 	Provider     string              `json:"provider,omitempty" yaml:"provider"`
 	HealthChecks []CommonHealthCheck `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`

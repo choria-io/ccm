@@ -82,6 +82,22 @@ var _ = Describe("Exec Type", func() {
 			Expect(exec.prop.Name).To(Equal("/bin/echo hello"))
 		})
 
+		It("Should set alias from properties", func(ctx context.Context) {
+			exec, err := New(ctx, mgr, model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   "/bin/echo hello",
+					Ensure: model.EnsurePresent,
+					Alias:  "greeting",
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(exec).ToNot(BeNil())
+			Expect(exec.Base.InstanceAlias).To(Equal("greeting"))
+
+			event := exec.NewTransactionEvent()
+			Expect(event.Alias).To(Equal("greeting"))
+		})
+
 		It("Should accept subscribe property", func(ctx context.Context) {
 			exec, err := New(ctx, mgr, model.ExecResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{

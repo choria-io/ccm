@@ -9,11 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 var _ = Describe("DirectorySessionStore", func() {
@@ -90,7 +91,7 @@ var _ = Describe("DirectorySessionStore", func() {
 
 	Describe("RecordEvent", func() {
 		It("Should write valid events to files", func() {
-			event := model.NewTransactionEvent("package", "test")
+			event := model.NewTransactionEvent("package", "test", "")
 			event.Changed = true
 
 			err := store.RecordEvent(event)
@@ -114,7 +115,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			newStore, err := NewDirectorySessionStore(newDir, logger, writer)
 			Expect(err).ToNot(HaveOccurred())
 
-			event := model.NewTransactionEvent("package", "test")
+			event := model.NewTransactionEvent("package", "test", "")
 			err = newStore.RecordEvent(event)
 			Expect(err).To(MatchError(ContainSubstring("does not exist")))
 		})
@@ -201,7 +202,7 @@ var _ = Describe("DirectorySessionStore", func() {
 
 		Context("Legitimate ksuid EventIDs", func() {
 			It("Should accept valid ksuid EventIDs", func() {
-				event := model.NewTransactionEvent("package", "test")
+				event := model.NewTransactionEvent("package", "test", "")
 
 				err := store.RecordEvent(event)
 				Expect(err).ToNot(HaveOccurred())
@@ -224,7 +225,7 @@ var _ = Describe("DirectorySessionStore", func() {
 			badStore, err := NewDirectorySessionStore(readOnlyDir, logger, writer)
 			Expect(err).ToNot(HaveOccurred())
 
-			event := model.NewTransactionEvent("package", "test")
+			event := model.NewTransactionEvent("package", "test", "")
 			err = badStore.RecordEvent(event)
 			Expect(err).To(MatchError(ContainSubstring("permission denied")))
 
@@ -236,15 +237,15 @@ var _ = Describe("DirectorySessionStore", func() {
 	Describe("EventsForResource", func() {
 		It("Should return events for a specific resource", func() {
 			// Create multiple events
-			event1 := model.NewTransactionEvent("package", "vim")
+			event1 := model.NewTransactionEvent("package", "vim", "")
 			event1.Changed = true
 			Expect(store.RecordEvent(event1)).ToNot(HaveOccurred())
 
-			event2 := model.NewTransactionEvent("package", "vim")
+			event2 := model.NewTransactionEvent("package", "vim", "")
 			event2.Changed = false
 			Expect(store.RecordEvent(event2)).ToNot(HaveOccurred())
 
-			event3 := model.NewTransactionEvent("package", "emacs")
+			event3 := model.NewTransactionEvent("package", "emacs", "")
 			Expect(store.RecordEvent(event3)).ToNot(HaveOccurred())
 
 			// Get events for vim
@@ -272,9 +273,9 @@ var _ = Describe("DirectorySessionStore", func() {
 
 		It("Should sort events by time order (EventID)", func() {
 			// Create events with different EventIDs
-			event1 := model.NewTransactionEvent("package", "test")
-			event2 := model.NewTransactionEvent("package", "test")
-			event3 := model.NewTransactionEvent("package", "test")
+			event1 := model.NewTransactionEvent("package", "test", "")
+			event2 := model.NewTransactionEvent("package", "test", "")
+			event3 := model.NewTransactionEvent("package", "test", "")
 
 			// Record in random order
 			Expect(store.RecordEvent(event2)).ToNot(HaveOccurred())
@@ -293,13 +294,13 @@ var _ = Describe("DirectorySessionStore", func() {
 
 		It("Should filter by both resourceType and name", func() {
 			// Create events with different types and names
-			pkg1 := model.NewTransactionEvent("package", "vim")
+			pkg1 := model.NewTransactionEvent("package", "vim", "")
 			Expect(store.RecordEvent(pkg1)).ToNot(HaveOccurred())
 
-			svc1 := model.NewTransactionEvent("service", "vim")
+			svc1 := model.NewTransactionEvent("service", "vim", "")
 			Expect(store.RecordEvent(svc1)).ToNot(HaveOccurred())
 
-			pkg2 := model.NewTransactionEvent("package", "emacs")
+			pkg2 := model.NewTransactionEvent("package", "emacs", "")
 			Expect(store.RecordEvent(pkg2)).ToNot(HaveOccurred())
 
 			// Get package vim events
@@ -310,9 +311,47 @@ var _ = Describe("DirectorySessionStore", func() {
 			Expect(events[0].Name).To(Equal("vim"))
 		})
 
+		It("Should find events by alias", func() {
+			// Create event with an alias
+			event := model.NewTransactionEvent("package", "nginx-mainline", "webserver")
+			event.Changed = true
+			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
+
+			// Find by alias
+			events, err := store.EventsForResource("package", "webserver")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(events).To(HaveLen(1))
+			Expect(events[0].Name).To(Equal("nginx-mainline"))
+			Expect(events[0].Alias).To(Equal("webserver"))
+		})
+
+		It("Should find events by name when alias is also set", func() {
+			// Create event with an alias
+			event := model.NewTransactionEvent("service", "httpd", "webserver")
+			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
+
+			// Find by name (not alias)
+			events, err := store.EventsForResource("service", "httpd")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(events).To(HaveLen(1))
+			Expect(events[0].Name).To(Equal("httpd"))
+			Expect(events[0].Alias).To(Equal("webserver"))
+		})
+
+		It("Should not match alias across different resource types", func() {
+			// Create event with an alias
+			event := model.NewTransactionEvent("package", "nginx", "webserver")
+			Expect(store.RecordEvent(event)).ToNot(HaveOccurred())
+
+			// Try to find by alias but wrong type
+			events, err := store.EventsForResource("service", "webserver")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(events).To(BeEmpty())
+		})
+
 		It("Should skip corrupted event files", func() {
 			// Write a valid event
-			event1 := model.NewTransactionEvent("package", "test")
+			event1 := model.NewTransactionEvent("package", "test", "")
 			Expect(store.RecordEvent(event1)).ToNot(HaveOccurred())
 
 			// Write a corrupted file
