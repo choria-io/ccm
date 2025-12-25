@@ -26,7 +26,6 @@ import (
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	serviceresource "github.com/choria-io/ccm/resources/service"
-	"github.com/choria-io/ccm/templates"
 )
 
 // Apply represents a parsed and resolved manifest ready for execution
@@ -181,7 +180,7 @@ func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string
 	}
 	defer manifestFile.Close()
 
-	resolved, apply, err := ResolveManifestReader(ctx, mgr, manifestFile)
+	resolved, apply, err := ResolveManifestReader(ctx, mgr, filepath.Dir(path), manifestFile)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -191,8 +190,20 @@ func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string
 	return resolved, apply, nil
 }
 
+type manifestParser struct {
+	Hierarchy yaml.RawMessage         `json:"hierarchy" yaml:"hierarchy"`
+	Data      yaml.RawMessage         `json:"data" yaml:"data"`
+	Overrides yaml.RawMessage         `json:"overrides" yaml:"overrides"`
+	CCM       manifestResourcesParser `json:"ccm" yaml:"ccm"`
+}
+
+type manifestResourcesParser struct {
+	ResourcesJetFile string          `json:"resources_jet_file" yaml:"resources_jet_file"`
+	Resources        yaml.RawMessage `json:"resources" yaml:"resources"`
+}
+
 // ResolveManifestReader reads and resolves a manifest using Hiera, returning the resolved data and parsed manifest
-func ResolveManifestReader(ctx context.Context, mgr model.Manager, manifest io.Reader) (map[string]any, model.Apply, error) {
+func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, manifest io.Reader) (map[string]any, model.Apply, error) {
 	mb, err := io.ReadAll(manifest)
 	if err != nil {
 		return nil, nil, err
@@ -208,6 +219,19 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, manifest io.R
 		return nil, nil, err
 	}
 
+	var parser manifestParser
+	err = yaml.Unmarshal(mb, &parser)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if parser.CCM.ResourcesJetFile != "" && len(parser.CCM.Resources) > 0 {
+		return nil, nil, fmt.Errorf("jet_file and resources cannot be used together")
+	}
+	if parser.CCM.ResourcesJetFile != "" && dir == "" {
+		return nil, nil, fmt.Errorf("jet_file requires a directory to be set")
+	}
+
 	resolved, err := hiera.ResolveYaml(mb, facts, hiera.DefaultOptions, hieraLogger)
 	if err != nil {
 		return nil, nil, err
@@ -218,29 +242,52 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, manifest io.R
 	if err != nil {
 		return nil, nil, err
 	}
+	env.Data = data
 
-	var manifestRaw map[string]any
-	err = yaml.Unmarshal(mb, &manifestRaw)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	var resources []map[string]yaml.RawMessage
 	manifestData := map[string]any{
-		"data":      data,
-		"resources": []map[string]any{},
+		"data": data,
 	}
 
-	ccm, ok := manifestRaw["ccm"].(map[string]any)
-	if ok {
-		manifestData["resources"] = ccm["resources"]
+	switch {
+	case parser.CCM.Resources != nil:
+		err = yaml.Unmarshal(parser.CCM.Resources, &resources)
+		if err != nil {
+			return nil, nil, err
+		}
+
+	case parser.CCM.ResourcesJetFile != "":
+		path := filepath.Join(dir, parser.CCM.ResourcesJetFile)
+		parsed, err := jetParseManifestResources(path, env)
+		if err != nil {
+			return nil, nil, err
+		}
+		err = yaml.Unmarshal(parsed, &resources)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
-	apply, err := ParseManifestHiera(manifestData, env, hieraLogger)
-	if err != nil {
-		return nil, nil, err
+	manifestData["resources"] = resources
+	if len(resources) == 0 {
+		return nil, nil, fmt.Errorf("manifest must not contain resources")
 	}
 
-	apply.source = "reader"
+	apply := &Apply{
+		data:   env.Data,
+		source: "reader",
+	}
+
+	for i, resource := range resources {
+		for typeName, v := range resource {
+			prop, err := model.NewValidatedResourcePropertiesFromYaml(typeName, v, env)
+			if err != nil {
+				return nil, nil, fmt.Errorf("invalid manifest resource %d: %w", i+1, err)
+			}
+
+			apply.resources = append(apply.resources, map[string]model.ResourceProperties{typeName: prop})
+		}
+	}
 
 	return manifestData, apply, err
 }
@@ -305,50 +352,4 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 	}
 
 	return session, nil
-}
-
-// Manifest represents the raw structure of a manifest file
-type Manifest struct {
-	Resources []map[string]yaml.RawMessage `json:"resources" yaml:"resources"`
-}
-
-// ParseManifestHiera parses a resolved Hiera manifest and returns an Apply instance
-func ParseManifestHiera(resolved map[string]any, env *templates.Env, log model.Logger) (*Apply, error) {
-	resourcesRaw, ok := resolved["resources"]
-	if !ok {
-		return nil, fmt.Errorf("invalid manifest: no resources found")
-	}
-
-	resources, ok := resourcesRaw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("invalid manifest: resources must be an array got %T", resourcesRaw)
-	}
-
-	res := &Apply{
-		data: env.Data,
-	}
-
-	for i, resource := range resources {
-		resourceMap, ok := resource.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("invalid manifest: resources must be an array of maps got %T", resource)
-		}
-
-		for typeName, v := range resourceMap {
-			var rawProperties yaml.RawMessage
-			rawProperties, err := yaml.Marshal(v)
-			if err != nil {
-				return nil, fmt.Errorf("invalid manifest resource %d: %w", i+1, err)
-			}
-
-			prop, err := model.NewValidatedResourcePropertiesFromYaml(typeName, rawProperties, env)
-			if err != nil {
-				return nil, fmt.Errorf("invalid manifest resource %d: %w", i+1, err)
-			}
-
-			res.resources = append(res.resources, map[string]model.ResourceProperties{typeName: prop})
-		}
-	}
-
-	return res, nil
 }

@@ -1,0 +1,5 @@
+[[ range Data.packages ]]
+- package:
+    name: [[ . ]]
+    ensure: present
+[[ end ]]

@@ -15,14 +15,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/choria-io/ccm/internal/registry"
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
-	"github.com/choria-io/ccm/templates"
 	"github.com/nats-io/nats.go/jetstream"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/internal/registry"
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestApply(t *testing.T) {
@@ -87,191 +87,6 @@ var _ = Describe("Apply", func() {
 			apply := &Apply{}
 			result := apply.Data()
 			Expect(result).To(BeNil())
-		})
-	})
-
-	Describe("ParseManifestHiera", func() {
-		var (
-			env *templates.Env
-		)
-
-		BeforeEach(func() {
-			env = &templates.Env{
-				Data:  map[string]any{"test": "value"},
-				Facts: map[string]any{"os": "linux"},
-			}
-		})
-
-		It("Should fail when resources key is missing", func() {
-			resolved := map[string]any{}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("no resources found"))
-			Expect(apply).To(BeNil())
-		})
-
-		It("Should fail when resources is not an array", func() {
-			resolved := map[string]any{
-				"resources": "not-an-array",
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("resources must be an array"))
-			Expect(apply).To(BeNil())
-		})
-
-		It("Should fail when resource is not a map", func() {
-			resolved := map[string]any{
-				"resources": []any{
-					"not-a-map",
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("resources must be an array of maps"))
-			Expect(apply).To(BeNil())
-		})
-
-		It("Should fail for unknown resource type", func() {
-			resolved := map[string]any{
-				"resources": []any{
-					map[string]any{
-						"unknown": map[string]any{
-							"name":   "test",
-							"ensure": "present",
-						},
-					},
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("unknown resource type"))
-			Expect(apply).To(BeNil())
-		})
-
-		It("Should parse valid package resource", func() {
-			resolved := map[string]any{
-				"resources": []any{
-					map[string]any{
-						model.PackageTypeName: map[string]any{
-							"name":   "vim",
-							"ensure": "present",
-						},
-					},
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(apply).ToNot(BeNil())
-			Expect(apply.Resources()).To(HaveLen(1))
-			Expect(apply.Data()).To(Equal(env.Data))
-		})
-
-		It("Should parse multiple package resources", func() {
-			resolved := map[string]any{
-				"resources": []any{
-					map[string]any{
-						model.PackageTypeName: map[string]any{
-							"name":   "vim",
-							"ensure": "present",
-						},
-					},
-					map[string]any{
-						model.PackageTypeName: map[string]any{
-							"name":   "git",
-							"ensure": "latest",
-						},
-					},
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(apply).ToNot(BeNil())
-			Expect(apply.Resources()).To(HaveLen(2))
-		})
-
-		It("Should fail when package properties are invalid", func() {
-			resolved := map[string]any{
-				"resources": []any{
-					map[string]any{
-						model.PackageTypeName: map[string]any{
-							"name": "vim",
-							// Missing ensure
-						},
-					},
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("ensure is required"))
-			Expect(apply).To(BeNil())
-		})
-
-		It("Should fail when package name is missing", func() {
-			resolved := map[string]any{
-				"resources": []any{
-					map[string]any{
-						model.PackageTypeName: map[string]any{
-							"ensure": "present",
-							// Missing name
-						},
-					},
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("name is required"))
-			Expect(apply).To(BeNil())
-		})
-
-		It("Should resolve templates in package properties", func() {
-			env.Data["package_name"] = "nginx"
-			env.Data["package_ensure"] = "latest"
-
-			resolved := map[string]any{
-				"resources": []any{
-					map[string]any{
-						model.PackageTypeName: map[string]any{
-							"name":   "{{ Data.package_name }}",
-							"ensure": "{{ Data.package_ensure }}",
-						},
-					},
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(apply).ToNot(BeNil())
-			Expect(apply.Resources()).To(HaveLen(1))
-
-			pkg := apply.Resources()[0][model.PackageTypeName].(*model.PackageResourceProperties)
-			Expect(pkg.Name).To(Equal("nginx"))
-			Expect(pkg.Ensure).To(Equal("latest"))
-		})
-
-		It("Should fail when template syntax is invalid", func() {
-			resolved := map[string]any{
-				"resources": []any{
-					map[string]any{
-						model.PackageTypeName: map[string]any{
-							"name":   "{{ invalid syntax }}}",
-							"ensure": "present",
-						},
-					},
-				},
-			}
-
-			apply, err := ParseManifestHiera(resolved, env, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(apply).To(BeNil())
 		})
 	})
 
@@ -734,7 +549,11 @@ var _ = Describe("ResolveManifestFilePath", func() {
 		ctx = context.Background()
 
 		mockLog.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
-		mockMgr.EXPECT().SetData(gomock.Any()).AnyTimes().Return(data)
+		mockMgr.EXPECT().SetData(gomock.Any()).DoAndReturn(func(d map[string]any) map[string]any {
+			data = d
+			return data
+		}).AnyTimes()
+		mockMgr.EXPECT().Data().Return(data).AnyTimes()
 
 		var err error
 		tempDir, err = os.MkdirTemp("", "manifest-file-test-*")
@@ -805,6 +624,15 @@ ccm:
 		Expect(apply.Resources()).To(HaveLen(1))
 	})
 
+	It("resolves manifest with jet templates", func() {
+		res, apply, err := ResolveManifestFilePath(ctx, mockMgr, "testdata/jet/manifest.yaml")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		Expect(apply).NotTo(BeNil())
+		resources := apply.Resources()
+		Expect(resources).To(HaveLen(2))
+	})
+
 	It("returns an error for invalid YAML", func() {
 		manifestContent := `
 data:
@@ -831,6 +659,6 @@ ccm:
 
 		_, _, err = ResolveManifestFilePath(ctx, mockMgr, manifestPath)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("resources must be an array"))
+		Expect(err.Error()).To(ContainSubstring("manifest must not contain resources"))
 	})
 })

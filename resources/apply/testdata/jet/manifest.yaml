@@ -1,0 +1,12 @@
+hierarchy:
+  order:
+    - os:{{ lookup('facts.os') }}
+    - default
+  merge: deep
+data:
+  packages: []
+overrides:
+  os:linux:
+    packages: ["one", "two"]
+ccm:
+  resources_jet_file: resources.jet

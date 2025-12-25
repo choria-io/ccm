@@ -103,6 +103,46 @@ resources:
     name: apache2
 ```
 
+### Templating
+
+Manifests and resources support templates like `{{ lookup("key") }}`, but these cannot be use to generate new resources, they are purely to adjust specific values in valid YAML files.
+
+Many times though one needs to create resources from data, for example you might have Hiera data that sets packages:
+
+```yaml
+data:
+  common_packages:
+    - zsh
+    - vim-enhanced
+    - nagios-plugins-all
+    - tar
+    - nmap-ncat
+
+```
+
+And want to set different packages for different nodes based on the Hierarchy, for this we can use [Jet Templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md)
+
+First, we set the path to the template holding resources instead ot the resources themselves:
+
+```yaml
+ccm:
+  resources_jet_file: resources.jet
+```
+
+```
+{* resources.jet *}
+[[ range Data.common_packages ]]
+- package:
+    name: [[ . ]]
+    ensure: present
+[[ end ]]
+```
+
+> [!info] Note
+> The template should be in the same directory as the manifest
+
+The data available in this template will be post Hierarchy evaluation so you will have access to the full Hierarchy resolved data, additionally you can also access `Facts` and `Environ`.
+
 ### Checking what would be done (Noop mode)
 
 One can ask the system to operate in Noop mode, meaning it will attempt to detect what would happen without actually doing it.
