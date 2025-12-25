@@ -167,10 +167,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		}
 	}
 
-	finalStatus.Noop = noop
-	finalStatus.NoopMessage = noopMessage
-	finalStatus.Changed = refreshState // we mark it changed even in noop mode since noop guesses what would have happened
-	finalStatus.Stable = isStable
+	t.FinalizeState(finalStatus, noop, noopMessage, refreshState, isStable, false)
 
 	return finalStatus, nil
 }
@@ -242,7 +239,7 @@ func (t *Type) validate() error {
 		return nil
 	}
 
-	err := t.prop.Validate()
+	err := t.Base.Validate()
 	if err != nil {
 		return err
 	}

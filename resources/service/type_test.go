@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/choria-io/ccm/internal/registry"
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/internal/registry"
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestServiceResource(t *testing.T) {

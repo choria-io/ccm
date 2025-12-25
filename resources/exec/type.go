@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/choria-io/ccm/internal/registry"
@@ -70,7 +69,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.ExecResourcePr
 		Manager:            mgr,
 	}
 
-	err = t.validate()
+	err = t.Base.Validate()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w: %w", t.String(), model.ErrResourceInvalid, err)
 	}
@@ -78,14 +77,6 @@ func New(ctx context.Context, mgr model.Manager, properties model.ExecResourcePr
 	t.log.Debug("Created resource instance")
 
 	return t, nil
-}
-
-func (t *Type) validate() error {
-	if t.prop.SkipValidate {
-		return nil
-	}
-
-	return t.prop.Validate()
 }
 
 func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
@@ -109,7 +100,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	shouldRefreshViaSubscribe, refreshResource, err = t.shouldRefresh()
+	shouldRefreshViaSubscribe, refreshResource, err = t.ShouldRefresh(properties.Subscribe)
 	if err != nil {
 		return nil, err
 	}
@@ -169,34 +160,13 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		}
 	}
 
-	finalStatus.Noop = noop
-	finalStatus.NoopMessage = noopMessage
+	changed := refreshState
 	if noop && refreshState {
-		finalStatus.Changed = true
-	} else {
-		finalStatus.Changed = refreshState
+		changed = true
 	}
-	finalStatus.Refreshed = shouldRefreshViaSubscribe
-	finalStatus.Stable = isStable
+	t.FinalizeState(finalStatus, noop, noopMessage, changed, isStable, shouldRefreshViaSubscribe)
 
 	return finalStatus, nil
-}
-
-func (t *Type) shouldRefresh() (bool, string, error) {
-	for _, s := range t.prop.Subscribe {
-		parts := strings.Split(s, "#")
-
-		// validate already ensured its the right shape
-		should, err := t.mgr.ShouldRefresh(parts[0], parts[1])
-		if err != nil {
-			return false, s, err
-		}
-		if should {
-			return true, s, nil
-		}
-	}
-
-	return false, "", nil
 }
 
 func (t *Type) isDesiredState(properties *model.ExecResourceProperties, status *model.ExecState) bool {

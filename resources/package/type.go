@@ -77,7 +77,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 		Manager:            mgr,
 	}
 
-	err = t.Validate()
+	err = t.Base.Validate()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w: %w", t.String(), model.ErrResourceInvalid, err)
 	}
@@ -220,14 +220,11 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		}
 	}
 
-	finalStatus.Noop = noop
-	finalStatus.NoopMessage = noopMessage
-	finalStatus.Stable = !refreshState
+	changed := initialStatus.Ensure != finalStatus.Ensure
 	if noop && refreshState {
-		finalStatus.Changed = true
-	} else {
-		finalStatus.Changed = initialStatus.Ensure != finalStatus.Ensure
+		changed = true
 	}
+	t.FinalizeState(finalStatus, noop, noopMessage, changed, !refreshState, false)
 
 	return finalStatus, nil
 }

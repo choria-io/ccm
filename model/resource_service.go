@@ -46,8 +46,8 @@ type ServiceState struct {
 	Metadata *ServiceMetadata `json:"metadata,omitempty"`
 }
 
-func (f *ServiceState) CommonState() CommonResourceState {
-	return f.CommonResourceState
+func (f *ServiceState) CommonState() *CommonResourceState {
+	return &f.CommonResourceState
 }
 
 func (p *ServiceResourceProperties) CommonProperties() *CommonResourceProperties {

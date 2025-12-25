@@ -56,8 +56,8 @@ type ExecState struct {
 	CreatesSatisfied bool `json:"creates_satisfied,omitempty" yaml:"creates_satisfied"`
 }
 
-func (f *ExecState) CommonState() CommonResourceState {
-	return f.CommonResourceState
+func (f *ExecState) CommonState() *CommonResourceState {
+	return &f.CommonResourceState
 }
 
 // Validate validates the package resource properties

@@ -370,4 +370,88 @@ var _ = Describe("Base", func() {
 			Expect(err.Error()).To(ContainSubstring("no suitable provider"))
 		})
 	})
+
+	Describe("FinalizeState", func() {
+		It("Should set all state fields correctly", func() {
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure: model.EnsurePresent,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			b.FinalizeState(state, true, "Would have created", true, false, true)
+
+			Expect(state.Noop).To(BeTrue())
+			Expect(state.NoopMessage).To(Equal("Would have created"))
+			Expect(state.Changed).To(BeTrue())
+			Expect(state.Stable).To(BeFalse())
+			Expect(state.Refreshed).To(BeTrue())
+		})
+
+		It("Should handle non-noop state", func() {
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure: model.EnsurePresent,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			b.FinalizeState(state, false, "", false, true, false)
+
+			Expect(state.Noop).To(BeFalse())
+			Expect(state.NoopMessage).To(BeEmpty())
+			Expect(state.Changed).To(BeFalse())
+			Expect(state.Stable).To(BeTrue())
+			Expect(state.Refreshed).To(BeFalse())
+		})
+	})
+
+	Describe("ShouldRefresh", func() {
+		It("Should return false for empty subscribe list", func() {
+			should, resource, err := b.ShouldRefresh([]string{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(should).To(BeFalse())
+			Expect(resource).To(BeEmpty())
+		})
+
+		It("Should return true when a subscribed resource has changed", func() {
+			mgr.EXPECT().ShouldRefresh("package", "nginx").Return(true, nil)
+
+			should, resource, err := b.ShouldRefresh([]string{"package#nginx"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(should).To(BeTrue())
+			Expect(resource).To(Equal("package#nginx"))
+		})
+
+		It("Should return false when no subscribed resource has changed", func() {
+			mgr.EXPECT().ShouldRefresh("package", "nginx").Return(false, nil)
+			mgr.EXPECT().ShouldRefresh("file", "/etc/nginx.conf").Return(false, nil)
+
+			should, resource, err := b.ShouldRefresh([]string{"package#nginx", "file#/etc/nginx.conf"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(should).To(BeFalse())
+			Expect(resource).To(BeEmpty())
+		})
+
+		It("Should return first changed resource when multiple have changed", func() {
+			mgr.EXPECT().ShouldRefresh("package", "nginx").Return(false, nil)
+			mgr.EXPECT().ShouldRefresh("file", "/etc/nginx.conf").Return(true, nil)
+
+			should, resource, err := b.ShouldRefresh([]string{"package#nginx", "file#/etc/nginx.conf"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(should).To(BeTrue())
+			Expect(resource).To(Equal("file#/etc/nginx.conf"))
+		})
+
+		It("Should return error from manager", func() {
+			mgr.EXPECT().ShouldRefresh("package", "nginx").Return(false, fmt.Errorf("session error"))
+
+			should, resource, err := b.ShouldRefresh([]string{"package#nginx"})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("session error"))
+			Expect(should).To(BeFalse())
+			Expect(resource).To(Equal("package#nginx"))
+		})
+	})
 })
