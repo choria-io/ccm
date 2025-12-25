@@ -9,10 +9,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/goccy/go-yaml"
+
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/resources/apply"
 	"github.com/choria-io/fisk"
-	"github.com/goccy/go-yaml"
 )
 
 type applyCommand struct {
@@ -40,7 +41,7 @@ func registerApplyCommand(ccm *fisk.Application) {
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
 	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
-	apply.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").StringVar(&cmd.natsContext)
+	apply.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 
 }
 

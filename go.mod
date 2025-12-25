@@ -3,6 +3,7 @@ module github.com/choria-io/ccm
 go 1.24.9
 
 require (
+	github.com/CloudyKit/jet/v6 v6.3.1
 	github.com/MatusOllah/slogcolor v1.7.0
 	github.com/adrg/xdg v0.5.3
 	github.com/choria-io/appbuilder v0.11.1-0.20251222140838-cc945dfe0c1d
@@ -26,8 +27,7 @@ require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.7 // indirect
-	github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 // indirect
-	github.com/CloudyKit/jet/v6 v6.3.1 // indirect
+	github.com/CloudyKit/fastprinter v0.0.0-20251202014920-1725d2651bd4 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

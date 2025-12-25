@@ -167,9 +167,9 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 
 	apply.(*Apply).source = fmt.Sprintf("obj://%s/%s", bucket, file)
 
-	log.Info("Using manifest from Object Store in temporary directory", "directory", td, "manifest", manifestPath, "bucket", bucket, "file", file)
+	log.Info("Using manifest from Object Store in temporary directory", "manifest", manifestPath, "bucket", bucket, "file", file)
 
-	return resolved, apply, td, nil
+	return resolved, apply, filepath.Dir(manifestPath), nil
 }
 
 // ResolveManifestFilePath reads a file and resolves the manifest using ResolveManifestReader()
