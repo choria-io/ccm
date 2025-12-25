@@ -47,6 +47,7 @@ type TransactionEvent struct {
 	ResourceType string               `json:"type" yaml:"type"`
 	Provider     string               `json:"provider" yaml:"provider"`
 	Name         string               `json:"name" yaml:"name"`
+	Alias        string               `json:"alias,omitempty" yaml:"alias,omitempty"`
 	Ensure       string               `json:"ensure" yaml:"ensure"`               // Ensure is the requested ensure value
 	ActualEnsure string               `json:"actual_ensure" yaml:"actual_ensure"` // ActualEnsure is the actual `ensure` value after the session
 	Duration     time.Duration        `json:"duration" yaml:"duration"`
@@ -77,13 +78,14 @@ func NewSessionStartEvent() *SessionStartEvent {
 	}
 }
 
-func NewTransactionEvent(typeName string, name string) *TransactionEvent {
+func NewTransactionEvent(typeName string, name string, alias string) *TransactionEvent {
 	return &TransactionEvent{
 		Protocol:     TransactionEventProtocol,
 		EventID:      ksuid.New().String(),
 		TimeStamp:    time.Now().UTC(),
 		ResourceType: typeName,
 		Name:         name,
+		Alias:        alias,
 	}
 }
 
@@ -109,31 +111,43 @@ func (t *TransactionEvent) LogStatus(log Logger) {
 		}
 	}
 
+	name := t.Name
+	if t.Alias != "" {
+		name = fmt.Sprintf("%s (alias)", t.Alias)
+	}
+	rname := fmt.Sprintf("%s#%s", t.ResourceType, name)
+
 	switch {
 	case t.Failed:
-		log.Error(fmt.Sprintf("%s#%s failed", t.ResourceType, t.Name), append(args, "errors", strings.Join(t.Errors, ", "))...)
+		log.Error(fmt.Sprintf("%s failed", rname), append(args, "errors", strings.Join(t.Errors, ", "))...)
 	case t.Skipped:
-		log.Warn(fmt.Sprintf("%s#%s skipped", t.ResourceType, t.Name), args...)
+		log.Warn(fmt.Sprintf("%s skipped", rname), args...)
 	case t.Refreshed:
-		log.Warn(fmt.Sprintf("%s#%s refreshed", t.ResourceType, t.Name), args...)
+		log.Warn(fmt.Sprintf("%s refreshed", rname), args...)
 	case t.Changed:
-		log.Warn(fmt.Sprintf("%s#%s changed", t.ResourceType, t.Name), args...)
+		log.Warn(fmt.Sprintf("%s changed", rname), args...)
 	default:
-		log.Info(fmt.Sprintf("%s#%s stable", t.ResourceType, t.Name), args...)
+		log.Info(fmt.Sprintf("%s stable", rname), args...)
 	}
 }
 func (t *TransactionEvent) String() string {
+	name := t.Name
+	if t.Alias != "" {
+		name = fmt.Sprintf("%s (alias)", t.Alias)
+	}
+	rname := fmt.Sprintf("%s#%s", t.ResourceType, name)
+
 	switch {
 	case t.Failed:
-		return fmt.Sprintf("%s#%s failed ensure=%s runtime=%v errors=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, strings.Join(t.Errors, ","), t.Provider)
+		return fmt.Sprintf("%s failed ensure=%s runtime=%v errors=%v provider=%s", rname, t.Ensure, t.Duration, strings.Join(t.Errors, ","), t.Provider)
 	case t.Skipped:
-		return fmt.Sprintf("%s#%s skipped ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s skipped ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
 	case t.Changed:
-		return fmt.Sprintf("%s#%s changed ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s changed ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
 	case t.Refreshed:
-		return fmt.Sprintf("%s#%s refreshed ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s refreshed ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
 	default:
-		return fmt.Sprintf("%s#%s ensure=%s runtime=%v provider=%s", t.ResourceType, t.Name, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
 	}
 }
 

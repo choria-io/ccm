@@ -11,6 +11,99 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var _ = Describe("NewTransactionEvent", func() {
+	It("Should create event with all fields set", func() {
+		event := NewTransactionEvent("package", "nginx", "webserver")
+		Expect(event).ToNot(BeNil())
+		Expect(event.ResourceType).To(Equal("package"))
+		Expect(event.Name).To(Equal("nginx"))
+		Expect(event.Alias).To(Equal("webserver"))
+		Expect(event.Protocol).To(Equal(TransactionEventProtocol))
+		Expect(event.EventID).ToNot(BeEmpty())
+		Expect(event.TimeStamp).ToNot(BeZero())
+	})
+
+	It("Should handle empty alias", func() {
+		event := NewTransactionEvent("service", "httpd", "")
+		Expect(event.Alias).To(BeEmpty())
+		Expect(event.Name).To(Equal("httpd"))
+	})
+})
+
+var _ = Describe("TransactionEvent", func() {
+	Describe("String", func() {
+		It("Should show alias when set", func() {
+			event := NewTransactionEvent("package", "nginx", "webserver")
+			event.Changed = true
+			event.Ensure = "present"
+			event.Provider = "dnf"
+
+			str := event.String()
+			Expect(str).To(ContainSubstring("webserver (alias)"))
+			Expect(str).ToNot(ContainSubstring("nginx"))
+		})
+
+		It("Should show name when alias is empty", func() {
+			event := NewTransactionEvent("package", "nginx", "")
+			event.Changed = true
+			event.Ensure = "present"
+			event.Provider = "dnf"
+
+			str := event.String()
+			Expect(str).To(ContainSubstring("package#nginx"))
+			Expect(str).ToNot(ContainSubstring("(alias)"))
+		})
+
+		It("Should format failed event correctly", func() {
+			event := NewTransactionEvent("service", "apache", "web")
+			event.Failed = true
+			event.Ensure = "running"
+			event.Errors = []string{"service not found"}
+			event.Provider = "systemd"
+
+			str := event.String()
+			Expect(str).To(ContainSubstring("service#web (alias)"))
+			Expect(str).To(ContainSubstring("failed"))
+			Expect(str).To(ContainSubstring("service not found"))
+		})
+
+		It("Should format skipped event correctly", func() {
+			event := NewTransactionEvent("package", "vim", "editor")
+			event.Skipped = true
+			event.Ensure = "present"
+			event.Provider = "dnf"
+
+			str := event.String()
+			Expect(str).To(ContainSubstring("package#editor (alias)"))
+			Expect(str).To(ContainSubstring("skipped"))
+		})
+
+		It("Should format refreshed event correctly", func() {
+			event := NewTransactionEvent("service", "nginx", "proxy")
+			event.Refreshed = true
+			event.Ensure = "running"
+			event.Provider = "systemd"
+
+			str := event.String()
+			Expect(str).To(ContainSubstring("service#proxy (alias)"))
+			Expect(str).To(ContainSubstring("refreshed"))
+		})
+
+		It("Should format stable event correctly", func() {
+			event := NewTransactionEvent("file", "/etc/motd", "motd")
+			event.Ensure = "present"
+			event.Provider = "posix"
+
+			str := event.String()
+			Expect(str).To(ContainSubstring("file#motd (alias)"))
+			Expect(str).To(ContainSubstring("ensure=present"))
+			Expect(str).ToNot(ContainSubstring("changed"))
+			Expect(str).ToNot(ContainSubstring("failed"))
+		})
+	})
+
+})
+
 var _ = Describe("SessionSummary", func() {
 	Describe("BuildSessionSummary", func() {
 		It("Should build a correct summary from events", func() {
@@ -24,14 +117,14 @@ var _ = Describe("SessionSummary", func() {
 			}
 
 			// Changed resource
-			changedEvent := NewTransactionEvent("package", "nginx")
+			changedEvent := NewTransactionEvent("package", "nginx", "")
 			changedEvent.Changed = true
 			changedEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 5, 0, time.UTC)
 			changedEvent.Duration = 5 * time.Second
 			events = append(events, changedEvent)
 
 			// Failed resource
-			failedEvent := NewTransactionEvent("service", "apache")
+			failedEvent := NewTransactionEvent("service", "apache", "")
 			failedEvent.Failed = true
 			failedEvent.Errors = append(failedEvent.Errors, "service not found")
 			failedEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 10, 0, time.UTC)
@@ -39,20 +132,20 @@ var _ = Describe("SessionSummary", func() {
 			events = append(events, failedEvent)
 
 			// Skipped resource
-			skippedEvent := NewTransactionEvent("package", "vim")
+			skippedEvent := NewTransactionEvent("package", "vim", "")
 			skippedEvent.Skipped = true
 			skippedEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 12, 0, time.UTC)
 			skippedEvent.Duration = 1 * time.Second
 			events = append(events, skippedEvent)
 
 			// Stable resource
-			stableEvent := NewTransactionEvent("service", "sshd")
+			stableEvent := NewTransactionEvent("service", "sshd", "")
 			stableEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 15, 0, time.UTC)
 			stableEvent.Duration = 3 * time.Second
 			events = append(events, stableEvent)
 
 			// Refreshed resource
-			refreshedEvent := NewTransactionEvent("service", "nginx")
+			refreshedEvent := NewTransactionEvent("service", "nginx", "")
 			refreshedEvent.Changed = true
 			refreshedEvent.Refreshed = true
 			refreshedEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 20, 0, time.UTC)
@@ -102,7 +195,7 @@ var _ = Describe("SessionSummary", func() {
 			startEvent := NewSessionStartEvent()
 			startEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 
-			changedEvent := NewTransactionEvent("package", "nginx")
+			changedEvent := NewTransactionEvent("package", "nginx", "")
 			changedEvent.Changed = true
 			changedEvent.TimeStamp = time.Date(2025, 1, 1, 12, 0, 10, 0, time.UTC)
 

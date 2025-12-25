@@ -32,3 +32,22 @@ func updateMetrics(event model.SessionEvent) {
 		metrics.ResourceStateError.WithLabelValues(e.ResourceType, e.Name).Inc()
 	}
 }
+
+func fileterEvents(allEvents []model.SessionEvent, resourceType string, resourceName string) ([]model.TransactionEvent, error) {
+	// Filter for the specific resource
+	var filtered []model.TransactionEvent
+	for _, event := range allEvents {
+		// Only include TransactionEvents (skip SessionStartEvent)
+		txEvent, ok := event.(*model.TransactionEvent)
+		if !ok {
+			continue
+		}
+
+		// Filter by resourceType and name
+		if txEvent.ResourceType == resourceType && (txEvent.Name == resourceName || txEvent.Alias == resourceName) {
+			filtered = append(filtered, *txEvent)
+		}
+	}
+
+	return filtered, nil
+}

@@ -10,10 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/choria-io/ccm/healthcheck"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // EmbeddedResource is an interface that must be implemented by all resources that are based on this base
@@ -27,6 +28,7 @@ type Base struct {
 	Resource           EmbeddedResource
 	TypeName           string
 	InstanceName       string
+	InstanceAlias      string
 	Ensure             string
 	ResourceProperties model.ResourceProperties
 	Log                model.Logger
@@ -41,10 +43,9 @@ func (b *Base) Validate() error {
 }
 
 func (b *Base) NewTransactionEvent() *model.TransactionEvent {
-	event := model.NewTransactionEvent(b.TypeName, b.InstanceName)
+	event := model.NewTransactionEvent(b.TypeName, b.InstanceName, b.InstanceAlias)
 	if b.ResourceProperties != nil {
 		event.Properties = b.ResourceProperties
-		event.Name = b.InstanceName
 		event.Ensure = b.Ensure
 	}
 
@@ -71,7 +72,7 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 	var state model.ResourceState
 
 	if !healthCheckOnly {
-		timer := prometheus.NewTimer(metrics.ResourceApplyTime.WithLabelValues(model.FileTypeName, provName, b.InstanceName))
+		timer := prometheus.NewTimer(metrics.ResourceApplyTime.WithLabelValues(b.TypeName, provName, b.InstanceName))
 		state, err = b.Resource.ApplyResource(ctx)
 		timer.ObserveDuration()
 
@@ -84,7 +85,7 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 
 	// TODO: make helper in healthchecks
 	for _, hc := range b.ResourceProperties.CommonProperties().HealthChecks {
-		hc.TypeName = model.ServiceTypeName
+		hc.TypeName = b.TypeName
 		hc.ResourceName = b.InstanceName
 
 		res, err := healthcheck.Execute(ctx, b.Manager, &hc, b.UserLogger, b.Log)
@@ -130,5 +131,5 @@ func (b *Base) Properties() model.ResourceProperties {
 }
 
 func (b *Base) String() string {
-	return fmt.Sprintf("%s#%s", model.FileTypeName, b.InstanceName)
+	return fmt.Sprintf("%s#%s", b.TypeName, b.InstanceName)
 }

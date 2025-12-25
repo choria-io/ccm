@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestBase(t *testing.T) {
@@ -87,6 +88,21 @@ var _ = Describe("Base", func() {
 			Expect(event.ResourceType).To(Equal(model.FileTypeName))
 			Expect(event.Properties).To(BeNil())
 		})
+
+		It("Should set alias when InstanceAlias is set", func() {
+			b.InstanceAlias = "motd"
+			event := b.NewTransactionEvent()
+			Expect(event).ToNot(BeNil())
+			Expect(event.Alias).To(Equal("motd"))
+			Expect(event.Name).To(Equal("/tmp/testfile"))
+		})
+
+		It("Should have empty alias when InstanceAlias is not set", func() {
+			b.InstanceAlias = ""
+			event := b.NewTransactionEvent()
+			Expect(event).ToNot(BeNil())
+			Expect(event.Alias).To(BeEmpty())
+		})
 	})
 
 	Describe("Accessor methods", func() {
@@ -111,7 +127,7 @@ var _ = Describe("Base", func() {
 		BeforeEach(func() {
 			mockRes.EXPECT().SelectProvider().Return("mock", nil).AnyTimes()
 			mockRes.EXPECT().NewTransactionEvent().DoAndReturn(func() *model.TransactionEvent {
-				return model.NewTransactionEvent(model.FileTypeName, "/tmp/testfile")
+				return model.NewTransactionEvent(model.FileTypeName, "/tmp/testfile", "")
 			}).AnyTimes()
 		})
 
@@ -236,7 +252,7 @@ var _ = Describe("Base", func() {
 		BeforeEach(func() {
 			mockRes.EXPECT().SelectProvider().Return("mock", nil).AnyTimes()
 			mockRes.EXPECT().NewTransactionEvent().DoAndReturn(func() *model.TransactionEvent {
-				return model.NewTransactionEvent(model.FileTypeName, "/tmp/testfile")
+				return model.NewTransactionEvent(model.FileTypeName, "/tmp/testfile", "")
 			}).AnyTimes()
 		})
 

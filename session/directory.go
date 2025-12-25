@@ -13,9 +13,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/segmentio/ksuid"
+
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
-	"github.com/segmentio/ksuid"
 )
 
 // DirectorySessionStore stores transaction events in a directory of files
@@ -80,29 +81,14 @@ func (s *DirectorySessionStore) StartSession(manifest model.Apply) error {
 }
 
 // EventsForResource returns all events for a given resource, the events are sorted in time order with latest event at the end
-func (s *DirectorySessionStore) EventsForResource(resourceType string, name string) ([]model.TransactionEvent, error) {
+func (s *DirectorySessionStore) EventsForResource(resourceType string, resourceName string) ([]model.TransactionEvent, error) {
 	// Get all events from the session
 	allEvents, err := s.AllEvents()
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter for the specific resource
-	var filtered []model.TransactionEvent
-	for _, event := range allEvents {
-		// Only include TransactionEvents (skip SessionStartEvent)
-		txEvent, ok := event.(*model.TransactionEvent)
-		if !ok {
-			continue
-		}
-
-		// Filter by resourceType and name
-		if txEvent.ResourceType == resourceType && txEvent.Name == name {
-			filtered = append(filtered, *txEvent)
-		}
-	}
-
-	return filtered, nil
+	return fileterEvents(allEvents, resourceType, resourceName)
 }
 
 func (s *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {

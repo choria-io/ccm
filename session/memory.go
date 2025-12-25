@@ -76,22 +76,7 @@ func (s *MemorySessionStore) EventsForResource(resourceType string, resourceName
 		return nil, err
 	}
 
-	// Filter for the specific resource
-	var filtered []model.TransactionEvent
-	for _, event := range allEvents {
-		// Only include TransactionEvents (skip SessionStartEvent)
-		txEvent, ok := event.(*model.TransactionEvent)
-		if !ok {
-			continue
-		}
-
-		// Filter by resourceType and name
-		if txEvent.ResourceType == resourceType && txEvent.Name == resourceName {
-			filtered = append(filtered, *txEvent)
-		}
-	}
-
-	return filtered, nil
+	return fileterEvents(allEvents, resourceType, resourceName)
 }
 
 // AllEvents returns all events in the session in time order

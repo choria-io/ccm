@@ -64,6 +64,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 		Resource:           t,
 		TypeName:           model.ServiceTypeName,
 		InstanceName:       properties.Name,
+		InstanceAlias:      properties.Alias,
 		Ensure:             properties.Ensure,
 		ResourceProperties: &properties,
 		Log:                logger,
@@ -295,7 +296,7 @@ func (t *Type) selectProviderUnlocked() error {
 	}
 
 	if selected == nil {
-		return fmt.Errorf("%s#%s: %w", model.PackageTypeName, t.prop.Name, model.ErrNoSuitableProvider)
+		return fmt.Errorf("%s#%s: %w", model.ServiceTypeName, t.prop.Name, model.ErrNoSuitableProvider)
 	}
 
 	t.log.Debug("Selected provider", "provider", selected.Name())
