@@ -56,8 +56,8 @@ type PackageState struct {
 	Metadata *PackageMetadata `json:"metadata,omitempty"`
 }
 
-func (f *PackageState) CommonState() CommonResourceState {
-	return f.CommonResourceState
+func (f *PackageState) CommonState() *CommonResourceState {
+	return &f.CommonResourceState
 }
 
 func (p *PackageResourceProperties) CommonProperties() *CommonResourceProperties {

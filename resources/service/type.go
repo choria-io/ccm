@@ -7,7 +7,6 @@ package serviceresource
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/choria-io/ccm/internal/registry"
@@ -102,7 +101,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	}
 
 	if len(properties.Subscribe) > 0 {
-		shouldRefreshViaSubscribe, refreshResource, err = t.shouldRefresh()
+		shouldRefreshViaSubscribe, refreshResource, err = t.ShouldRefresh(properties.Subscribe)
 		if err != nil {
 			return nil, err
 		}
@@ -221,15 +220,11 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		}
 	}
 
-	finalStatus.Noop = noop
-	finalStatus.NoopMessage = noopMessage
+	changed := refreshState
 	if noop && refreshState {
-		finalStatus.Changed = true
-	} else {
-		finalStatus.Changed = refreshState
+		changed = true
 	}
-	finalStatus.Refreshed = shouldRefreshViaSubscribe
-	finalStatus.Stable = !refreshState
+	t.FinalizeState(finalStatus, noop, noopMessage, changed, !refreshState, shouldRefreshViaSubscribe)
 
 	return finalStatus, nil
 }
@@ -315,21 +310,4 @@ func (t *Type) SelectProvider() (string, error) {
 	}
 
 	return t.providerUnlocked(), nil
-}
-
-func (t *Type) shouldRefresh() (bool, string, error) {
-	for _, s := range t.prop.Subscribe {
-		parts := strings.Split(s, "#")
-
-		// validate already ensured its the right shape
-		should, err := t.mgr.ShouldRefresh(parts[0], parts[1])
-		if err != nil {
-			return false, s, err
-		}
-		if should {
-			return true, s, nil
-		}
-	}
-
-	return false, "", nil
 }

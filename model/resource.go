@@ -33,7 +33,7 @@ type Resource interface {
 }
 
 type ResourceState interface {
-	CommonState() CommonResourceState
+	CommonState() *CommonResourceState
 }
 
 // ResourceProperties defines the interface for resource property validation and template resolution

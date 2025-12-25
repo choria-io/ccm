@@ -7,6 +7,7 @@ package base
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,6 +40,10 @@ type Base struct {
 }
 
 func (b *Base) Validate() error {
+	if b.ResourceProperties.CommonProperties().SkipValidate {
+		return nil
+	}
+
 	return b.ResourceProperties.Validate()
 }
 
@@ -132,4 +137,34 @@ func (b *Base) Properties() model.ResourceProperties {
 
 func (b *Base) String() string {
 	return fmt.Sprintf("%s#%s", b.TypeName, b.InstanceName)
+}
+
+// FinalizeState sets common fields on the resource state after applying changes.
+// This reduces boilerplate in ApplyResource implementations.
+func (b *Base) FinalizeState(state model.ResourceState, noop bool, noopMessage string, changed bool, stable bool, refreshed bool) {
+	cs := state.CommonState()
+	cs.Noop = noop
+	cs.NoopMessage = noopMessage
+	cs.Changed = changed
+	cs.Stable = stable
+	cs.Refreshed = refreshed
+}
+
+// ShouldRefresh checks if any of the subscribed resources have changed and should trigger a refresh.
+// Returns true if a refresh should occur, the resource that triggered the refresh, and any error.
+func (b *Base) ShouldRefresh(subscribe []string) (bool, string, error) {
+	for _, s := range subscribe {
+		parts := strings.Split(s, "#")
+
+		// validate already ensured its the right shape
+		should, err := b.Manager.ShouldRefresh(parts[0], parts[1])
+		if err != nil {
+			return false, s, err
+		}
+		if should {
+			return true, s, nil
+		}
+	}
+
+	return false, "", nil
 }
