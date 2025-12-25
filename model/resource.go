@@ -49,8 +49,8 @@ type CommonResourceProperties struct {
 	Type         string              `json:"-" yaml:"-"`
 	Name         string              `json:"name" yaml:"name"`
 	Alias        string              `json:"alias,omitempty" yaml:"alias,omitempty"`
-	Ensure       string              `json:"ensure,omitempty" yaml:"ensure"`
-	Provider     string              `json:"provider,omitempty" yaml:"provider"`
+	Ensure       string              `json:"ensure,omitempty" yaml:"ensure,omitempty"`
+	Provider     string              `json:"provider,omitempty" yaml:"provider,omitempty"`
 	HealthChecks []CommonHealthCheck `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
 	SkipValidate bool                `json:"-" yaml:"-"`
 }
