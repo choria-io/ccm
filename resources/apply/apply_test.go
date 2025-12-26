@@ -90,6 +90,29 @@ var _ = Describe("Apply", func() {
 		})
 	})
 
+	Describe("FailOnError", func() {
+		It("Should return true when failOnError is set", func() {
+			apply := &Apply{
+				failOnError: true,
+			}
+
+			Expect(apply.FailOnError()).To(BeTrue())
+		})
+
+		It("Should return false when failOnError is not set", func() {
+			apply := &Apply{
+				failOnError: false,
+			}
+
+			Expect(apply.FailOnError()).To(BeFalse())
+		})
+
+		It("Should return false by default", func() {
+			apply := &Apply{}
+			Expect(apply.FailOnError()).To(BeFalse())
+		})
+	})
+
 	Describe("Thread safety", func() {
 		It("Should handle concurrent access to Resources", func() {
 			apply := &Apply{
@@ -133,6 +156,29 @@ var _ = Describe("Apply", func() {
 					defer GinkgoRecover()
 					data := apply.Data()
 					Expect(data).To(HaveKey("key"))
+					done <- true
+				}()
+			}
+
+			// Wait for all goroutines
+			for i := 0; i < 10; i++ {
+				<-done
+			}
+		})
+
+		It("Should handle concurrent access to FailOnError", func() {
+			apply := &Apply{
+				failOnError: true,
+			}
+
+			done := make(chan bool)
+
+			// Concurrent reads
+			for i := 0; i < 10; i++ {
+				go func() {
+					defer GinkgoRecover()
+					ff := apply.FailOnError()
+					Expect(ff).To(BeTrue())
 					done <- true
 				}()
 			}
@@ -660,5 +706,67 @@ ccm:
 		_, _, err = ResolveManifestFilePath(ctx, mockMgr, manifestPath)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("manifest must not contain resources"))
+	})
+
+	It("parses fail_on_error as true when set", func() {
+		manifestContent := `
+data:
+  log_level: INFO
+ccm:
+  fail_on_error: true
+  resources:
+    - package:
+        name: vim
+        ensure: present
+`
+		manifestPath := tempDir + "/fail-on-error.yaml"
+		err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apply).NotTo(BeNil())
+		Expect(apply.FailOnError()).To(BeTrue())
+	})
+
+	It("parses fail_on_error as false when set to false", func() {
+		manifestContent := `
+data:
+  log_level: INFO
+ccm:
+  fail_on_error: false
+  resources:
+    - package:
+        name: vim
+        ensure: present
+`
+		manifestPath := tempDir + "/fail-on-error-false.yaml"
+		err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apply).NotTo(BeNil())
+		Expect(apply.FailOnError()).To(BeFalse())
+	})
+
+	It("defaults fail_on_error to false when not specified", func() {
+		manifestContent := `
+data:
+  log_level: INFO
+ccm:
+  resources:
+    - package:
+        name: vim
+        ensure: present
+`
+		manifestPath := tempDir + "/no-fail-on-error.yaml"
+		err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apply).NotTo(BeNil())
+		Expect(apply.FailOnError()).To(BeFalse())
 	})
 })

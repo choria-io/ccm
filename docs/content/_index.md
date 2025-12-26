@@ -27,7 +27,7 @@ This then is a new system designed for small-scale Configuration Management desi
 
 This is an experimental work in progress, there are only `exec`, `file` (very basic), `service` and `package` resources implemented so far, they support only `dnf` and `systemd`.
 
-We're focusing on the plumbing for sessions, transactions, plugins, embeddability and experimenting with the CLI interaction model.
+We've got the CLI/shell interaction to a quite mature state, next we're exploring network related features and deeper monitoring integration.
 
 At this point we think the idea has legs and will keep working on it. Keeping in mind the minimal focus of this is to deliver something that can do package-config-service style deployments and as such will have minimal resource types (`file`, `package`, `service` and `exec` are the current targets).
 

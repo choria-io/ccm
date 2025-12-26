@@ -143,6 +143,31 @@ ccm:
 
 The data available in this template will be post Hierarchy evaluation so you will have access to the full Hierarchy resolved data, additionally you can also access `Facts` and `Environ`.
 
+### Controlling failure handling
+
+By default, if any resource fails, the apply will continue to the next resource, and at the moment we do not have any concept that let one resource require another.
+
+This behavior can be controlled by using the `fail_on_error` flag which will terminate the manifest apply as soon as a resource fails.
+
+```yaml
+ccm:
+  fail_on_error: true
+  resources:
+    - exec:
+        name: /usr/bin/false
+    - exec:
+        name: /usr/bin/false
+```
+
+When running we can see the second is never invoked:
+
+```
+$ ccm apply manifest.yaml
+INFO  Executing manifest manifest=manifest.yaml resources=2
+ERROR exec#/usr/bin/false failed ensure=present runtime=3ms provider=posix errors=failed to reach desired state exit code 1
+WARN  Terminating manifest execution due to failed resource
+```
+
 ### Checking what would be done (Noop mode)
 
 One can ask the system to operate in Noop mode, meaning it will attempt to detect what would happen without actually doing it.

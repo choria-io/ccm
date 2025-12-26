@@ -30,9 +30,10 @@ import (
 
 // Apply represents a parsed and resolved manifest ready for execution
 type Apply struct {
-	source    string
-	resources []map[string]model.ResourceProperties
-	data      map[string]any
+	source      string
+	resources   []map[string]model.ResourceProperties
+	data        map[string]any
+	failOnError bool
 
 	mu sync.Mutex
 }
@@ -59,6 +60,14 @@ func (a *Apply) toMap() map[string]any {
 		"resources": a.resources,
 		"data":      a.data,
 	}
+}
+
+// FailOnError returns true if the manifest should fail fast on errors
+func (a *Apply) FailOnError() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	return a.failOnError
 }
 
 // Resources returns the list of resources in the manifest
@@ -198,7 +207,8 @@ type manifestParser struct {
 }
 
 type manifestResourcesParser struct {
-	ResourcesJetFile string          `json:"resources_jet_file" yaml:"resources_jet_file"`
+	ResourcesJetFile string          `json:"resources_jet_file,omitempty" yaml:"resources_jet_file,omitempty"`
+	FailOnError      bool            `json:"fail_on_error,omitempty" yaml:"fail_on_error,omitempty"`
 	Resources        yaml.RawMessage `json:"resources" yaml:"resources"`
 }
 
@@ -274,8 +284,9 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 	}
 
 	apply := &Apply{
-		data:   env.Data,
-		source: "reader",
+		data:        env.Data,
+		source:      "reader",
+		failOnError: parser.CCM.FailOnError,
 	}
 
 	for i, resource := range resources {
@@ -308,7 +319,13 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 		return nil, err
 	}
 
+	var terminate bool
+
 	for _, r := range a.Resources() {
+		if len(r) > 1 {
+			return nil, fmt.Errorf("only one resource type per resource is supported")
+		}
+
 		for _, prop := range r {
 			var event *model.TransactionEvent
 			var resource model.Resource
@@ -348,6 +365,15 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 			if err != nil {
 				log.Error("Could not save event", "event", event.String())
 			}
+
+			if a.FailOnError() && event.Failed {
+				userLog.Warn("Terminating manifest execution due to failed resource")
+				terminate = true
+			}
+		}
+
+		if terminate {
+			break
 		}
 	}
 

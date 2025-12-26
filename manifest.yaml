@@ -1,0 +1,7 @@
+ccm:
+   fail_on_error: true
+   resources:
+      - exec:
+         name: /usr/bin/false
+      - exec:
+         name: /usr/bin/true
