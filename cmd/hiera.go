@@ -13,13 +13,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/goccy/go-yaml"
+	"github.com/tidwall/gjson"
+
 	"github.com/choria-io/ccm/hiera"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/manager"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/fisk"
-	"github.com/goccy/go-yaml"
-	"github.com/tidwall/gjson"
 )
 
 type hieraCommand struct {
@@ -43,7 +44,7 @@ func registerHieraCommand(ccm *fisk.Application) {
 
 	hiera := ccm.Command("hiera", "Hierarchical data resolver")
 
-	parse := hiera.Command("parse", "Parses a YAML or JSON file and prints the result as JSON").Action(cmd.parseAction)
+	parse := hiera.Command("parse", "Parses a YAML or JSON file and prints the result as JSON").Alias("resolve").Action(cmd.parseAction)
 	parse.Arg("input", "Input JSON or YAML file to resolve").Envar("HIERA_INPUT").Required().StringVar(&cmd.input)
 	parse.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)
 	parse.Flag("facts", "JSON or YAML file containing facts").ExistingFileVar(&cmd.factsFile)
@@ -54,7 +55,7 @@ func registerHieraCommand(ccm *fisk.Application) {
 	parse.Flag("env-prefix", "Prefix for environment variable names").Default("HIERA").StringVar(&cmd.envPrefix)
 	parse.Flag("query", "Performs a gjson query on the result").StringVar(&cmd.query)
 	parse.Flag("data", "Sets the data key").Default("data").StringVar(&cmd.dataKey)
-	parse.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").StringVar(&cmd.natsContext)
+	parse.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 
 	facts := hiera.Command("facts", "Shows resolved facts").Action(cmd.showFactsAction)
 	facts.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)

@@ -124,6 +124,20 @@ func (mr *MockApplyMockRecorder) Execute(ctx, mgr, healthCheckOnly, userLog any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockApply)(nil).Execute), ctx, mgr, healthCheckOnly, userLog)
 }
 
+// FailOnError mocks base method.
+func (m *MockApply) FailOnError() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FailOnError")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// FailFast indicates an expected call of FailFast.
+func (mr *MockApplyMockRecorder) FailFast() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailOnError", reflect.TypeOf((*MockApply)(nil).FailOnError))
+}
+
 // Resources mocks base method.
 func (m *MockApply) Resources() []map[string]model.ResourceProperties {
 	m.ctrl.T.Helper()
