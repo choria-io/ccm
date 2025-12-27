@@ -9,3 +9,4 @@ coverage.out
 coverage.html
 *.test
 AGENTS.md
+manifest.yaml

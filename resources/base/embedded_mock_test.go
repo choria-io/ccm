@@ -86,3 +86,17 @@ func (mr *MockEmbeddedResourceMockRecorder) SelectProvider() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectProvider", reflect.TypeOf((*MockEmbeddedResource)(nil).SelectProvider))
 }
+
+// Type mocks base method.
+func (m *MockEmbeddedResource) Type() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Type")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Type indicates an expected call of Type.
+func (mr *MockEmbeddedResourceMockRecorder) Type() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Type", reflect.TypeOf((*MockEmbeddedResource)(nil).Type))
+}

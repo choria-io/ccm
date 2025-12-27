@@ -132,8 +132,8 @@ func (m *MockApply) FailOnError() bool {
 	return ret0
 }
 
-// FailFast indicates an expected call of FailFast.
-func (mr *MockApplyMockRecorder) FailFast() *gomock.Call {
+// FailOnError indicates an expected call of FailOnError.
+func (mr *MockApplyMockRecorder) FailOnError() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailOnError", reflect.TypeOf((*MockApply)(nil).FailOnError))
 }

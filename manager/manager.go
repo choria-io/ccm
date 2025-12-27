@@ -388,16 +388,25 @@ func (m *CCM) RecordEvent(event *model.TransactionEvent) error {
 	return m.session.RecordEvent(event)
 }
 
-// ShouldRefresh returns true if the last transaction event for the resource indicated by the type and name was changed
-func (m *CCM) ShouldRefresh(resourceType string, resourceName string) (bool, error) {
+func (m *CCM) findEvents(resourceType string, resourceName string) ([]model.TransactionEvent, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.session == nil {
-		return false, fmt.Errorf("no session store available")
+		return nil, fmt.Errorf("no session store available")
 	}
 
 	events, err := m.session.EventsForResource(resourceType, resourceName)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve events for %s#%s: %w", resourceType, resourceName, err)
+	}
+
+	return events, nil
+}
+
+// ShouldRefresh returns true if the last transaction event for the resource indicated by the type and name was changed
+func (m *CCM) ShouldRefresh(resourceType string, resourceName string) (bool, error) {
+	events, err := m.findEvents(resourceType, resourceName)
 	if err != nil {
 		return false, fmt.Errorf("could not retrieve events for %s#%s: %w", resourceType, resourceName, err)
 	}
@@ -407,6 +416,21 @@ func (m *CCM) ShouldRefresh(resourceType string, resourceName string) (bool, err
 	}
 
 	return events[len(events)-1].Changed, nil
+}
+
+func (m *CCM) IsResourceFailed(resourceType string, resourceName string) (bool, error) {
+	events, err := m.findEvents(resourceType, resourceName)
+	if err != nil {
+		return false, fmt.Errorf("could not retrieve events for %s#%s: %w", resourceType, resourceName, err)
+	}
+
+	if len(events) == 0 {
+		return false, fmt.Errorf("no events found for %s#%s", resourceType, resourceName)
+	}
+
+	e := events[len(events)-1]
+
+	return e.Failed || len(e.UnmetRequirements) > 0, nil
 }
 
 func (m *CCM) SessionSummary() (*model.SessionSummary, error) {

@@ -6,14 +6,16 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	"github.com/nats-io/nats.go/jetstream"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestManager(t *testing.T) {
@@ -771,7 +773,7 @@ var _ = Describe("ShouldRefresh", func() {
 		mgr.session = nil
 
 		_, err := mgr.ShouldRefresh("file", "/tmp/test")
-		Expect(err).To(MatchError("no session store available"))
+		Expect(err).To(MatchError(fmt.Errorf("no session store available")))
 	})
 })
 

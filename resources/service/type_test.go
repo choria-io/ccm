@@ -133,7 +133,7 @@ var _ = Describe("Service Type", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(svc).ToNot(BeNil())
-			Expect(svc.Base.InstanceAlias).To(Equal("webserver"))
+			Expect(svc.Base.CommonProperties.Alias).To(Equal("webserver"))
 
 			event := svc.NewTransactionEvent()
 			Expect(event.Alias).To(Equal("webserver"))
@@ -183,7 +183,6 @@ var _ = Describe("Service Type", func() {
 			Context("when ensure is running", func() {
 				BeforeEach(func() {
 					svc.prop.Ensure = model.ServiceEnsureRunning
-					svc.Base.Ensure = model.ServiceEnsureRunning
 				})
 
 				It("Should start when service is stopped", func(ctx context.Context) {
@@ -203,8 +202,8 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal(model.ServiceEnsureRunning))
-					Expect(result.ActualEnsure).To(Equal(model.ServiceEnsureRunning))
+					Expect(result.RequestedEnsure).To(Equal(model.ServiceEnsureRunning))
+					Expect(result.FinalEnsure).To(Equal(model.ServiceEnsureRunning))
 				})
 
 				It("Should not change when service is already running", func(ctx context.Context) {
@@ -218,7 +217,7 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeFalse())
-					Expect(result.ActualEnsure).To(Equal(model.ServiceEnsureRunning))
+					Expect(result.FinalEnsure).To(Equal(model.ServiceEnsureRunning))
 				})
 
 				It("Should fail if start fails", func(ctx context.Context) {
@@ -239,7 +238,7 @@ var _ = Describe("Service Type", func() {
 			Context("when ensure is stopped", func() {
 				BeforeEach(func() {
 					svc.prop.Ensure = model.ServiceEnsureStopped
-					svc.Base.Ensure = model.ServiceEnsureStopped
+					svc.Base.CommonProperties = svc.prop.CommonResourceProperties
 				})
 
 				It("Should stop when service is running", func(ctx context.Context) {
@@ -259,7 +258,7 @@ var _ = Describe("Service Type", func() {
 					result, err := svc.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal(model.ServiceEnsureStopped))
+					Expect(result.RequestedEnsure).To(Equal(model.ServiceEnsureStopped))
 				})
 
 				It("Should not change when service is already stopped", func(ctx context.Context) {

@@ -59,10 +59,7 @@ func New(ctx context.Context, mgr model.Manager, properties model.ExecResourcePr
 	}
 	t.Base = &base.Base{
 		Resource:           t,
-		TypeName:           model.ExecTypeName,
-		InstanceName:       properties.Name,
-		Ensure:             properties.Ensure,
-		InstanceAlias:      properties.Alias,
+		CommonProperties:   properties.CommonResourceProperties,
 		ResourceProperties: &properties,
 		Log:                logger,
 		UserLogger:         mgr.UserLogger().With(loggerArgs...),

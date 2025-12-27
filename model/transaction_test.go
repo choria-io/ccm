@@ -35,7 +35,7 @@ var _ = Describe("TransactionEvent", func() {
 		It("Should show alias when set", func() {
 			event := NewTransactionEvent("package", "nginx", "webserver")
 			event.Changed = true
-			event.Ensure = "present"
+			event.RequestedEnsure = "present"
 			event.Provider = "dnf"
 
 			str := event.String()
@@ -46,7 +46,7 @@ var _ = Describe("TransactionEvent", func() {
 		It("Should show name when alias is empty", func() {
 			event := NewTransactionEvent("package", "nginx", "")
 			event.Changed = true
-			event.Ensure = "present"
+			event.RequestedEnsure = "present"
 			event.Provider = "dnf"
 
 			str := event.String()
@@ -57,7 +57,7 @@ var _ = Describe("TransactionEvent", func() {
 		It("Should format failed event correctly", func() {
 			event := NewTransactionEvent("service", "apache", "web")
 			event.Failed = true
-			event.Ensure = "running"
+			event.RequestedEnsure = "running"
 			event.Errors = []string{"service not found"}
 			event.Provider = "systemd"
 
@@ -70,7 +70,7 @@ var _ = Describe("TransactionEvent", func() {
 		It("Should format skipped event correctly", func() {
 			event := NewTransactionEvent("package", "vim", "editor")
 			event.Skipped = true
-			event.Ensure = "present"
+			event.RequestedEnsure = "present"
 			event.Provider = "dnf"
 
 			str := event.String()
@@ -81,7 +81,7 @@ var _ = Describe("TransactionEvent", func() {
 		It("Should format refreshed event correctly", func() {
 			event := NewTransactionEvent("service", "nginx", "proxy")
 			event.Refreshed = true
-			event.Ensure = "running"
+			event.RequestedEnsure = "running"
 			event.Provider = "systemd"
 
 			str := event.String()
@@ -91,7 +91,7 @@ var _ = Describe("TransactionEvent", func() {
 
 		It("Should format stable event correctly", func() {
 			event := NewTransactionEvent("file", "/etc/motd", "motd")
-			event.Ensure = "present"
+			event.RequestedEnsure = "present"
 			event.Provider = "posix"
 
 			str := event.String()

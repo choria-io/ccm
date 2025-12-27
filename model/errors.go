@@ -12,6 +12,7 @@ var (
 	ErrResourceInvalid        = errors.New("invalid resource")
 	ErrResourceNameRequired   = errors.New("name is required")
 	ErrResourceEnsureRequired = errors.New("ensure is required")
+	ErrInvalidRequires        = errors.New("invalid require properties")
 	ErrProviderNotFound       = errors.New("provider not found")
 	ErrProviderNotManageable  = errors.New("provider is not manageable")
 	ErrMultipleProviders      = errors.New("multiple providers found")

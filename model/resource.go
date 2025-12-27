@@ -11,6 +11,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/templates"
 )
 
@@ -52,6 +53,7 @@ type CommonResourceProperties struct {
 	Ensure       string              `json:"ensure,omitempty" yaml:"ensure,omitempty"`
 	Provider     string              `json:"provider,omitempty" yaml:"provider,omitempty"`
 	HealthChecks []CommonHealthCheck `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
+	Require      []string            `json:"require,omitempty" yaml:"require,omitempty"`
 	SkipValidate bool                `json:"-" yaml:"-"`
 }
 
@@ -98,6 +100,12 @@ func (p *CommonResourceProperties) Validate() error {
 
 	if p.Ensure == "" {
 		return ErrResourceEnsureRequired
+	}
+
+	if len(p.Require) > 0 {
+		if !iu.IsValidResourceRef(p.Require...) {
+			return ErrInvalidRequires
+		}
 	}
 
 	return nil

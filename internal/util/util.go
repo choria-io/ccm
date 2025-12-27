@@ -288,3 +288,16 @@ func MapStringsToMapStringAny(m map[string]string) map[string]any {
 
 	return res
 }
+
+// IsValidResourceRef checks if a resource reference is valid
+func IsValidResourceRef(refs ...string) bool {
+	// TODO: should ask the registry for valid types
+
+	for _, ref := range refs {
+		if len(strings.SplitN(ref, "#", 2)) != 2 {
+			return false
+		}
+	}
+
+	return true
+}

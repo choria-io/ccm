@@ -200,6 +200,21 @@ func (mr *MockManagerMockRecorder) FactsRaw(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FactsRaw", reflect.TypeOf((*MockManager)(nil).FactsRaw), ctx)
 }
 
+// IsResourceFailed mocks base method.
+func (m *MockManager) IsResourceFailed(resourceType, resourceName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsResourceFailed", resourceType, resourceName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsResourceFailed indicates an expected call of IsResourceFailed.
+func (mr *MockManagerMockRecorder) IsResourceFailed(resourceType, resourceName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsResourceFailed", reflect.TypeOf((*MockManager)(nil).IsResourceFailed), resourceType, resourceName)
+}
+
 // JetStream mocks base method.
 func (m *MockManager) JetStream() (jetstream.JetStream, error) {
 	m.ctrl.T.Helper()

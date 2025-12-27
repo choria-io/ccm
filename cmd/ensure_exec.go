@@ -36,16 +36,20 @@ func registerEnsureExecCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 func (c *ensureExecCommand) execAction(_ *fisk.ParseContext) error {
 	properties := model.ExecResourceProperties{
 		CommonResourceProperties: model.CommonResourceProperties{
-			Name:         c.command,
-			Ensure:       model.EnsurePresent,
-			Provider:     c.parent.provider,
-			HealthChecks: c.parent.healthCheckProperties(),
+			Name:     c.command,
+			Ensure:   model.EnsurePresent,
+			Provider: c.parent.provider,
 		},
 		Returns:     c.returns,
 		Timeout:     c.timeout,
 		Creates:     c.creates,
 		RefreshOnly: c.refreshOnly,
 		Subscribe:   c.subscribe,
+	}
+
+	err := c.parent.setCommonProperties(&properties.CommonResourceProperties)
+	if err != nil {
+		return err
 	}
 
 	mgr, err := c.parent.manager()

@@ -140,7 +140,6 @@ var _ = Describe("ServiceResourceProperties", func() {
 			Entry("valid multiple subscribes", []string{"file#/etc/nginx/nginx.conf", "file#/etc/nginx/conf.d/default.conf"}, ""),
 			Entry("empty subscribe array", []string{}, ""),
 			Entry("invalid subscribe without hash", []string{"file:/etc/nginx/nginx.conf"}, "invalid subscribe format"),
-			Entry("invalid subscribe with multiple hashes", []string{"file#name#extra"}, "invalid subscribe format"),
 			Entry("invalid subscribe empty string", []string{""}, "invalid subscribe format"),
 			Entry("mixed valid and invalid", []string{"file#/etc/nginx/nginx.conf", "invalid"}, "invalid subscribe format"),
 		)

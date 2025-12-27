@@ -34,7 +34,15 @@ func registerApplyCommand(ccm *fisk.Application) {
 	}
 
 	apply := ccm.Command("apply", "Apply a manifest").Action(cmd.applyAction)
-	apply.Arg("manifest", "Path to manifest to apply").StringVar(&cmd.manifest)
+	apply.HelpLong(`Paths to manifests can be given in a few ways
+
+   * manifest.json: A path to a local file on disk
+   * obj://BUCKET/file.tgz: Downloads a gzipped tarball from a NATS Object Store
+
+When accessing manifests via NATS use the --context flag to provide 
+server urls and authentication parameters.
+`)
+	apply.Arg("manifest", "Path to manifest to apply").PlaceHolder("URL").Required().StringVar(&cmd.manifest)
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	apply.Flag("fact", "Set additional facts to merge with the system facts").StringMapVar(&cmd.facts)
@@ -92,6 +100,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		fmt.Printf("     Failed Resources: %d\n", summary.FailedResources)
 		fmt.Printf("    Skipped Resources: %d\n", summary.SkippedResources)
 		fmt.Printf("  Refreshed Resources: %d\n", summary.RefreshedCount)
+		fmt.Printf("   Unmet Requirements: %d\n", summary.RequirementsUnMetCount)
 		if summary.HealthCheckOKCount > 0 {
 			fmt.Printf("    Checked Resources: %d (ok: %d, critical: %d, warning: %d unknown: %d)\n", summary.HealthCheckedCount, summary.HealthCheckOKCount, summary.HealthCheckCriticalCount, summary.HealthCheckWarningCount, summary.HealthCheckUnknownCount)
 		} else {

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/choria-io/ccm/model"
@@ -21,8 +22,10 @@ type ensureCommand struct {
 	healthCheckTries   int
 	healthCheckSleep   time.Duration
 
+	alias    string
 	noop     bool
 	provider string
+	requires []string
 
 	out model.Logger
 }
@@ -45,13 +48,19 @@ func registerEnsureCommand(ccm *fisk.Application) {
 
 // we do it like this in each child so it shows up in the main sub command help without needing explicit --help
 func (cmd *ensureCommand) addCommonFlags(app *fisk.CmdClause) {
+	app.Flag("alias", "Resource alias").StringVar(&cmd.alias)
 	app.Flag("check", "Command to execute for additional health checks").PlaceHolder("COMMAND").StringVar(&cmd.healthCheckCommand)
 	app.Flag("check-tries", "Number of times to execute the health check command").Default("5").IntVar(&cmd.healthCheckTries)
 	app.Flag("check-sleep", "Time to sleep between health check tries").Default("1s").DurationVar(&cmd.healthCheckSleep)
 	app.Flag("provider", "Resource provider").PlaceHolder("NAME").StringVar(&cmd.provider)
+	app.Flag("require", "Require success on an earlier resource").PlaceHolder("RESOURCES").StringsVar(&cmd.requires)
 }
 
 func (cmd *ensureCommand) manager() (model.Manager, error) {
+	if cmd.session == "" && len(cmd.requires) > 0 {
+		return nil, fmt.Errorf("session store should be set when using requires")
+	}
+
 	mgr, out, err := newManager(cmd.session, cmd.hieraFile, cmd.natsContext, cmd.readEnv, cmd.noop, nil)
 	if err != nil {
 		return nil, err
@@ -60,6 +69,14 @@ func (cmd *ensureCommand) manager() (model.Manager, error) {
 	cmd.out = out
 
 	return mgr, nil
+}
+
+func (cmd *ensureCommand) setCommonProperties(cp *model.CommonResourceProperties) error {
+	cp.HealthChecks = cmd.healthCheckProperties()
+	cp.Require = cmd.requires
+	cp.Alias = cmd.alias
+
+	return nil
 }
 
 func (cmd *ensureCommand) healthCheckProperties() []model.CommonHealthCheck {

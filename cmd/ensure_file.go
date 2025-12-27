@@ -80,10 +80,9 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		Group: group,
 		Mode:  c.mode,
 		CommonResourceProperties: model.CommonResourceProperties{
-			Name:         c.name,
-			Ensure:       c.ensure,
-			Provider:     c.parent.provider,
-			HealthChecks: c.parent.healthCheckProperties(),
+			Name:     c.name,
+			Ensure:   c.ensure,
+			Provider: c.parent.provider,
 		},
 	}
 
@@ -100,6 +99,11 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 
 	case c.source != "":
 		properties.Source = c.source
+	}
+
+	err = c.parent.setCommonProperties(&properties.CommonResourceProperties)
+	if err != nil {
+		return err
 	}
 
 	file, err := fileresource.New(ctx, mgr, properties)

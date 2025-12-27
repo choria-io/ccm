@@ -35,7 +35,7 @@ func (c *ensureServiceCommand) serviceAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	props := model.ServiceResourceProperties{
+	properties := model.ServiceResourceProperties{
 		Subscribe: c.subscribe,
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:         c.name,
@@ -46,10 +46,15 @@ func (c *ensureServiceCommand) serviceAction(_ *fisk.ParseContext) error {
 	}
 
 	if c.enable != nil {
-		props.Enable = c.enable
+		properties.Enable = c.enable
 	}
 
-	svc, err := serviceresource.New(ctx, mgr, props)
+	err = c.parent.setCommonProperties(&properties.CommonResourceProperties)
+	if err != nil {
+		return err
+	}
+
+	svc, err := serviceresource.New(ctx, mgr, properties)
 	if err != nil {
 		return err
 	}
