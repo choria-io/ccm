@@ -13,12 +13,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/choria-io/ccm/internal/registry"
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/internal/registry"
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestFileResource(t *testing.T) {
@@ -80,7 +81,7 @@ var _ = Describe("File Type", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(file).ToNot(BeNil())
-			Expect(file.Base.InstanceAlias).To(Equal("motd"))
+			Expect(file.Base.CommonProperties.Alias).To(Equal("motd"))
 
 			event := file.NewTransactionEvent()
 			Expect(event.Alias).To(Equal("motd"))
@@ -89,6 +90,7 @@ var _ = Describe("File Type", func() {
 		It("Should validate mode is valid octal", func(ctx context.Context) {
 			_, err := New(ctx, mgr, model.FileResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{
+					Type:   model.FileTypeName,
 					Name:   "/tmp/foo",
 					Ensure: model.EnsurePresent,
 				},
@@ -408,7 +410,6 @@ var _ = Describe("File Type", func() {
 			Context("when ensure is present", func() {
 				BeforeEach(func() {
 					file.prop.Ensure = model.EnsurePresent
-					file.Base.Ensure = model.EnsurePresent
 				})
 
 				It("Should create file when absent", func(ctx context.Context) {
@@ -433,7 +434,7 @@ var _ = Describe("File Type", func() {
 					result, err := file.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal(model.EnsurePresent))
+					Expect(result.RequestedEnsure).To(Equal(model.EnsurePresent))
 				})
 
 				It("Should update file when content differs", func(ctx context.Context) {
@@ -549,7 +550,6 @@ var _ = Describe("File Type", func() {
 			Context("when ensure is directory", func() {
 				BeforeEach(func() {
 					file.prop.Ensure = model.FileEnsureDirectory
-					file.Base.Ensure = model.FileEnsureDirectory
 					file.prop.Contents = ""
 				})
 
@@ -575,7 +575,8 @@ var _ = Describe("File Type", func() {
 					result, err := file.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal(model.FileEnsureDirectory))
+					Expect(result.FinalEnsure).To(Equal(model.FileEnsureDirectory))
+					Expect(result.RequestedEnsure).To(Equal(model.EnsurePresent))
 				})
 
 				It("Should not change when directory already exists", func(ctx context.Context) {

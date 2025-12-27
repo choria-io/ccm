@@ -42,27 +42,28 @@ const SessionStartEventProtocol = "io.choria.ccm.v1.session.start"
 
 // TransactionEvent represents a single event for a resource session
 type TransactionEvent struct {
-	Protocol     string               `json:"protocol" yaml:"protocol"`
-	EventID      string               `json:"event_id" yaml:"event_id"`
-	TimeStamp    time.Time            `json:"timestamp" yaml:"timestamp"`
-	ResourceType string               `json:"type" yaml:"type"`
-	Provider     string               `json:"provider" yaml:"provider"`
-	Name         string               `json:"name" yaml:"name"`
-	Alias        string               `json:"alias,omitempty" yaml:"alias,omitempty"`
-	Ensure       string               `json:"ensure" yaml:"ensure"`               // Ensure is the requested ensure value
-	ActualEnsure string               `json:"actual_ensure" yaml:"actual_ensure"` // ActualEnsure is the actual `ensure` value after the session
-	Duration     time.Duration        `json:"duration" yaml:"duration"`
-	Properties   ResourceProperties   `json:"properties" yaml:"properties"`
-	Status       ResourceState        `json:"status" yaml:"status"`
-	NoopMessage  string               `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
-	HealthChecks []*HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
+	Protocol        string               `json:"protocol" yaml:"protocol"`
+	EventID         string               `json:"event_id" yaml:"event_id"`
+	TimeStamp       time.Time            `json:"timestamp" yaml:"timestamp"`
+	ResourceType    string               `json:"type" yaml:"type"`
+	Provider        string               `json:"provider" yaml:"provider"`
+	Name            string               `json:"name" yaml:"name"`
+	Alias           string               `json:"alias,omitempty" yaml:"alias,omitempty"`
+	RequestedEnsure string               `json:"requested_ensure" yaml:"requested_ensure"` // RequestedEnsure is the requested ensure value in the initial properties
+	FinalEnsure     string               `json:"final_ensure" yaml:"final_ensure"`         // FinalEnsure is the actual `ensure` value after the session
+	Duration        time.Duration        `json:"duration" yaml:"duration"`
+	Properties      ResourceProperties   `json:"properties" yaml:"properties"`
+	Status          ResourceState        `json:"status" yaml:"status"`
+	NoopMessage     string               `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
+	HealthChecks    []*HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 
-	Errors    []string `json:"error" yaml:"error"`
-	Changed   bool     `json:"changed" yaml:"changed"`
-	Refreshed bool     `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
-	Failed    bool     `json:"failed" yaml:"failed"`
-	Skipped   bool     `json:"skipped" yaml:"skipped"`
-	Noop      bool     `json:"noop" yaml:"noop"`
+	Errors            []string `json:"error" yaml:"error"`
+	Changed           bool     `json:"changed" yaml:"changed"`
+	Refreshed         bool     `json:"refreshed" yaml:"refreshed"` // Refreshed indicates the resource was restarted/reloaded via subscribe
+	Failed            bool     `json:"failed" yaml:"failed"`
+	Skipped           bool     `json:"skipped" yaml:"skipped"`
+	Noop              bool     `json:"noop" yaml:"noop"`
+	UnmetRequirements []string `json:"unmet_requirements" yaml:"unmet_requirements"`
 }
 
 type SessionStartEvent struct {
@@ -99,7 +100,7 @@ func (t *TransactionEvent) SessionEventID() string { return t.EventID }
 
 func (t *TransactionEvent) LogStatus(log Logger) {
 	args := []any{
-		"ensure", t.Ensure,
+		"ensure", t.RequestedEnsure,
 		"runtime", t.Duration.Truncate(time.Millisecond),
 		"provider", t.Provider,
 	}
@@ -121,6 +122,11 @@ func (t *TransactionEvent) LogStatus(log Logger) {
 	switch {
 	case t.Failed:
 		log.Error(fmt.Sprintf("%s failed", rname), append(args, "errors", strings.Join(t.Errors, ", "))...)
+	case len(t.UnmetRequirements) > 0:
+		for _, req := range t.UnmetRequirements {
+			args = append(args, "unmet", req)
+		}
+		log.Error(fmt.Sprintf("%s skipped due to unmet requirement", rname), args...)
 	case t.Skipped:
 		log.Warn(fmt.Sprintf("%s skipped", rname), args...)
 	case t.Refreshed:
@@ -140,15 +146,17 @@ func (t *TransactionEvent) String() string {
 
 	switch {
 	case t.Failed:
-		return fmt.Sprintf("%s failed ensure=%s runtime=%v errors=%v provider=%s", rname, t.Ensure, t.Duration, strings.Join(t.Errors, ","), t.Provider)
+		return fmt.Sprintf("%s failed ensure=%s runtime=%v errors=%v provider=%s", rname, t.RequestedEnsure, t.Duration, strings.Join(t.Errors, ","), t.Provider)
+	case len(t.UnmetRequirements) > 0:
+		return fmt.Sprintf("%s skipped unmet requirements ensure=%s runtime=%v provider=%s unmet:%s", rname, t.RequestedEnsure, t.Duration, t.Provider, strings.Join(t.UnmetRequirements, ", "))
 	case t.Skipped:
-		return fmt.Sprintf("%s skipped ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s skipped ensure=%s runtime=%v provider=%s", rname, t.RequestedEnsure, t.Duration, t.Provider)
 	case t.Changed:
-		return fmt.Sprintf("%s changed ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s changed ensure=%s runtime=%v provider=%s", rname, t.RequestedEnsure, t.Duration, t.Provider)
 	case t.Refreshed:
-		return fmt.Sprintf("%s refreshed ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s refreshed ensure=%s runtime=%v provider=%s", rname, t.RequestedEnsure, t.Duration, t.Provider)
 	default:
-		return fmt.Sprintf("%s ensure=%s runtime=%v provider=%s", rname, t.Ensure, t.Duration, t.Provider)
+		return fmt.Sprintf("%s ensure=%s runtime=%v provider=%s", rname, t.RequestedEnsure, t.Duration, t.Provider)
 	}
 }
 
@@ -164,6 +172,7 @@ type SessionSummary struct {
 	SkippedResources         int           `json:"skipped_resources" yaml:"skipped_resources"`
 	StableResources          int           `json:"stable_resources" yaml:"stable_resources"`
 	RefreshedCount           int           `json:"refreshed_count" yaml:"refreshed_count"`
+	RequirementsUnMetCount   int           `json:"requirements_unmet_count" yaml:"requirements_unmet_count"`
 	HealthCheckedCount       int           `json:"health_checked_count" yaml:"health_checked_count"`
 	HealthCheckOKCount       int           `json:"health_check_ok_count" yaml:"health_check_ok_count"`
 	HealthCheckWarningCount  int           `json:"health_check_warning_count" yaml:"health_check_warning_count"`
@@ -212,6 +221,9 @@ func BuildSessionSummary(events []SessionEvent) *SessionSummary {
 		default:
 			summary.StableResources++
 		}
+
+		// Track requirements aren't met separately as they are considered stable
+		summary.RequirementsUnMetCount += len(txEvent.UnmetRequirements)
 
 		// Track refreshes separately (a resource can be both changed and refreshed)
 		if txEvent.Refreshed {

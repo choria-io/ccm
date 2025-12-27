@@ -7,10 +7,10 @@ package model
 import (
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/goccy/go-yaml"
 
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/templates"
 )
 
@@ -80,10 +80,9 @@ func (p *ServiceResourceProperties) Validate() error {
 		return fmt.Errorf("service name contains invalid characters: %q (allowed: alphanumeric, ._+:~-)", p.Name)
 	}
 
-	for _, sub := range p.Subscribe {
-		parts := strings.Split(sub, "#")
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid subscribe format %s", sub)
+	if len(p.Subscribe) > 0 {
+		if !iu.IsValidResourceRef(p.Subscribe...) {
+			return fmt.Errorf("invalid subscribe format")
 		}
 	}
 

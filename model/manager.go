@@ -8,8 +8,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/choria-io/ccm/templates"
 	"github.com/nats-io/nats.go/jetstream"
+
+	"github.com/choria-io/ccm/templates"
 )
 
 type Logger interface {
@@ -33,6 +34,7 @@ type Manager interface {
 	NewRunner() (CommandRunner, error)
 	RecordEvent(event *TransactionEvent) error
 	ShouldRefresh(resourceType string, resourceName string) (bool, error)
+	IsResourceFailed(resourceType string, resourceName string) (bool, error)
 	TemplateEnvironment(ctx context.Context) (*templates.Env, error)
 	SetWorkingDirectory(dir string)
 	WorkingDirectory() string

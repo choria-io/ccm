@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/choria-io/ccm/internal/registry"
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/internal/registry"
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestPackageResource(t *testing.T) {
@@ -102,7 +103,7 @@ var _ = Describe("Package Type", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(pkg).ToNot(BeNil())
-			Expect(pkg.Base.InstanceAlias).To(Equal("webserver"))
+			Expect(pkg.Base.CommonProperties.Alias).To(Equal("webserver"))
 
 			event := pkg.NewTransactionEvent()
 			Expect(event.Alias).To(Equal("webserver"))
@@ -161,7 +162,6 @@ var _ = Describe("Package Type", func() {
 			Context("when ensure is present", func() {
 				BeforeEach(func() {
 					pkg.prop.Ensure = EnsurePresent
-					pkg.Base.Ensure = EnsurePresent
 				})
 
 				It("Should install when package is absent", func(ctx context.Context) {
@@ -175,8 +175,8 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal("present"))
-					Expect(result.ActualEnsure).To(Equal("1.0.0"))
+					Expect(result.RequestedEnsure).To(Equal("present"))
+					Expect(result.FinalEnsure).To(Equal("1.0.0"))
 				})
 
 				It("Should not change when package is already present", func(ctx context.Context) {
@@ -187,7 +187,7 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeFalse())
-					Expect(result.ActualEnsure).To(Equal("1.0.0"))
+					Expect(result.FinalEnsure).To(Equal("1.0.0"))
 				})
 
 				It("Should fail if install fails", func(ctx context.Context) {
@@ -205,7 +205,7 @@ var _ = Describe("Package Type", func() {
 			Context("when ensure is absent", func() {
 				BeforeEach(func() {
 					pkg.prop.Ensure = EnsureAbsent
-					pkg.Base.Ensure = EnsureAbsent
+					pkg.Base.CommonProperties = pkg.prop.CommonResourceProperties
 				})
 
 				It("Should uninstall when package is present", func(ctx context.Context) {
@@ -219,7 +219,7 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal(EnsureAbsent))
+					Expect(result.RequestedEnsure).To(Equal(EnsureAbsent))
 				})
 
 				It("Should fail if uninstall fails", func(ctx context.Context) {
@@ -268,7 +268,7 @@ var _ = Describe("Package Type", func() {
 			Context("when ensure is a specific version", func() {
 				It("Should install when package is absent", func(ctx context.Context) {
 					pkg.prop.Ensure = "2.0.0"
-					pkg.Base.Ensure = "2.0.0"
+					pkg.Base.CommonProperties = pkg.prop.CommonResourceProperties
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: EnsureAbsent}}
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 
@@ -279,13 +279,13 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal("2.0.0"))
-					Expect(result.ActualEnsure).To(Equal("2.0.0"))
+					Expect(result.RequestedEnsure).To(Equal("2.0.0"))
+					Expect(result.FinalEnsure).To(Equal("2.0.0"))
 				})
 
 				It("Should not change when version matches", func(ctx context.Context) {
 					pkg.prop.Ensure = "1.0.0"
-					pkg.Base.Ensure = "1.0.0"
+					pkg.Base.CommonProperties = pkg.prop.CommonResourceProperties
 					state := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(state, nil)
@@ -293,13 +293,13 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeFalse())
-					Expect(result.Ensure).To(Equal("1.0.0"))
-					Expect(result.ActualEnsure).To(Equal("1.0.0"))
+					Expect(result.RequestedEnsure).To(Equal("1.0.0"))
+					Expect(result.FinalEnsure).To(Equal("1.0.0"))
 				})
 
 				It("Should upgrade when current version is lower", func(ctx context.Context) {
 					pkg.prop.Ensure = "2.0.0"
-					pkg.Base.Ensure = "2.0.0"
+					pkg.Base.CommonProperties = pkg.prop.CommonResourceProperties
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 
@@ -310,13 +310,14 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal("2.0.0"))
-					Expect(result.ActualEnsure).To(Equal("2.0.0"))
+					Expect(result.RequestedEnsure).To(Equal("2.0.0"))
+					Expect(result.FinalEnsure).To(Equal("2.0.0"))
 				})
 
 				It("Should downgrade when current version is higher", func(ctx context.Context) {
 					pkg.prop.Ensure = "1.0.0"
-					pkg.Base.Ensure = "1.0.0"
+					pkg.Base.CommonProperties = pkg.prop.CommonResourceProperties
+
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
@@ -327,8 +328,8 @@ var _ = Describe("Package Type", func() {
 					result, err := pkg.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeTrue())
-					Expect(result.Ensure).To(Equal("1.0.0"))
-					Expect(result.ActualEnsure).To(Equal("1.0.0"))
+					Expect(result.RequestedEnsure).To(Equal("1.0.0"))
+					Expect(result.FinalEnsure).To(Equal("1.0.0"))
 				})
 
 				It("Should fail if upgrade fails", func(ctx context.Context) {
