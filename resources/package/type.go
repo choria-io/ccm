@@ -58,6 +58,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.PackageResourc
 		return nil, err
 	}
 
+	properties.CommonResourceProperties.Type = model.PackageTypeName
+
 	t := &Type{
 		prop:  &properties,
 		mgr:   mgr,

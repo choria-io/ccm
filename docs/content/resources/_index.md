@@ -13,7 +13,7 @@ Each resource has a type and a unique name followed by some resource-specific pr
 
 Resources can all have additional monitoring / health checks associated with them. See the [Monitoring page](../monitoring/) for more information.
 
-All resources can have an `alias` set which will be used in logging and to find resources for `subscribe` etc
+All resources can have an `alias` set which will be used in logging and to find resources for `subscribe`, `require` etc
 
 All resources can have a `require` property that is a list of `type#name` or `type#alias` that must have succeeded before this resource can be applied.
 
