@@ -50,6 +50,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.ExecResourcePr
 		return nil, err
 	}
 
+	properties.CommonResourceProperties.Type = model.ExecTypeName
+
 	t := &Type{
 		prop:  &properties,
 		mgr:   mgr,

@@ -54,6 +54,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 		return nil, err
 	}
 
+	properties.CommonResourceProperties.Type = model.FileTypeName
+
 	t := &Type{
 		prop:  &properties,
 		mgr:   mgr,

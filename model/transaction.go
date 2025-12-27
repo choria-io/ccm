@@ -52,8 +52,8 @@ type TransactionEvent struct {
 	RequestedEnsure string               `json:"requested_ensure" yaml:"requested_ensure"` // RequestedEnsure is the requested ensure value in the initial properties
 	FinalEnsure     string               `json:"final_ensure" yaml:"final_ensure"`         // FinalEnsure is the actual `ensure` value after the session
 	Duration        time.Duration        `json:"duration" yaml:"duration"`
-	Properties      ResourceProperties   `json:"properties" yaml:"properties"`
-	Status          ResourceState        `json:"status" yaml:"status"`
+	Properties      any                  `json:"properties" yaml:"properties"`
+	Status          any                  `json:"status" yaml:"status"`
 	NoopMessage     string               `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
 	HealthChecks    []*HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
 
@@ -82,12 +82,14 @@ func NewSessionStartEvent() *SessionStartEvent {
 
 func NewTransactionEvent(typeName string, name string, alias string) *TransactionEvent {
 	return &TransactionEvent{
-		Protocol:     TransactionEventProtocol,
-		EventID:      ksuid.New().String(),
-		TimeStamp:    time.Now().UTC(),
-		ResourceType: typeName,
-		Name:         name,
-		Alias:        alias,
+		Protocol:          TransactionEventProtocol,
+		EventID:           ksuid.New().String(),
+		TimeStamp:         time.Now().UTC(),
+		ResourceType:      typeName,
+		Name:              name,
+		Alias:             alias,
+		UnmetRequirements: make([]string, 0),
+		Errors:            make([]string, 0),
 	}
 }
 
