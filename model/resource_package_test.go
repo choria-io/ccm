@@ -104,3 +104,101 @@ var _ = Describe("PackageResourceProperties", func() {
 		)
 	})
 })
+
+var _ = Describe("CommonResourceProperties", func() {
+	Describe("Validate", func() {
+		Describe("Require", func() {
+			It("Should accept valid require references", func() {
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: []string{"package#nginx", "file#/etc/config", "service#httpd"},
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should accept empty require list", func() {
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: []string{},
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should accept nil require list", func() {
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: nil,
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should reject require without hash separator", func() {
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: []string{"package-nginx"},
+				}
+
+				err := prop.Validate()
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ErrInvalidRequires))
+			})
+
+			It("Should accept require with empty type (validation is lenient)", func() {
+				// IsValidResourceRef only checks for presence of # separator
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: []string{"#nginx"},
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should accept require with empty name (validation is lenient)", func() {
+				// IsValidResourceRef only checks for presence of # separator
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: []string{"package#"},
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should reject if any require is invalid", func() {
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: []string{"package#nginx", "invalid-format", "file#/etc/config"},
+				}
+
+				err := prop.Validate()
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ErrInvalidRequires))
+			})
+
+			It("Should accept require with paths containing hash", func() {
+				prop := &CommonResourceProperties{
+					Name:    "test",
+					Ensure:  "present",
+					Require: []string{"file#/path/to/file#with#hash"},
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+	})
+})

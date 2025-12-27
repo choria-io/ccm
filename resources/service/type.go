@@ -61,11 +61,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.ServiceResourc
 	}
 	t.Base = &base.Base{
 		Resource:           t,
-		TypeName:           model.ServiceTypeName,
-		InstanceName:       properties.Name,
-		InstanceAlias:      properties.Alias,
-		Ensure:             properties.Ensure,
 		ResourceProperties: &properties,
+		CommonProperties:   properties.CommonResourceProperties,
 		Log:                logger,
 		UserLogger:         mgr.UserLogger().With(loggerArgs...),
 		Manager:            mgr,

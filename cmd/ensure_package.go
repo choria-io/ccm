@@ -26,19 +26,25 @@ func registerEnsurePackageCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 }
 
 func (c *packageCommand) packageAction(_ *fisk.ParseContext) error {
+	properties := model.PackageResourceProperties{
+		CommonResourceProperties: model.CommonResourceProperties{
+			Name:     c.name,
+			Ensure:   c.ensure,
+			Provider: c.parent.provider,
+		},
+	}
+
+	err := c.parent.setCommonProperties(&properties.CommonResourceProperties)
+	if err != nil {
+		return err
+	}
+
 	mgr, err := c.parent.manager()
 	if err != nil {
 		return err
 	}
 
-	pkg, err := packageresource.New(ctx, mgr, model.PackageResourceProperties{
-		CommonResourceProperties: model.CommonResourceProperties{
-			Name:         c.name,
-			Ensure:       c.ensure,
-			Provider:     c.parent.provider,
-			HealthChecks: c.parent.healthCheckProperties(),
-		},
-	})
+	pkg, err := packageresource.New(ctx, mgr, properties)
 	if err != nil {
 		return err
 	}

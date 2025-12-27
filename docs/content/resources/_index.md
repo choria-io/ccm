@@ -15,6 +15,8 @@ Resources can all have additional monitoring / health checks associated with the
 
 All resources can have an `alias` set which will be used in logging and to find resources for `subscribe` etc
 
+All resources can have a `require` property that is a list of `type#name` or `type#alias` that must have succeeded before this resource can be applied.
+
 ## Exec
 
 When you manage an exec resource, you describe a command that should be executed to bring the system into the desired state. The exec resource is idempotent when used with the `creates` property or `refreshonly` mode.
@@ -31,6 +33,8 @@ exec:
   creates: /tmp/hello
   timeout: 30s
   cwd: /tmp
+  require:
+    - file#/usr/bin/touch
 ```
 
 On the CLI:

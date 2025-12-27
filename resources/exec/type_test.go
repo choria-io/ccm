@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/choria-io/ccm/internal/registry"
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/internal/registry"
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestExecResource(t *testing.T) {
@@ -73,6 +74,7 @@ var _ = Describe("Exec Type", func() {
 		It("Should create exec resource with valid properties", func(ctx context.Context) {
 			exec, err := New(ctx, mgr, model.ExecResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{
+					Type:   model.ExecTypeName,
 					Name:   "/bin/echo hello",
 					Ensure: model.EnsurePresent,
 				},
@@ -92,7 +94,7 @@ var _ = Describe("Exec Type", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(exec).ToNot(BeNil())
-			Expect(exec.Base.InstanceAlias).To(Equal("greeting"))
+			Expect(exec.Base.CommonProperties.Alias).To(Equal("greeting"))
 
 			event := exec.NewTransactionEvent()
 			Expect(event.Alias).To(Equal("greeting"))
