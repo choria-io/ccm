@@ -30,11 +30,12 @@ In these examples you'll see expressions like `{{ lookup('facts.host.info.platfo
 
 We've added the following functions to Expr:
 
-| Function               | Description                                                                                                                |
-|------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `lookup(key, default)` | Lookup data from the runtime environment using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md) |
-| `readFile(file)`       | Read a file into a string, can only read files in the working directory                                                    |
-| `template(f)`          | Parses `f` using templates                                                                                                 |
+| Function                       | Description                                                                                                                     |
+|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `lookup(key, default)`         | Lookup data from the runtime environment using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md)      |
+| `readFile(file)`               | Read a file into a string, can only read files in the working directory                                                         |
+| `template(f)`                  | Parses `f` using templates                                                                                                      |
+| `jet(f)`, `jet(f, "[[", "]]")` | Parses `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md), optionally specifying delimiters |
 
 
 These expressions can be used in Hiera Data and even on the CLI.
