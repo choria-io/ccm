@@ -76,19 +76,19 @@ data:
 ccm:
   resources:
     - package:
-        name: "{{ Data.package_name }}"
-        ensure: present
+        - "{{ Data.package_name }}":
+           ensure: present
     - file: 
-        name: "/etc/httpd/conf.d/listen.conf"
-        ensure: present
-        content: |
-          Listen 8080
+        - "/etc/httpd/conf.d/listen.conf":
+           ensure: present
+           content: |
+               Listen 8080
     - service:
-        name: "{{ Data.service_name }}"
-        ensure: running
-        enable: true
-        subscribe: 
-          - file#/etc/httpd/conf.d/listen.conf
+        "{{ Data.service_name }}":
+           ensure: running
+           enable: true
+           subscribe: 
+             - file#/etc/httpd/conf.d/listen.conf
 
 hierarchy:
   order:
@@ -138,7 +138,7 @@ Here we have a basic `ccm apply` scheduler, but by combining other parts like `k
 
 This way we have a managed manifest, with external data and a scheduler that runs it periodically. 
 
-Together with Governors we can create rolling rollouts where any remediation or configuration change can be globally restricted to single nodes in a cluster concurrently. 
+Together with Governors we can create rolling rollouts where any remediation or configuration change can be globally restricted to single nodes in a cluster concurrently.
 
 ### Choria RPC Support
 

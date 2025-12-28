@@ -255,10 +255,15 @@ func (m *CCM) infoPackageResource(ctx context.Context, prop *model.PackageResour
 
 // ResourceInfo returns information about a resource of the given type and name
 func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, error) {
-	prop, err := model.NewResourcePropertiesFromYaml(typeName, yaml.RawMessage(fmt.Sprintf("name: %q", name)), &templates.Env{})
+	props, err := model.NewResourcePropertiesFromYaml(typeName, yaml.RawMessage(fmt.Sprintf("name: %q", name)), &templates.Env{})
 	if err != nil {
 		return nil, err
 	}
+
+	if len(props) != 1 {
+		return nil, fmt.Errorf("expected exactly one resource of type %s, found %d", typeName, len(props))
+	}
+	prop := props[0]
 
 	switch typeName {
 	case model.FileTypeName:

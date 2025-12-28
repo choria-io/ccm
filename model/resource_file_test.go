@@ -5,10 +5,11 @@
 package model
 
 import (
-	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/choria-io/ccm/templates"
 )
 
 var _ = Describe("FileResourceProperties", func() {
@@ -254,9 +255,10 @@ group: wheel
 mode: "0644"
 content: "hello world"
 `
-			prop, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(prop).ToNot(BeNil())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*FileResourceProperties)
 			Expect(prop.Name).To(Equal("/tmp/test.txt"))
 			Expect(prop.Ensure).To(Equal(EnsurePresent))
 			Expect(prop.Owner).To(Equal("root"))
@@ -286,8 +288,10 @@ content: |
   line 2
   line 3
 `
-			prop, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*FileResourceProperties)
 			Expect(prop.Contents).To(ContainSubstring("line 1"))
 			Expect(prop.Contents).To(ContainSubstring("line 2"))
 			Expect(prop.Contents).To(ContainSubstring("line 3"))
@@ -301,8 +305,10 @@ owner: root
 group: root
 mode: "0644"
 `
-			prop, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*FileResourceProperties)
 			Expect(prop.Type).To(Equal(FileTypeName))
 		})
 	})

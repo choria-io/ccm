@@ -7,6 +7,7 @@ package registry
 import (
 	"fmt"
 	"maps"
+	"sort"
 	"sync"
 
 	"github.com/choria-io/ccm/model"
@@ -123,6 +124,8 @@ func Types() []string {
 	for k := range maps.Keys(entries) {
 		res = append(res, k)
 	}
+
+	sort.Strings(res)
 
 	return res
 }
