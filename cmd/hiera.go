@@ -92,7 +92,7 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	var res map[string]any
+	var res any
 	var logger model.Logger
 
 	if debug {
@@ -111,15 +111,13 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	jout, err := json.MarshalIndent(res, "", "  ")
-	if err != nil {
-		return err
-	}
-
 	if cmd.query != "" {
-		val := gjson.GetBytes(jout, cmd.query)
-		fmt.Println(val.String())
-		return nil
+		jout, err := json.MarshalIndent(res, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		res = gjson.GetBytes(jout, cmd.query).Value()
 	}
 
 	var out []byte
@@ -129,12 +127,9 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 	case cmd.envOutput:
 		buff := bytes.NewBuffer([]byte{})
 		err = cmd.renderEnvOutput(buff, res)
-		if err != nil {
-			return err
-		}
 		out = buff.Bytes()
 	default:
-		out = jout
+		out, err = json.Marshal(res)
 	}
 	if err != nil {
 		return err
@@ -145,24 +140,33 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 	return nil
 }
 
-func (cmd *hieraCommand) renderEnvOutput(w io.Writer, res map[string]any) error {
-	for k, v := range res {
-		key := fmt.Sprintf("%s_%s", cmd.envPrefix, strings.ToUpper(k))
+func (cmd *hieraCommand) renderEnvOutput(w io.Writer, res any) error {
+	switch val := res.(type) {
+	case map[string]any:
+		for k, v := range val {
+			key := fmt.Sprintf("%s_%s", cmd.envPrefix, strings.ToUpper(k))
 
-		switch typed := v.(type) {
-		case string:
-			fmt.Fprintf(w, "%s=%s\n", key, typed)
-		case int8, int16, int32, int64, int:
-			fmt.Fprintf(w, "%s=%v\n", key, typed)
-		case float32, float64:
-			fmt.Fprintf(w, "%s=%f\n", key, typed)
-		default:
-			j, err := json.Marshal(typed)
-			if err != nil {
-				return err
+			switch typed := v.(type) {
+			case string:
+				fmt.Fprintf(w, "%s=%s\n", key, typed)
+			case int8, int16, int32, int64, int:
+				fmt.Fprintf(w, "%s=%v\n", key, typed)
+			case float32, float64:
+				fmt.Fprintf(w, "%s=%f\n", key, typed)
+			default:
+				j, err := json.Marshal(typed)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(w, "%s=%s\n", key, string(j))
 			}
-			fmt.Fprintf(w, "%s=%s\n", key, string(j))
 		}
+	case gjson.Result:
+		j, _ := json.Marshal(val.Value())
+		fmt.Fprintf(w, "%s_VALUE=%v\n", cmd.envPrefix, string(j))
+	default:
+		j, _ := json.Marshal(val)
+		fmt.Fprintf(w, "%s_VALUE=%v\n", cmd.envPrefix, string(j))
 	}
 
 	return nil
