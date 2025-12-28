@@ -7,10 +7,11 @@ package model
 import (
 	"time"
 
-	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/choria-io/ccm/templates"
 )
 
 var _ = Describe("ExecResourceProperties", func() {
@@ -370,9 +371,10 @@ timeout: 30s
 creates: /tmp/marker
 refreshonly: true
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(prop).ToNot(BeNil())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Name).To(Equal("/bin/echo hello"))
 			Expect(prop.Ensure).To(Equal(EnsurePresent))
 			Expect(prop.Cwd).To(Equal("/tmp"))
@@ -387,8 +389,10 @@ refreshonly: true
 name: /bin/echo hello
 ensure: present
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Type).To(Equal(ExecTypeName))
 		})
 
@@ -396,8 +400,10 @@ ensure: present
 			yamlData := `
 name: /bin/echo hello
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Ensure).To(Equal(EnsurePresent))
 		})
 
@@ -406,8 +412,10 @@ name: /bin/echo hello
 name: /bin/echo hello
 ensure: absent
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Ensure).To(Equal(EnsureAbsent))
 		})
 
@@ -427,8 +435,10 @@ environment:
   - FOO=bar
   - BAZ=qux
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Environment).To(HaveLen(2))
 			Expect(prop.Environment[0]).To(Equal("FOO=bar"))
 			Expect(prop.Environment[1]).To(Equal("BAZ=qux"))
@@ -443,8 +453,10 @@ returns:
   - 1
   - 2
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Returns).To(HaveLen(3))
 			Expect(prop.Returns).To(ContainElements(0, 1, 2))
 		})
@@ -457,8 +469,10 @@ subscribe:
   - file:///etc/nginx/nginx.conf
   - file:///etc/nginx/conf.d/default.conf
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Subscribe).To(HaveLen(2))
 			Expect(prop.Subscribe[0]).To(Equal("file:///etc/nginx/nginx.conf"))
 			Expect(prop.Subscribe[1]).To(Equal("file:///etc/nginx/conf.d/default.conf"))
@@ -470,8 +484,10 @@ name: echo hello
 ensure: present
 path: /usr/local/bin:/usr/bin:/bin
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.Path).To(Equal("/usr/local/bin:/usr/bin:/bin"))
 		})
 
@@ -481,8 +497,10 @@ name: /bin/echo hello
 ensure: present
 logoutput: true
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.LogOutput).To(BeTrue())
 		})
 
@@ -491,8 +509,10 @@ logoutput: true
 name: /bin/echo hello
 ensure: present
 `
-			prop, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			props, err := NewExecResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ExecResourceProperties)
 			Expect(prop.LogOutput).To(BeFalse())
 		})
 	})

@@ -291,12 +291,15 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 
 	for i, resource := range resources {
 		for typeName, v := range resource {
-			prop, err := model.NewValidatedResourcePropertiesFromYaml(typeName, v, env)
+			props, err := model.NewValidatedResourcePropertiesFromYaml(typeName, v, env)
 			if err != nil {
 				return nil, nil, fmt.Errorf("invalid manifest resource %d: %w", i+1, err)
 			}
 
-			apply.resources = append(apply.resources, map[string]model.ResourceProperties{typeName: prop})
+			for _, prop := range props {
+				apply.resources = append(apply.resources, map[string]model.ResourceProperties{typeName: prop})
+			}
+
 		}
 	}
 

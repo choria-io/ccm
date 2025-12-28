@@ -1,5 +1,6 @@
 [[ range Data.packages ]]
 - package:
-    name: [[ . ]]
-    ensure: present
+    - defaults:
+       ensure: present
+    - [[ . ]]: {}
 [[ end ]]

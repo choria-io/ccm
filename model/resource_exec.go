@@ -158,18 +158,19 @@ func (p *ExecResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
 }
 
 // NewExecResourcePropertiesFromYaml creates a new exec resource properties object from a yaml document, does not validate or expand templates
-func NewExecResourcePropertiesFromYaml(raw yaml.RawMessage) (*ExecResourceProperties, error) {
-	prop := &ExecResourceProperties{}
-	err := yaml.Unmarshal(raw, prop)
+func NewExecResourcePropertiesFromYaml(raw yaml.RawMessage) ([]ResourceProperties, error) {
+	res, err := parseProperties(raw, ExecTypeName, func() ResourceProperties { return &ExecResourceProperties{} })
 	if err != nil {
 		return nil, err
 	}
 
-	prop.Type = ExecTypeName
-
-	if prop.Ensure == "" {
-		prop.Ensure = EnsurePresent
+	for _, prop := range res {
+		p := prop.(*ExecResourceProperties)
+		p.ParsedTimeout = 0
+		if p.Ensure == "" {
+			p.Ensure = EnsurePresent
+		}
 	}
 
-	return prop, nil
+	return res, nil
 }

@@ -7,9 +7,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/fisk"
 )
 
@@ -23,7 +25,7 @@ func registerStatusCommand(ccm *fisk.Application) {
 	cmd := &statusCommand{}
 
 	status := ccm.Command("status", "Get resource status").Alias("info").Action(cmd.statusAction)
-	status.Arg("type", "Type to get status for").Required().EnumVar(&cmd.typeName, "file", "package", "service", "exec") // TODO: get this from the registry
+	status.Arg("type", fmt.Sprintf("Type to get status for (%s)", strings.Join(registry.Types(), ","))).Required().EnumVar(&cmd.typeName, registry.Types()...)
 	status.Arg("name", "Resource name to get status for").Required().StringVar(&cmd.name)
 	status.Flag("json", "Output status in JSON format").UnNegatableBoolVar(&cmd.json)
 }

@@ -140,21 +140,21 @@ type CommonResourceState struct {
 }
 
 // NewResourcePropertiesFromYaml creates a new resource properties object from a yaml document, it validates the properties and expands any templates
-func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessage, env *templates.Env) (ResourceProperties, error) {
-	var prop ResourceProperties
+func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessage, env *templates.Env) ([]ResourceProperties, error) {
+	var props []ResourceProperties
 	var err error
 
 	// TODO: extend the registry to include these so its automatic and doesnt need maintenance
 
 	switch typeName {
 	case PackageTypeName:
-		prop, err = NewPackageResourcePropertiesFromYaml(rawProperties)
+		props, err = NewPackageResourcePropertiesFromYaml(rawProperties)
 	case ServiceTypeName:
-		prop, err = NewServiceResourcePropertiesFromYaml(rawProperties)
+		props, err = NewServiceResourcePropertiesFromYaml(rawProperties)
 	case FileTypeName:
-		prop, err = NewFileResourcePropertiesFromYaml(rawProperties)
+		props, err = NewFileResourcePropertiesFromYaml(rawProperties)
 	case ExecTypeName:
-		prop, err = NewExecResourcePropertiesFromYaml(rawProperties)
+		props, err = NewExecResourcePropertiesFromYaml(rawProperties)
 	default:
 		return nil, fmt.Errorf("%w: %s %s", ErrResourceInvalid, ErrUnknownType, typeName)
 	}
@@ -162,25 +162,108 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 		return nil, err
 	}
 
-	err = prop.ResolveTemplates(env)
-	if err != nil {
-		return nil, err
+	for _, prop := range props {
+		err = prop.ResolveTemplates(env)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return prop, nil
+	return props, nil
 }
 
 // NewValidatedResourcePropertiesFromYaml creates and validates a new resource properties object from a yaml document, it validates the properties and expands any templates
-func NewValidatedResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessage, env *templates.Env) (ResourceProperties, error) {
-	prop, err := NewResourcePropertiesFromYaml(typeName, rawProperties, env)
+func NewValidatedResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessage, env *templates.Env) ([]ResourceProperties, error) {
+	props, err := NewResourcePropertiesFromYaml(typeName, rawProperties, env)
 	if err != nil {
 		return nil, err
 	}
 
-	err = prop.Validate()
+	for _, prop := range props {
+		err = prop.Validate()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return props, nil
+}
+
+func findDefaultProperties(props []map[string]yaml.RawMessage) (yaml.RawMessage, error) {
+	var defaultProps yaml.RawMessage
+
+	for _, v := range props {
+		if len(v) != 1 {
+			return nil, fmt.Errorf("multiple resource names found in package resource")
+		}
+		_, dflt := v["defaults"]
+		if dflt {
+			if defaultProps != nil {
+				return nil, fmt.Errorf("multiple defaults found in package resource")
+			}
+			defaultProps = v["defaults"]
+		}
+	}
+
+	return defaultProps, nil
+}
+
+func parseProperties(raw yaml.RawMessage, typeName string, target func() ResourceProperties) ([]ResourceProperties, error) {
+	var props []map[string]yaml.RawMessage
+
+	yaml.Unmarshal(raw, &props) // failure is expected cos this detects 2 formats
+
+	switch len(props) {
+	case 0:
+		prop := target()
+		err := yaml.Unmarshal(raw, prop)
+		if err != nil {
+			return nil, err
+		}
+
+		cp := prop.CommonProperties()
+		cp.Type = typeName
+		return []ResourceProperties{prop}, nil
+
+	default:
+		return parseMultipleProperties(props, typeName, target)
+	}
+}
+
+func parseMultipleProperties(props []map[string]yaml.RawMessage, typeName string, target func() ResourceProperties) ([]ResourceProperties, error) {
+	var res []ResourceProperties
+
+	dflt, err := findDefaultProperties(props)
 	if err != nil {
 		return nil, err
 	}
 
-	return prop, nil
+	for _, v := range props {
+		for name, vprop := range v {
+			if name == "defaults" {
+				continue
+			}
+
+			prop := target()
+
+			if len(dflt) > 0 {
+				err := yaml.Unmarshal(dflt, prop)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			err := yaml.Unmarshal(vprop, prop)
+			if err != nil {
+				return nil, err
+			}
+
+			cp := prop.CommonProperties()
+			cp.Name = name
+			cp.Type = typeName
+			res = append(res, prop)
+		}
+	}
+
+	return res, nil
 }

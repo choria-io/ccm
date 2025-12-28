@@ -117,14 +117,6 @@ func (p *ServiceResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
 }
 
 // NewServiceResourcePropertiesFromYaml creates a new service resource properties object from a yaml document, does not validate or expand templates
-func NewServiceResourcePropertiesFromYaml(raw yaml.RawMessage) (*ServiceResourceProperties, error) {
-	prop := &ServiceResourceProperties{}
-	err := yaml.Unmarshal(raw, prop)
-	if err != nil {
-		return nil, err
-	}
-
-	prop.Type = ServiceTypeName
-
-	return prop, nil
+func NewServiceResourcePropertiesFromYaml(raw yaml.RawMessage) ([]ResourceProperties, error) {
+	return parseProperties(raw, ServiceTypeName, func() ResourceProperties { return &ServiceResourceProperties{} })
 }

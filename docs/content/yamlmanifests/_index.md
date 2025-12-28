@@ -30,8 +30,8 @@ We will manage the Apache Server package here:
 ccm:
   resources:
     - package:
-        name: "{{ lookup('data.package_name') }}"
-        ensure: latest
+       - "{{ lookup('data.package_name') }}":
+           ensure: latest
 ```
 
 ##### Configure Hierarchy
@@ -67,8 +67,8 @@ data:
 ccm:
   resources:
     - package:
-        name: "{{ lookup('data.package_name') }}"
-        ensure: latest
+        - "{{ lookup('data.package_name') }}":
+             ensure: latest
 
 hierarchy:
   order:
@@ -99,9 +99,39 @@ data:
   package_name: apache2
 resources:
 - package:
-    ensure: latest
-    name: apache2
+    - apache2:
+         ensure: latest
 ```
+
+### Setting Defaults
+
+Writing manifests with many similar resources can become tedious, we support setting defaults in the manifest itself:
+
+```yaml
+resources:
+  - file:
+      - defaults:
+          owner: app
+          group: app
+          mode: "0644"
+          ensure: present
+      - /app/config/file.conf:
+          source: file.conf
+      - /app/bin/app:
+          source: app.bin
+          mode: "0700"
+
+  - file:
+      - /etc/motd:
+           ensure: present
+           source: motd.txt
+           owner: root
+           group: root
+           mode: "0644"           
+```
+
+Here we create two files with the same owner and group but different contents and a different mode on one of the files. The first file is unaffected by the defaults earlier as it's a new scope.
+
 
 ### Templating
 
@@ -133,8 +163,8 @@ ccm:
 {* resources.jet *}
 [[ range Data.common_packages ]]
 - package:
-    name: [[ . ]]
-    ensure: present
+    - [[ . ]]:
+         ensure: present
 [[ end ]]
 ```
 
@@ -154,9 +184,8 @@ ccm:
   fail_on_error: true
   resources:
     - exec:
-        name: /usr/bin/false
-    - exec:
-        name: /usr/bin/false
+        - /usr/bin/false: {}
+        - /usr/bin/true: {}
 ```
 
 When running we can see the second is never invoked:
@@ -206,12 +235,13 @@ $ vi /tmp/manifest/manifest.yaml
 ...
 ccm:
   resources:
-        name: /etc/motd
-        ensure: present
-        source: motd
-        owner: root
-        group: root
-        mode: "0644"
+    - file:
+       - /etc/motd:
+            ensure: present
+            source: motd
+            owner: root
+            group: root
+            mode: "0644"
 ```
 
 You can see here we read the file `motd` and copy it to `/etc/motd` on the node.

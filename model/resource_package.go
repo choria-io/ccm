@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/choria-io/ccm/templates"
 	"github.com/goccy/go-yaml"
+
+	"github.com/choria-io/ccm/templates"
 )
 
 const (
@@ -103,14 +104,6 @@ func (p *PackageResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
 }
 
 // NewPackageResourcePropertiesFromYaml creates a new package resource properties object from a yaml document, does not validate or expand templates
-func NewPackageResourcePropertiesFromYaml(raw yaml.RawMessage) (*PackageResourceProperties, error) {
-	prop := &PackageResourceProperties{}
-	err := yaml.Unmarshal(raw, prop)
-	if err != nil {
-		return nil, err
-	}
-
-	prop.Type = PackageTypeName
-
-	return prop, nil
+func NewPackageResourcePropertiesFromYaml(raw yaml.RawMessage) ([]ResourceProperties, error) {
+	return parseProperties(raw, PackageTypeName, func() ResourceProperties { return &PackageResourceProperties{} })
 }

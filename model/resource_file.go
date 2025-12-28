@@ -146,14 +146,6 @@ func (p *FileResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
 }
 
 // NewFileResourcePropertiesFromYaml creates a new file resource properties object from a yaml document, does not validate or expand templates
-func NewFileResourcePropertiesFromYaml(raw yaml.RawMessage) (*FileResourceProperties, error) {
-	prop := &FileResourceProperties{}
-	err := yaml.Unmarshal(raw, prop)
-	if err != nil {
-		return nil, err
-	}
-
-	prop.Type = FileTypeName
-
-	return prop, nil
+func NewFileResourcePropertiesFromYaml(raw yaml.RawMessage) ([]ResourceProperties, error) {
+	return parseProperties(raw, FileTypeName, func() ResourceProperties { return &FileResourceProperties{} })
 }
