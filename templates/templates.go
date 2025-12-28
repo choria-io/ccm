@@ -5,15 +5,18 @@
 package templates
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
 	"sync"
 
+	"github.com/CloudyKit/jet/v6"
 	"github.com/expr-lang/expr"
 	"github.com/tidwall/gjson"
 )
@@ -72,6 +75,62 @@ func (e *Env) template(params ...any) (any, error) {
 	}
 
 	return ResolveTemplateTyped(contents, e)
+}
+
+func (e *Env) jet(params ...any) (any, error) {
+	lpat := "[["
+	rpat := "]]"
+	body := ""
+	var ok bool
+
+	switch len(params) {
+	case 1:
+		body, ok = params[0].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for template body")
+		}
+
+	case 3:
+		body, ok = params[0].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for template body")
+		}
+
+		lpat, ok = params[1].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for left delimiter")
+		}
+
+		rpat, ok = params[2].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for right delimiter")
+		}
+	default:
+		return "", fmt.Errorf("jet requires 1 or 3 arguments")
+	}
+
+	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims(lpat, rpat))
+	tpl, err := set.Parse("input", body)
+	if err != nil {
+		return nil, err
+	}
+
+	variables := jet.VarMap{
+		"facts":   reflect.ValueOf(e.Facts),
+		"Facts":   reflect.ValueOf(e.Facts),
+		"data":    reflect.ValueOf(e.Data),
+		"Data":    reflect.ValueOf(e.Data),
+		"environ": reflect.ValueOf(e.Environ),
+		"Environ": reflect.ValueOf(e.Environ),
+	}
+
+	buff := bytes.NewBuffer([]byte{})
+	err = tpl.Execute(buff, variables, e)
+	if err != nil {
+		return nil, err
+	}
+
+	return buff.String(), nil
 }
 
 func (e *Env) lookup(params ...any) (any, error) {
@@ -226,6 +285,7 @@ func exprParse(query string, env *Env) (any, error) {
 		expr.Function("lookup", env.lookup),
 		expr.Function("readFile", env.readFile),
 		expr.Function("template", env.template),
+		expr.Function("jet", env.jet),
 	)
 	if err != nil {
 		return "", fmt.Errorf("expr compile error for '%s': %w", query, err)

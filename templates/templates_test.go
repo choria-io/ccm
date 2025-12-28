@@ -272,6 +272,103 @@ var _ = Describe("Templates", func() {
 		})
 	})
 
+	Describe("jet function", func() {
+		// Note: In Jet templates, use VarMap variables without leading dot (e.g., data.field)
+		// or use .Field to access fields on the context object (Env struct)
+
+		DescribeTable("successful template rendering",
+			func(template, expected string) {
+				result, err := ResolveTemplateString(template, env)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(expected))
+			},
+			// Variable access - VarMap
+			Entry("lowercase VarMap data variable", "{{ jet('[[ data.app_name ]]') }}", "myapp"),
+			Entry("lowercase VarMap facts variable", "{{ jet('[[ facts.os ]]') }}", "linux"),
+			Entry("capitalized VarMap Data variable", "{{ jet('[[ Data.app_name ]]') }}", "myapp"),
+			Entry("capitalized VarMap Facts variable", "{{ jet('[[ Facts.hostname ]]') }}", "test-server"),
+
+			// Variable access - context dot notation
+			Entry("context dot notation for Data", "{{ jet('[[ .Data.app_name ]]') }}", "myapp"),
+			Entry("context dot notation for Facts", "{{ jet('[[ .Facts.os ]]') }}", "linux"),
+
+			// Custom delimiters
+			Entry("custom delimiters << >>", "{{ jet('<< data.app_name >>', '<<', '>>') }}", "myapp"),
+
+			// Control structures
+			Entry("if conditional true", "{{ jet('[[ if data.enabled ]]yes[[ end ]]') }}", "yes"),
+			Entry("if-else true branch", "{{ jet('[[ if data.enabled ]]enabled[[ else ]]disabled[[ end ]]') }}", "enabled"),
+			Entry("numeric comparison >", "{{ jet('[[ if data.port > 80 ]]high[[ else ]]low[[ end ]]') }}", "high"),
+			Entry("string equality", "{{ jet('[[ if facts.os == \"linux\" ]]penguin[[ end ]]') }}", "penguin"),
+
+			// Variable assignment
+			Entry("variable assignment", "{{ jet('[[ name := data.app_name ]][[ name ]]') }}", "myapp"),
+
+			// Built-in functions
+			Entry("isset function", "{{ jet('[[ if isset(data.app_name) ]]exists[[ end ]]') }}", "exists"),
+
+			// Edge cases
+			Entry("empty template body", "{{ jet('') }}", ""),
+			Entry("plain text without expressions", "{{ jet('plain text without expressions') }}", "plain text without expressions"),
+		)
+
+		DescribeTable("error cases",
+			func(template, expectedError string) {
+				_, err := ResolveTemplateString(template, env)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedError))
+			},
+			Entry("invalid jet syntax", "{{ jet('[[ if ]]') }}", ""),
+			Entry("no arguments", "{{ jet() }}", "jet requires 1 or 3 arguments"),
+			Entry("2 arguments", "{{ jet('body', 'left') }}", "jet requires 1 or 3 arguments"),
+			Entry("non-string body", "{{ jet(123) }}", "jet requires a string argument for template body"),
+			Entry("non-string left delimiter", "{{ jet('body', 123, '>>') }}", "jet requires a string argument for left delimiter"),
+			Entry("non-string right delimiter", "{{ jet('body', '<<', 123) }}", "jet requires a string argument for right delimiter"),
+		)
+
+		It("Should support if-else false branch", func() {
+			env.Data["enabled"] = false
+			result, err := ResolveTemplateString("{{ jet('[[ if data.enabled ]]enabled[[ else ]]disabled[[ end ]]') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("disabled"))
+		})
+
+		It("Should support range over maps", func() {
+			env.Data["items"] = map[string]string{"a": "alpha"}
+			result, err := ResolveTemplateString("{{ jet('[[ range k, v := data.items ]][[ k ]]=[[ v ]][[ end ]]') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("a=alpha"))
+		})
+
+		It("Should support range over slices", func() {
+			env.Data["list"] = []string{"one", "two", "three"}
+			result, err := ResolveTemplateString("{{ jet('[[ range i, v := data.list ]][[ i ]]:[[ v ]] [[ end ]]') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("0:one 1:two 2:three "))
+		})
+
+		It("Should support len function", func() {
+			env.Data["list"] = []string{"a", "b", "c"}
+			result, err := ResolveTemplateString("{{ jet('[[ len(data.list) ]]') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("3"))
+		})
+
+		It("Should access environ VarMap variable", func() {
+			env.Environ = map[string]string{"HOME": "/home/test"}
+			result, err := ResolveTemplateString("{{ jet('[[ environ.HOME ]]') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("/home/test"))
+		})
+
+		It("Should access Environ via context dot notation", func() {
+			env.Environ = map[string]string{"PATH": "/usr/bin"}
+			result, err := ResolveTemplateString("{{ jet('[[ .Environ.PATH ]]') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("/usr/bin"))
+		})
+	})
+
 	Describe("Edge cases", func() {
 		It("Should handle nil values", func() {
 			env.Data["null_value"] = nil
