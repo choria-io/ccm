@@ -77,18 +77,18 @@ ccm:
   resources:
     - package:
         - "{{ Data.package_name }}":
-           ensure: present
+            ensure: present
     - file: 
         - "/etc/httpd/conf.d/listen.conf":
-           ensure: present
-           content: |
-               Listen 8080
+            ensure: present
+            content: |
+                Listen 8080
     - service:
-        "{{ Data.service_name }}":
-           ensure: running
-           enable: true
-           subscribe: 
-             - file#/etc/httpd/conf.d/listen.conf
+        - "{{ Data.service_name }}":
+            ensure: running
+            enable: true
+            subscribe: 
+              - file#/etc/httpd/conf.d/listen.conf
 
 hierarchy:
   order:

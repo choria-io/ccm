@@ -599,7 +599,6 @@ var _ = Describe("ResolveManifestFilePath", func() {
 			data = d
 			return data
 		}).AnyTimes()
-		mockMgr.EXPECT().Data().Return(data).AnyTimes()
 
 		var err error
 		tempDir, err = os.MkdirTemp("", "manifest-file-test-*")
@@ -768,5 +767,154 @@ ccm:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(apply).NotTo(BeNil())
 		Expect(apply.FailOnError()).To(BeFalse())
+	})
+
+	Describe("WithOverridingHieraData", func() {
+		It("should set the overridingHieraData field", func() {
+			apply := &Apply{}
+			opt := WithOverridingHieraData("/some/path.yaml")
+			err := opt(apply)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply.overridingHieraData).To(Equal("/some/path.yaml"))
+		})
+
+		It("should return error for nonexistent hiera file", func() {
+			manifestContent := `
+data:
+  key: value
+ccm:
+  resources:
+    - package:
+        name: test
+        ensure: present
+`
+			manifestPath := tempDir + "/invalid-hiera-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, _, err = ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+				WithOverridingHieraData("/nonexistent/path.yaml"))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should override manifest data with hiera data", func() {
+			manifestContent := `
+data:
+  app_name: original
+  log_level: INFO
+ccm:
+  resources:
+    - package:
+        name: "{{lookup('data.app_name')}}"
+        ensure: present
+`
+			manifestPath := tempDir + "/override-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Override file must have 'data:' section (hiera format)
+			hieraContent := `
+data:
+  app_name: overridden
+`
+			hieraPath := tempDir + "/override-hiera.yaml"
+			err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath, WithOverridingHieraData(hieraPath))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply).NotTo(BeNil())
+
+			// The overriding hiera data should have replaced the original value
+			resultData := apply.Data()
+			Expect(resultData).To(HaveKeyWithValue("app_name", "overridden"))
+			// Original data that wasn't overridden should still be present
+			Expect(resultData).To(HaveKeyWithValue("log_level", "INFO"))
+		})
+
+		It("should augment manifest data with new keys from hiera", func() {
+			manifestContent := `
+data:
+  existing_key: original_value
+ccm:
+  resources:
+    - package:
+        name: test-pkg
+        ensure: present
+`
+			manifestPath := tempDir + "/augment-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Override file must have 'data:' section (hiera format)
+			hieraContent := `
+data:
+  new_key: added_value
+`
+			hieraPath := tempDir + "/augment-hiera.yaml"
+			err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+				WithOverridingHieraData(hieraPath))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply).NotTo(BeNil())
+
+			resultData := apply.Data()
+			// Both original and new keys should be present
+			Expect(resultData).To(HaveKeyWithValue("existing_key", "original_value"))
+			Expect(resultData).To(HaveKeyWithValue("new_key", "added_value"))
+		})
+
+		It("should deep merge nested data structures", func() {
+			manifestContent := `
+data:
+  config:
+    database:
+      host: localhost
+      port: 5432
+    cache:
+      enabled: true
+ccm:
+  resources:
+    - package:
+        name: test-pkg
+        ensure: present
+`
+			manifestPath := tempDir + "/deep-merge-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			hieraContent := `
+data:
+  config:
+    database:
+      host: production-db
+`
+			hieraPath := tempDir + "/deep-merge-hiera.yaml"
+			err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+				WithOverridingHieraData(hieraPath))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply).NotTo(BeNil())
+
+			resultData := apply.Data()
+			config, ok := resultData["config"].(map[string]any)
+			Expect(ok).To(BeTrue())
+
+			database, ok := config["database"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			// Overridden value
+			Expect(database["host"]).To(Equal("production-db"))
+			// Original value preserved
+			Expect(database["port"]).To(BeNumerically("==", 5432))
+
+			// Other nested structures should be preserved
+			cache, ok := config["cache"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			Expect(cache["enabled"]).To(BeTrue())
+		})
 	})
 })

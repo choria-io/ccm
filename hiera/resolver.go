@@ -16,12 +16,13 @@ import (
 	"slices"
 	"strings"
 
-	iu "github.com/choria-io/ccm/internal/util"
-	"github.com/choria-io/ccm/model"
 	"github.com/expr-lang/expr"
 	"github.com/goccy/go-yaml"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/tidwall/gjson"
+
+	iu "github.com/choria-io/ccm/internal/util"
+	"github.com/choria-io/ccm/model"
 )
 
 // Hierarchy describes how data sections should be resolved.
@@ -205,7 +206,7 @@ func ResolveFile(ctx context.Context, file string, facts map[string]any, opts Op
 	}
 
 	if !iu.FileExists(abs) {
-		return nil, nil
+		return nil, fmt.Errorf("file %s does not exist", abs)
 	}
 
 	raw, err := os.ReadFile(abs)

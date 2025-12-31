@@ -90,7 +90,7 @@ func (m *CCM) JetStream() (jetstream.JetStream, error) {
 
 	m.nc, _, err = natscontext.Connect(m.natsContext, m.natsOptions(m.log)...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nats connection error: %w", err)
 	}
 
 	m.js, err = jetstream.New(m.nc, jetstream.WithDefaultTimeout(2*time.Second))

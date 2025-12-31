@@ -49,17 +49,19 @@ server urls and authentication parameters.
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
 	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
+	apply.Flag("hiera", "Hiera data file to use as overriding data source").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
+
 	apply.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
-	mgr, userLogger, err := newManager("", c.hieraFile, c.natsContext, c.readEnv, c.noop, iu.MapStringsToMapStringAny(c.facts))
+	mgr, userLogger, err := newManager("", "", c.natsContext, c.readEnv, c.noop, iu.MapStringsToMapStringAny(c.facts))
 	if err != nil {
 		return err
 	}
 
-	_, manifest, wd, err := apply.ResolveManifestUrl(ctx, mgr, c.manifest, userLogger)
+	_, manifest, wd, err := apply.ResolveManifestUrl(ctx, mgr, c.manifest, userLogger, apply.WithOverridingHieraData(c.hieraFile))
 	if err != nil {
 		return err
 	}
