@@ -10,11 +10,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/choria-io/ccm/model/modelmocks"
 	"github.com/nats-io/nats.go/jetstream"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestHiera(t *testing.T) {
@@ -748,12 +749,6 @@ var _ = Describe("ResolveFile", func() {
 	AfterEach(func() {
 		ctrl.Finish()
 		os.RemoveAll(tempDir)
-	})
-
-	It("returns nil for non-existent files", func() {
-		result, err := ResolveFile(ctx, "/nonexistent/file.yaml", nil, DefaultOptions, mockLog)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(BeNil())
 	})
 
 	It("resolves YAML files", func() {

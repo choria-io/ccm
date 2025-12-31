@@ -103,6 +103,12 @@ resources:
          ensure: latest
 ```
 
+### Overriding Data
+
+It might be useful to override/augmenting the data in a manifest with another Hiera file, or KV bucket.
+
+To do this pass `--hiera kv://CCM/common` to the `ccm apply` command.
+
 ### Setting Defaults
 
 Writing manifests with many similar resources can become tedious, we support setting defaults in the manifest itself:
@@ -130,7 +136,7 @@ resources:
            mode: "0644"           
 ```
 
-Here we create two files with the same owner and group but different contents and a different mode on one of the files. The first file is unaffected by the defaults earlier as it's a new scope.
+Here we create two files with the same owner and group but different contents and a different mode on one of the files. The `motd` file is unaffected by the defaults earlier as it's a new scope.
 
 
 ### Templating

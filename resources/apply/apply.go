@@ -30,10 +30,11 @@ import (
 
 // Apply represents a parsed and resolved manifest ready for execution
 type Apply struct {
-	source      string
-	resources   []map[string]model.ResourceProperties
-	data        map[string]any
-	failOnError bool
+	source              string
+	resources           []map[string]model.ResourceProperties
+	data                map[string]any
+	failOnError         bool
+	overridingHieraData string
 
 	mu sync.Mutex
 }
@@ -91,7 +92,7 @@ func (a *Apply) Data() map[string]any {
 // When accessing manifests from an object store the working directory of the manager should be set to this directory, it should
 // be removed after use and the manager working dir be reset. The wd output from the function is the path to the temporary directory or empty
 // string when no temporary directory was used
-func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, log model.Logger) (res map[string]any, apply model.Apply, wd string, err error) {
+func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, log model.Logger, opts ...Option) (res map[string]any, apply model.Apply, wd string, err error) {
 	if source == "" {
 		return nil, nil, "", fmt.Errorf("source is required")
 	}
@@ -103,10 +104,10 @@ func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, l
 
 	switch uri.Scheme {
 	case "obj":
-		res, apply, wd, err = ResolveManifestObjectValue(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), log)
+		res, apply, wd, err = ResolveManifestObjectValue(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), log, opts...)
 
 	case "":
-		res, apply, err = ResolveManifestFilePath(ctx, mgr, source)
+		res, apply, err = ResolveManifestFilePath(ctx, mgr, source, opts...)
 
 	default:
 		return nil, nil, "", fmt.Errorf("unsupported manifest source: %s", source)
@@ -123,7 +124,7 @@ func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, l
 // ResolveManifestObjectValue reads a manifest from an object store and resolves it using ResolveManifestReader()
 //
 // If a value for `dir` is returned it should be cleaned up after use
-func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket string, file string, log model.Logger) (manifest map[string]any, apply model.Apply, dir string, err error) {
+func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket string, file string, log model.Logger, opts ...Option) (manifest map[string]any, apply model.Apply, dir string, err error) {
 	if bucket == "" {
 		return nil, nil, "", fmt.Errorf("bucket name is required for object store manifest source")
 	}
@@ -168,7 +169,7 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 		}
 	}
 
-	resolved, apply, err := ResolveManifestFilePath(ctx, mgr, manifestPath)
+	resolved, apply, err := ResolveManifestFilePath(ctx, mgr, manifestPath, opts...)
 	if err != nil {
 		os.RemoveAll(td)
 		return nil, nil, "", err
@@ -182,14 +183,14 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 }
 
 // ResolveManifestFilePath reads a file and resolves the manifest using ResolveManifestReader()
-func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string) (map[string]any, model.Apply, error) {
+func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string, opts ...Option) (map[string]any, model.Apply, error) {
 	manifestFile, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer manifestFile.Close()
 
-	resolved, apply, err := ResolveManifestReader(ctx, mgr, filepath.Dir(path), manifestFile)
+	resolved, apply, err := ResolveManifestReader(ctx, mgr, filepath.Dir(path), manifestFile, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -213,7 +214,18 @@ type manifestResourcesParser struct {
 }
 
 // ResolveManifestReader reads and resolves a manifest using Hiera, returning the resolved data and parsed manifest
-func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, manifest io.Reader) (map[string]any, model.Apply, error) {
+func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, manifest io.Reader, opts ...Option) (map[string]any, model.Apply, error) {
+	apply := &Apply{
+		source: "reader",
+	}
+
+	for _, o := range opts {
+		err := o(apply)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	mb, err := io.ReadAll(manifest)
 	if err != nil {
 		return nil, nil, err
@@ -235,6 +247,8 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		return nil, nil, err
 	}
 
+	apply.failOnError = parser.CCM.FailOnError
+
 	if parser.CCM.ResourcesJetFile != "" && len(parser.CCM.Resources) > 0 {
 		return nil, nil, fmt.Errorf("jet_file and resources cannot be used together")
 	}
@@ -247,12 +261,22 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		return nil, nil, err
 	}
 
+	if apply.overridingHieraData != "" {
+		overriding, err := hiera.ResolveUrl(ctx, apply.overridingHieraData, mgr, facts, hiera.DefaultOptions, hieraLogger)
+		if err != nil {
+			return nil, nil, err
+		}
+		resolved = iu.DeepMergeMap(resolved, overriding)
+	}
+
 	data := mgr.SetData(resolved)
 	env, err := mgr.TemplateEnvironment(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	env.Data = data
+	apply.data = data
 
 	var resources []map[string]yaml.RawMessage
 	manifestData := map[string]any{
@@ -281,12 +305,6 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 	manifestData["resources"] = resources
 	if len(resources) == 0 {
 		return nil, nil, fmt.Errorf("manifest must not contain resources")
-	}
-
-	apply := &Apply{
-		data:        env.Data,
-		source:      "reader",
-		failOnError: parser.CCM.FailOnError,
 	}
 
 	for i, resource := range resources {
