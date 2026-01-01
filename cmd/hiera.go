@@ -129,7 +129,7 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 		err = cmd.renderEnvOutput(buff, res)
 		out = buff.Bytes()
 	default:
-		out, err = json.Marshal(res)
+		out, err = json.MarshalIndent(res, "", "  ")
 	}
 	if err != nil {
 		return err

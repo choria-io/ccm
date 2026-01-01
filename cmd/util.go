@@ -105,7 +105,5 @@ func dotEnvData(readEnv bool, log model.Logger) (map[string]string, error) {
 		}
 	}
 
-	log.Debug("Resolved environment data", "data", res)
-
 	return res, nil
 }
