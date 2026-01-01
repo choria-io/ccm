@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goccy/go-yaml"
 	"github.com/prometheus/client_golang/prometheus"
@@ -139,12 +140,15 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 
 	log.Debug("Getting manifest data from JetStream Object Store", "key", file, "bucket", bucket)
 
-	obj, err := js.ObjectStore(ctx, bucket)
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	obj, err := js.ObjectStore(timeoutCtx, bucket)
 	if err != nil {
 		return nil, nil, "", err
 	}
 
-	res, err := obj.Get(ctx, file)
+	res, err := obj.Get(timeoutCtx, file)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -169,6 +173,13 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 		}
 	}
 
+	if manifestPath == "" {
+		os.RemoveAll(td)
+		return nil, nil, "", fmt.Errorf("manifest.yaml not found in object store")
+	}
+	manifestParent := filepath.Dir(manifestPath)
+	mgr.SetWorkingDirectory(manifestParent)
+
 	resolved, apply, err := ResolveManifestFilePath(ctx, mgr, manifestPath, opts...)
 	if err != nil {
 		os.RemoveAll(td)
@@ -179,7 +190,7 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 
 	log.Info("Using manifest from Object Store in temporary directory", "manifest", manifestPath, "bucket", bucket, "file", file)
 
-	return resolved, apply, filepath.Dir(manifestPath), nil
+	return resolved, apply, manifestParent, nil
 }
 
 // ResolveManifestFilePath reads a file and resolves the manifest using ResolveManifestReader()
@@ -304,7 +315,7 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 
 	manifestData["resources"] = resources
 	if len(resources) == 0 {
-		return nil, nil, fmt.Errorf("manifest must not contain resources")
+		return nil, nil, fmt.Errorf("manifest must contain resources")
 	}
 
 	for i, resource := range resources {

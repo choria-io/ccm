@@ -52,7 +52,6 @@ server urls and authentication parameters.
 	apply.Flag("hiera", "Hiera data file to use as overriding data source").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
 
 	apply.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
-
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {

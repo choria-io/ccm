@@ -115,6 +115,8 @@ func (e *Env) jet(params ...any) (any, error) {
 		return nil, err
 	}
 
+	set.AddGlobalFunc("lookup", e.jetLookup())
+
 	variables := jet.VarMap{
 		"facts":   reflect.ValueOf(e.Facts),
 		"Facts":   reflect.ValueOf(e.Facts),
@@ -131,6 +133,34 @@ func (e *Env) jet(params ...any) (any, error) {
 	}
 
 	return buff.String(), nil
+}
+
+func (e *Env) jetLookup() jet.Func {
+	return func(a jet.Arguments) reflect.Value {
+		// 1–2 arguments, same as your original intent
+		a.RequireNumOfArguments("lookup", 1, 2)
+
+		// First arg: key (string)
+		var key string
+		if err := a.ParseInto(&key); err != nil {
+			a.Panicf("lookup: first argument must be a string: %v", err)
+		}
+
+		// Optional second arg: default value (any)
+		var defaultValue any
+		if a.NumOfArguments() == 2 {
+			defaultValue = a.Get(1).Interface()
+		} else {
+			defaultValue = nil
+		}
+
+		val, err := e.lookup(key, defaultValue)
+		if err != nil {
+			a.Panicf("lookup: failed: %v", err)
+		}
+
+		return reflect.ValueOf(val)
+	}
 }
 
 func (e *Env) lookup(params ...any) (any, error) {

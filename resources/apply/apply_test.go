@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -447,8 +447,8 @@ ccm:
 		}
 
 		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
-		mockJS.EXPECT().ObjectStore(ctx, "mybucket").Return(mockObjStore, nil)
-		mockObjStore.EXPECT().Get(ctx, "manifest.tar.gz").Return(mockResult, nil)
+		mockJS.EXPECT().ObjectStore(gomock.Any(), "mybucket").Return(mockObjStore, nil)
+		mockObjStore.EXPECT().Get(gomock.Any(), "manifest.tar.gz").Return(mockResult, nil)
 
 		res, apply, wd, err := ResolveManifestUrl(ctx, mockMgr, "obj://mybucket/manifest.tar.gz", mockLog)
 		Expect(err).NotTo(HaveOccurred())
@@ -511,7 +511,7 @@ var _ = Describe("ResolveManifestObjectValue", func() {
 
 	It("returns an error when ObjectStore fails", func() {
 		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
-		mockJS.EXPECT().ObjectStore(ctx, "missing-bucket").Return(nil, jetstream.ErrBucketNotFound)
+		mockJS.EXPECT().ObjectStore(gomock.Any(), "missing-bucket").Return(nil, jetstream.ErrBucketNotFound)
 
 		_, _, _, err := ResolveManifestObjectValue(ctx, mockMgr, "missing-bucket", "key", mockLog)
 		Expect(err).To(MatchError(jetstream.ErrBucketNotFound))
@@ -519,8 +519,8 @@ var _ = Describe("ResolveManifestObjectValue", func() {
 
 	It("returns an error when Get fails", func() {
 		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
-		mockJS.EXPECT().ObjectStore(ctx, "bucket").Return(mockObjStore, nil)
-		mockObjStore.EXPECT().Get(ctx, "missing-key").Return(nil, jetstream.ErrObjectNotFound)
+		mockJS.EXPECT().ObjectStore(gomock.Any(), "bucket").Return(mockObjStore, nil)
+		mockObjStore.EXPECT().Get(gomock.Any(), "missing-key").Return(nil, jetstream.ErrObjectNotFound)
 
 		_, _, _, err := ResolveManifestObjectValue(ctx, mockMgr, "bucket", "missing-key", mockLog)
 		Expect(err).To(MatchError(jetstream.ErrObjectNotFound))
@@ -533,8 +533,8 @@ var _ = Describe("ResolveManifestObjectValue", func() {
 		}
 
 		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
-		mockJS.EXPECT().ObjectStore(ctx, "bucket").Return(mockObjStore, nil)
-		mockObjStore.EXPECT().Get(ctx, "invalid.tar.gz").Return(mockResult, nil)
+		mockJS.EXPECT().ObjectStore(gomock.Any(), "bucket").Return(mockObjStore, nil)
+		mockObjStore.EXPECT().Get(gomock.Any(), "invalid.tar.gz").Return(mockResult, nil)
 
 		_, _, _, err := ResolveManifestObjectValue(ctx, mockMgr, "bucket", "invalid.tar.gz", mockLog)
 		Expect(err).To(HaveOccurred())
@@ -559,8 +559,8 @@ ccm:
 		}
 
 		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
-		mockJS.EXPECT().ObjectStore(ctx, "manifests").Return(mockObjStore, nil)
-		mockObjStore.EXPECT().Get(ctx, "app/manifest.tar.gz").Return(mockResult, nil)
+		mockJS.EXPECT().ObjectStore(gomock.Any(), "manifests").Return(mockObjStore, nil)
+		mockObjStore.EXPECT().Get(gomock.Any(), "app/manifest.tar.gz").Return(mockResult, nil)
 
 		res, apply, wd, err := ResolveManifestObjectValue(ctx, mockMgr, "manifests", "app/manifest.tar.gz", mockLog)
 		Expect(err).NotTo(HaveOccurred())
@@ -704,7 +704,7 @@ ccm:
 
 		_, _, err = ResolveManifestFilePath(ctx, mockMgr, manifestPath)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("manifest must not contain resources"))
+		Expect(err.Error()).To(ContainSubstring("manifest must contain resources"))
 	})
 
 	It("parses fail_on_error as true when set", func() {
@@ -797,124 +797,76 @@ ccm:
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should override manifest data with hiera data", func() {
-			manifestContent := `
+		DescribeTable("hiera data merging",
+			func(manifestData, hieraData string, check func(map[string]any)) {
+				manifestContent := `
 data:
-  app_name: original
-  log_level: INFO
-ccm:
-  resources:
-    - package:
-        name: "{{lookup('data.app_name')}}"
-        ensure: present
-`
-			manifestPath := tempDir + "/override-test.yaml"
-			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Override file must have 'data:' section (hiera format)
-			hieraContent := `
-data:
-  app_name: overridden
-`
-			hieraPath := tempDir + "/override-hiera.yaml"
-			err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath, WithOverridingHieraData(hieraPath))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(apply).NotTo(BeNil())
-
-			// The overriding hiera data should have replaced the original value
-			resultData := apply.Data()
-			Expect(resultData).To(HaveKeyWithValue("app_name", "overridden"))
-			// Original data that wasn't overridden should still be present
-			Expect(resultData).To(HaveKeyWithValue("log_level", "INFO"))
-		})
-
-		It("should augment manifest data with new keys from hiera", func() {
-			manifestContent := `
-data:
-  existing_key: original_value
+` + manifestData + `
 ccm:
   resources:
     - package:
         name: test-pkg
         ensure: present
 `
-			manifestPath := tempDir + "/augment-test.yaml"
-			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
-			Expect(err).NotTo(HaveOccurred())
+				manifestPath := tempDir + "/hiera-merge-test.yaml"
+				err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+				Expect(err).NotTo(HaveOccurred())
 
-			// Override file must have 'data:' section (hiera format)
-			hieraContent := `
+				hieraContent := `
 data:
-  new_key: added_value
-`
-			hieraPath := tempDir + "/augment-hiera.yaml"
-			err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
-			Expect(err).NotTo(HaveOccurred())
+` + hieraData
+				hieraPath := tempDir + "/hiera-override.yaml"
+				err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
+				Expect(err).NotTo(HaveOccurred())
 
-			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
-				WithOverridingHieraData(hieraPath))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(apply).NotTo(BeNil())
+				_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+					WithOverridingHieraData(hieraPath))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(apply).NotTo(BeNil())
 
-			resultData := apply.Data()
-			// Both original and new keys should be present
-			Expect(resultData).To(HaveKeyWithValue("existing_key", "original_value"))
-			Expect(resultData).To(HaveKeyWithValue("new_key", "added_value"))
-		})
-
-		It("should deep merge nested data structures", func() {
-			manifestContent := `
-data:
-  config:
+				check(apply.Data())
+			},
+			Entry("override existing value",
+				`  app_name: original
+  log_level: INFO`,
+				`  app_name: overridden`,
+				func(data map[string]any) {
+					Expect(data).To(HaveKeyWithValue("app_name", "overridden"))
+					Expect(data).To(HaveKeyWithValue("log_level", "INFO"))
+				},
+			),
+			Entry("augment with new key",
+				`  existing_key: original_value`,
+				`  new_key: added_value`,
+				func(data map[string]any) {
+					Expect(data).To(HaveKeyWithValue("existing_key", "original_value"))
+					Expect(data).To(HaveKeyWithValue("new_key", "added_value"))
+				},
+			),
+			Entry("deep merge nested structures",
+				`  config:
     database:
       host: localhost
       port: 5432
     cache:
-      enabled: true
-ccm:
-  resources:
-    - package:
-        name: test-pkg
-        ensure: present
-`
-			manifestPath := tempDir + "/deep-merge-test.yaml"
-			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			hieraContent := `
-data:
-  config:
+      enabled: true`,
+				`  config:
     database:
-      host: production-db
-`
-			hieraPath := tempDir + "/deep-merge-hiera.yaml"
-			err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
-			Expect(err).NotTo(HaveOccurred())
+      host: production-db`,
+				func(data map[string]any) {
+					config, ok := data["config"].(map[string]any)
+					Expect(ok).To(BeTrue())
 
-			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
-				WithOverridingHieraData(hieraPath))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(apply).NotTo(BeNil())
+					database, ok := config["database"].(map[string]any)
+					Expect(ok).To(BeTrue())
+					Expect(database["host"]).To(Equal("production-db"))
+					Expect(database["port"]).To(BeNumerically("==", 5432))
 
-			resultData := apply.Data()
-			config, ok := resultData["config"].(map[string]any)
-			Expect(ok).To(BeTrue())
-
-			database, ok := config["database"].(map[string]any)
-			Expect(ok).To(BeTrue())
-			// Overridden value
-			Expect(database["host"]).To(Equal("production-db"))
-			// Original value preserved
-			Expect(database["port"]).To(BeNumerically("==", 5432))
-
-			// Other nested structures should be preserved
-			cache, ok := config["cache"].(map[string]any)
-			Expect(ok).To(BeTrue())
-			Expect(cache["enabled"]).To(BeTrue())
-		})
+					cache, ok := config["cache"].(map[string]any)
+					Expect(ok).To(BeTrue())
+					Expect(cache["enabled"]).To(BeTrue())
+				},
+			),
+		)
 	})
 })
