@@ -18,6 +18,7 @@ Data can be used for:
 Choria CM supports various data sources:
 
  * **Facts** about the instance - the Operating System, Networking and Disk configuration
+ * **Facts** from `/etc/choria/ccm/facts.{yaml,json}` and `~/.config/choria/ccm/facts.{yaml,json}`
  * **Environment** data like variables read from the shell environment and files like `./.env`
  * **Hiera Data** data resolved using Hiera that supports hierarchical overrides based on facts
 

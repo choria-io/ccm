@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,17 +6,68 @@ package facts
 
 import (
 	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
 
+	"github.com/adrg/xdg"
+	"github.com/goccy/go-yaml"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
+
+	iu "github.com/choria-io/ccm/internal/util"
+	"github.com/choria-io/ccm/model"
 )
 
 // StandardFacts returns a map of standard facts
-func StandardFacts(ctx context.Context) (map[string]any, error) {
-	return standardFacts(ctx)
+func StandardFacts(ctx context.Context, log model.Logger) (map[string]any, error) {
+	sf, err := standardFacts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sysConfigDir := "/etc/choria/ccm"
+	userconfigDir := filepath.Join(xdg.ConfigHome, "choria", "ccm")
+
+	for _, dir := range []string{sysConfigDir, userconfigDir} {
+		jf := filepath.Join(dir, "facts.json")
+		yf := filepath.Join(dir, "facts.yaml")
+
+		if iu.FileExists(jf) {
+			log.Debug("Reading facts from %v", jf)
+			jb, err := os.ReadFile(jf)
+			if err != nil {
+				log.Error("Failed to read facts file", "file", jf, "error", err)
+			} else {
+				var f map[string]any
+				err = json.Unmarshal(jb, &f)
+				if err != nil {
+					log.Error("Failed to unmarshal facts file", "file", jf, "error", err)
+				} else {
+					sf = iu.DeepMergeMap(sf, f)
+				}
+			}
+		}
+
+		if iu.FileExists(yf) {
+			log.Debug("Reading facts from %v", yf)
+			jb, err := os.ReadFile(yf)
+			if err == nil {
+				var f map[string]any
+				err = yaml.Unmarshal(jb, &f)
+				if err != nil {
+					log.Error("Failed to unmarshal facts file", "file", jf, "error", err)
+				} else {
+					sf = iu.DeepMergeMap(sf, f)
+				}
+			}
+		}
+	}
+
+	return sf, nil
 }
 
 func standardFacts(ctx context.Context) (map[string]any, error) {

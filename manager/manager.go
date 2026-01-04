@@ -329,7 +329,7 @@ func (m *CCM) SystemFacts(ctx context.Context) (map[string]any, error) {
 		defer cancel()
 	}
 
-	return facts.StandardFacts(to)
+	return facts.StandardFacts(to, m.log)
 }
 
 // Facts gather system facts, cache them, and return them, if already cached return the cache
