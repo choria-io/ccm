@@ -50,7 +50,8 @@ func newManager(session string, hieraSource string, natsContext string, readEnv 
 		mgr.MergeFacts(ctx, facts)
 	}
 
-	if hieraSource != "" {
+	if hieraSource != "" && iu.FileExists(hieraSource) {
+
 		facts, err := mgr.Facts(ctx)
 		if err != nil {
 			return nil, nil, err

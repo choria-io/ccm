@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -26,6 +27,7 @@ type applyCommand struct {
 	monitorOnly bool
 	natsContext string
 	facts       map[string]string
+	factsFile   string
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
@@ -46,6 +48,7 @@ server urls and authentication parameters.
 	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	apply.Flag("fact", "Set additional facts to merge with the system facts").StringMapVar(&cmd.facts)
+	apply.Flag("facts", "File holding additional facts to merge with the system facts").PlaceHolder("FILE").ExistingFileVar(&cmd.factsFile)
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
 	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
@@ -55,7 +58,28 @@ server urls and authentication parameters.
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
-	mgr, userLogger, err := newManager("", "", c.natsContext, c.readEnv, c.noop, iu.MapStringsToMapStringAny(c.facts))
+	finalFacts := iu.MapStringsToMapStringAny(c.facts)
+
+	if c.factsFile != "" {
+		fc, err := os.ReadFile(c.factsFile)
+		if err != nil {
+			return err
+		}
+
+		facts := map[string]any{}
+
+		if iu.IsJsonObject(fc) {
+			err = json.Unmarshal(fc, &facts)
+		} else {
+			err = yaml.Unmarshal(fc, &facts)
+		}
+		if err != nil {
+			return err
+		}
+		finalFacts = iu.DeepMergeMap(finalFacts, facts)
+	}
+
+	mgr, userLogger, err := newManager("", "", c.natsContext, c.readEnv, c.noop, finalFacts)
 	if err != nil {
 		return err
 	}
