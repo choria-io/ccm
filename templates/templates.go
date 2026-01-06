@@ -74,6 +74,14 @@ func (e *Env) template(params ...any) (any, error) {
 		return "", fmt.Errorf("template requires a string argument")
 	}
 
+	if strings.HasSuffix(contents, ".templ") {
+		f, err := e.readFile(contents)
+		if err != nil {
+			return nil, err
+		}
+		contents = f.(string)
+	}
+
 	return ResolveTemplateTyped(contents, e)
 }
 
@@ -107,6 +115,14 @@ func (e *Env) jet(params ...any) (any, error) {
 		}
 	default:
 		return "", fmt.Errorf("jet requires 1 or 3 arguments")
+	}
+
+	if strings.HasSuffix(body, ".jet") {
+		f, err := e.readFile(body)
+		if err != nil {
+			return nil, err
+		}
+		body = f.(string)
 	}
 
 	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims(lpat, rpat))
@@ -314,6 +330,7 @@ func exprParse(query string, env *Env) (any, error) {
 		expr.Env(env),
 		expr.Function("lookup", env.lookup),
 		expr.Function("readFile", env.readFile),
+		expr.Function("file", env.readFile),
 		expr.Function("template", env.template),
 		expr.Function("jet", env.jet),
 	)
