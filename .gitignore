@@ -10,3 +10,4 @@ coverage.html
 *.test
 AGENTS.md
 manifest.yaml
+*.patch
