@@ -9,7 +9,7 @@ require (
 	github.com/choria-io/appbuilder v0.11.1-0.20251222140838-cc945dfe0c1d
 	github.com/choria-io/fisk v0.7.2
 	github.com/expr-lang/expr v1.17.7
-	github.com/goccy/go-yaml v1.19.1
+	github.com/goccy/go-yaml v1.19.2
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/nats-io/nats.go v1.48.0
 	github.com/onsi/ginkgo/v2 v2.27.3
@@ -75,7 +75,7 @@ require (
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
