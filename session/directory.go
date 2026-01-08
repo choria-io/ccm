@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -45,8 +45,6 @@ func NewDirectorySessionStore(directory string, logger model.Logger, writer mode
 	if err != nil {
 		return nil, err
 	}
-
-	logger.Info("Creating new session store")
 
 	return &DirectorySessionStore{
 		out:       writer,

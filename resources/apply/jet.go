@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,7 +6,6 @@ package apply
 
 import (
 	"bytes"
-	"log"
 	"os"
 	"reflect"
 
@@ -25,7 +24,7 @@ func jetParseManifestResources(path string, env *templates.Env) (yaml.RawMessage
 	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims("[[", "]]"))
 	tpl, err := set.Parse(path, string(jb))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	variables := jet.VarMap{
