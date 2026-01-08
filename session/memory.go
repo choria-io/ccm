@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -22,7 +22,6 @@ type MemorySessionStore struct {
 
 // NewMemorySessionStore creates a new in-memory session store with the provided loggers
 func NewMemorySessionStore(logger model.Logger, writer model.Logger) (*MemorySessionStore, error) {
-	logger.Info("Creating new session store")
 	return &MemorySessionStore{
 		out:    writer,
 		log:    logger,
