@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -338,6 +338,10 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly bool, userLog model.Logger) (model.SessionStore, error) {
 	timer := prometheus.NewTimer(metrics.ManifestApplyTime.WithLabelValues())
 	defer timer.ObserveDuration()
+
+	if mgr.NoopMode() && healthCheckOnly {
+		return nil, fmt.Errorf("cannot set healthceck only and noop mode at the same time")
+	}
 
 	log, err := mgr.Logger("component", "apply")
 	if err != nil {
