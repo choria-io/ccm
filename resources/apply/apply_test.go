@@ -215,6 +215,45 @@ var _ = Describe("Apply", func() {
 			registry.Clear()
 		})
 
+		It("Should fail when both noop mode and healthCheckOnly are set", func(ctx context.Context) {
+			// Create a manager with noop mode enabled
+			noopMgr, _ := modelmocks.NewManager(facts, data, true, mockctl)
+
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{},
+			}
+
+			result, err := apply.Execute(ctx, noopMgr, true, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot set healthceck only and noop mode at the same time"))
+			Expect(result).To(BeNil())
+		})
+
+		It("Should allow noop mode without healthCheckOnly", func(ctx context.Context) {
+			noopMgr, _ := modelmocks.NewManager(facts, data, true, mockctl)
+			noopMgr.EXPECT().StartSession(gomock.Any()).Return(session, nil)
+
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{},
+			}
+
+			result, err := apply.Execute(ctx, noopMgr, false, userLogger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(session))
+		})
+
+		It("Should allow healthCheckOnly without noop mode", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{},
+			}
+
+			mgr.EXPECT().StartSession(apply).Return(session, nil)
+
+			result, err := apply.Execute(ctx, mgr, true, userLogger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(session))
+		})
+
 		It("Should fail when StartSession fails", func(ctx context.Context) {
 			apply := &Apply{
 				resources: []map[string]model.ResourceProperties{},
