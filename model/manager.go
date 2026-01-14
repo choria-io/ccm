@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/choria-io/ccm/templates"
@@ -22,6 +23,7 @@ type Logger interface {
 }
 
 type Manager interface {
+	Close() error
 	FactsRaw(ctx context.Context) (json.RawMessage, error)
 	Facts(ctx context.Context) (map[string]any, error)
 	MergeFacts(ctx context.Context, facts map[string]any) (map[string]any, error)
@@ -29,6 +31,7 @@ type Manager interface {
 	SystemFacts(ctx context.Context) (map[string]any, error)
 	Data() map[string]any
 	SetData(data map[string]any) map[string]any
+	SetExternalData(data map[string]any)
 	Logger(args ...any) (Logger, error)
 	UserLogger() Logger
 	NewRunner() (CommandRunner, error)
@@ -43,4 +46,8 @@ type Manager interface {
 	SessionSummary() (*SessionSummary, error)
 	NoopMode() bool
 	JetStream() (jetstream.JetStream, error)
+}
+
+type NatsConnProvider interface {
+	Connect(natsContext string, opts ...nats.Option) (*nats.Conn, error)
 }

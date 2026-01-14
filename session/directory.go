@@ -115,7 +115,7 @@ func (s *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {
 	// Write to file named <eventid>.event
 	// Safe to use EventID directly since it's validated as a ksuid
 	filename := filepath.Join(s.directory, event.SessionEventID()+".event")
-	s.log.Info("Recording event", "filename", filename)
+	s.log.Debug("Recording event", "filename", filename)
 
 	err = os.WriteFile(filename, data, 0644)
 	if err != nil {

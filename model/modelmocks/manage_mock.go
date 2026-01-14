@@ -16,6 +16,7 @@ import (
 
 	model "github.com/choria-io/ccm/model"
 	templates "github.com/choria-io/ccm/templates"
+	nats "github.com/nats-io/nats.go"
 	jetstream "github.com/nats-io/nats.go/jetstream"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -154,6 +155,20 @@ func NewMockManager(ctrl *gomock.Controller) *MockManager {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
+}
+
+// Close mocks base method.
+func (m *MockManager) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockManagerMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockManager)(nil).Close))
 }
 
 // Data mocks base method.
@@ -351,6 +366,18 @@ func (mr *MockManagerMockRecorder) SetData(data any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetData", reflect.TypeOf((*MockManager)(nil).SetData), data)
 }
 
+// SetExternalData mocks base method.
+func (m *MockManager) SetExternalData(data map[string]any) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetExternalData", data)
+}
+
+// SetExternalData indicates an expected call of SetExternalData.
+func (mr *MockManagerMockRecorder) SetExternalData(data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExternalData", reflect.TypeOf((*MockManager)(nil).SetExternalData), data)
+}
+
 // SetFacts mocks base method.
 func (m *MockManager) SetFacts(facts map[string]any) {
 	m.ctrl.T.Helper()
@@ -361,6 +388,18 @@ func (m *MockManager) SetFacts(facts map[string]any) {
 func (mr *MockManagerMockRecorder) SetFacts(facts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFacts", reflect.TypeOf((*MockManager)(nil).SetFacts), facts)
+}
+
+// SetNatsConnProvider mocks base method.
+func (m *MockManager) SetNatsConnProvider(provider model.NatsConnProvider) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetNatsConnProvider", provider)
+}
+
+// SetNatsConnProvider indicates an expected call of SetNatsConnProvider.
+func (mr *MockManagerMockRecorder) SetNatsConnProvider(provider any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNatsConnProvider", reflect.TypeOf((*MockManager)(nil).SetNatsConnProvider), provider)
 }
 
 // SetWorkingDirectory mocks base method.
@@ -461,4 +500,48 @@ func (m *MockManager) WorkingDirectory() string {
 func (mr *MockManagerMockRecorder) WorkingDirectory() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkingDirectory", reflect.TypeOf((*MockManager)(nil).WorkingDirectory))
+}
+
+// MockNatsConnProvider is a mock of NatsConnProvider interface.
+type MockNatsConnProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MockNatsConnProviderMockRecorder
+	isgomock struct{}
+}
+
+// MockNatsConnProviderMockRecorder is the mock recorder for MockNatsConnProvider.
+type MockNatsConnProviderMockRecorder struct {
+	mock *MockNatsConnProvider
+}
+
+// NewMockNatsConnProvider creates a new mock instance.
+func NewMockNatsConnProvider(ctrl *gomock.Controller) *MockNatsConnProvider {
+	mock := &MockNatsConnProvider{ctrl: ctrl}
+	mock.recorder = &MockNatsConnProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNatsConnProvider) EXPECT() *MockNatsConnProviderMockRecorder {
+	return m.recorder
+}
+
+// Connect mocks base method.
+func (m *MockNatsConnProvider) Connect(natsContext string, opts ...nats.Option) (*nats.Conn, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{natsContext}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Connect", varargs...)
+	ret0, _ := ret[0].(*nats.Conn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Connect indicates an expected call of Connect.
+func (mr *MockNatsConnProviderMockRecorder) Connect(natsContext any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{natsContext}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connect", reflect.TypeOf((*MockNatsConnProvider)(nil).Connect), varargs...)
 }

@@ -1,0 +1,14 @@
+[Unit]
+Description=The Choria Configuration Manager Agent
+After=network.target
+
+[Service]
+User=root
+Group=root
+ExecStart=/usr/bin/ccm agent --config /etc/choria/ccm/config.yaml
+KillMode=process
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

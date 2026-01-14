@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -23,13 +23,13 @@ type ensureExecCommand struct {
 func registerEnsureExecCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	cmd := &ensureExecCommand{returns: []int{}, parent: parent}
 
-	exec := ccm.Command("exec", "Exeution management").Action(cmd.execAction)
+	exec := ccm.Command("exec", "Execution management").Action(cmd.execAction)
 	exec.Arg("command", "Command to execute").Required().StringVar(&cmd.command)
 	exec.Flag("creates", "File to check for existence").StringVar(&cmd.creates)
 	exec.Flag("returns", "Expected return codes").IntsVar(&cmd.returns)
 	exec.Flag("timeout", "Command timeout").Default("1m").StringVar(&cmd.timeout)
 	exec.Flag("refresh-only", "Only run on subscribed resources").UnNegatableBoolVar(&cmd.refreshOnly)
-	exec.Flag("subscribe", "Subscribe to changes in other resources (type#name)").PlaceHolder("RESOURCE").Short('S').StringsVar(&cmd.subscribe)
+	exec.Flag("subscribe", "Subscribe to changes in other resources").PlaceHolder("type#name").Short('S').StringsVar(&cmd.subscribe)
 	parent.addCommonFlags(exec)
 }
 

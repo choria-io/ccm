@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -71,6 +71,7 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 
 	event := b.Resource.NewTransactionEvent()
 	event.Provider = provName
+	event.HealthCheckOnly = healthCheckOnly
 	start := time.Now()
 	defer func() {
 		event.Duration = time.Since(start)
@@ -96,7 +97,12 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 	}
 
 	if !healthCheckOnly {
-		timer := prometheus.NewTimer(metrics.ResourceApplyTime.WithLabelValues(b.CommonProperties.Type, provName, b.CommonProperties.Name))
+		name := b.CommonProperties.Name
+		if b.CommonProperties.Alias != "" {
+			name = b.CommonProperties.Alias
+		}
+
+		timer := prometheus.NewTimer(metrics.ResourceApplyTime.WithLabelValues(b.CommonProperties.Type, provName, name))
 		state, err = b.Resource.ApplyResource(ctx)
 		timer.ObserveDuration()
 

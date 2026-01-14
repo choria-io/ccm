@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -10,6 +10,14 @@ type Option func(*Apply) error
 func WithOverridingHieraData(u string) Option {
 	return func(a *Apply) error {
 		a.overridingHieraData = u
+		return nil
+	}
+}
+
+// WithOverridingResolvedData provides an additional map of data that will be merged into the resolved data
+func WithOverridingResolvedData(d map[string]any) Option {
+	return func(a *Apply) error {
+		a.overridingResolvedData = d
 		return nil
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -105,7 +105,6 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	}
 
 	isStable := t.isDesiredState(properties, initialStatus)
-	t.log.Info("Checking desired state", "stable", isStable, "refresh", shouldRefreshViaSubscribe)
 	switch {
 	case shouldRefreshViaSubscribe:
 		t.log.Info("Refreshing via subscribe", "subscribe", refreshResource)

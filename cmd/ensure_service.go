@@ -1,21 +1,26 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
 package main
 
 import (
+	"fmt"
+
 	"github.com/choria-io/ccm/model"
 	serviceresource "github.com/choria-io/ccm/resources/service"
 	"github.com/choria-io/fisk"
 )
 
 type ensureServiceCommand struct {
-	name      string
-	ensure    string
-	enable    *bool
-	subscribe []string
-	parent    *ensureCommand
+	name         string
+	ensure       string
+	enable       bool
+	enableIsSet  bool
+	disable      bool
+	disableIsSet bool
+	subscribe    []string
+	parent       *ensureCommand
 }
 
 func registerEnsureServiceCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
@@ -24,8 +29,9 @@ func registerEnsureServiceCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	svc := ccm.Command("service", "Service management").Alias("svc").Action(cmd.serviceAction)
 	svc.Arg("name", "Service name to manage").Required().StringVar(&cmd.name)
 	svc.Arg("ensure", "Ensure value").Default(model.ServiceEnsureRunning).StringVar(&cmd.ensure)
-	cmd.enable = svc.Flag("enable", "Enable the service").Default("true").Bool()
-	svc.Flag("subscribe", "Subscribe to changes in other resources (type#name)").PlaceHolder("RESOURCE").Short('S').StringsVar(&cmd.subscribe)
+	svc.Flag("enable", "Enable the service").IsSetByUser(&cmd.enableIsSet).UnNegatableBoolVar(&cmd.enable)
+	svc.Flag("disable", "Disable the service").IsSetByUser(&cmd.disableIsSet).UnNegatableBoolVar(&cmd.disable)
+	svc.Flag("subscribe", "Subscribe to changes in other resources").PlaceHolder("type#name").Short('S').StringsVar(&cmd.subscribe)
 	parent.addCommonFlags(svc)
 }
 
@@ -45,8 +51,15 @@ func (c *ensureServiceCommand) serviceAction(_ *fisk.ParseContext) error {
 		},
 	}
 
-	if c.enable != nil {
-		properties.Enable = c.enable
+	switch {
+	case c.enableIsSet && c.disableIsSet:
+		return fmt.Errorf("cannot specify both enable and disable flags")
+	case c.enableIsSet:
+		t := true
+		properties.Enable = &t
+	case c.disableIsSet:
+		f := false
+		properties.Enable = &f
 	}
 
 	err = c.parent.setCommonProperties(&properties.CommonResourceProperties)

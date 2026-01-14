@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,19 +7,16 @@ package main
 import (
 	"context"
 	"log"
-	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
 
-	"github.com/MatusOllah/slogcolor"
 	"github.com/adrg/xdg"
+
 	"github.com/choria-io/appbuilder/builder"
 	"github.com/choria-io/appbuilder/commands/exec"
 	"github.com/choria-io/appbuilder/commands/parent"
 	iu "github.com/choria-io/ccm/internal/util"
-	"github.com/choria-io/ccm/manager"
-	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/fisk"
 )
 
@@ -38,6 +35,7 @@ func main() {
 	app.Flag("debug", "Enable debug logging").UnNegatableBoolVar(&debug)
 	app.Flag("info", "Enable info logging").UnNegatableBoolVar(&info)
 
+	registerAgentCommand(app)
 	registerApplyCommand(app)
 	registerEnsureCommand(app)
 	registerFactsCommand(app)
@@ -86,24 +84,4 @@ func extendCli(app *fisk.Application) error {
 	ext := app.Command("plugin", "External CLI plugin commands").Alias("ext")
 
 	return builder.MountAsCommand(ctx, ext, def, nil)
-}
-
-func newOutputLogger() model.Logger {
-	return manager.NewSlogLogger(slog.New(slogcolor.NewHandler(os.Stdout, &slogcolor.Options{Level: slog.LevelInfo})))
-}
-
-func newLogger() model.Logger {
-	var level slog.Level
-
-	switch {
-	case debug:
-		level = slog.LevelDebug
-	case info:
-		level = slog.LevelInfo
-	default:
-		level = slog.LevelWarn
-	}
-
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
-	return manager.NewSlogLogger(logger)
 }

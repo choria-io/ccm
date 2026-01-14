@@ -31,11 +31,12 @@ import (
 
 // Apply represents a parsed and resolved manifest ready for execution
 type Apply struct {
-	source              string
-	resources           []map[string]model.ResourceProperties
-	data                map[string]any
-	failOnError         bool
-	overridingHieraData string
+	source                 string
+	resources              []map[string]model.ResourceProperties
+	data                   map[string]any
+	failOnError            bool
+	overridingHieraData    string
+	overridingResolvedData map[string]any
 
 	mu sync.Mutex
 }
@@ -280,6 +281,10 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		resolved = iu.DeepMergeMap(resolved, overriding)
 	}
 
+	if apply.overridingResolvedData != nil {
+		resolved = iu.DeepMergeMap(resolved, apply.overridingResolvedData)
+	}
+
 	data := mgr.SetData(resolved)
 	env, err := mgr.TemplateEnvironment(ctx)
 	if err != nil {
@@ -336,7 +341,7 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 }
 
 func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly bool, userLog model.Logger) (model.SessionStore, error) {
-	timer := prometheus.NewTimer(metrics.ManifestApplyTime.WithLabelValues())
+	timer := prometheus.NewTimer(metrics.ManifestApplyTime.WithLabelValues(a.source))
 	defer timer.ObserveDuration()
 
 	if mgr.NoopMode() && healthCheckOnly {
@@ -348,7 +353,15 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 		return nil, err
 	}
 
-	userLog.Info("Executing manifest", "manifest", a.Source(), "resources", len(a.Resources()))
+	if healthCheckOnly {
+		userLog = userLog.With("healthcheck", true)
+	}
+
+	if healthCheckOnly {
+		userLog.Info("Executing manifest health checks", "manifest", a.Source(), "resources", len(a.Resources()))
+	} else {
+		userLog.Info("Executing manifest", "manifest", a.Source(), "resources", len(a.Resources()))
+	}
 
 	session, err := mgr.StartSession(a)
 	if err != nil {
@@ -395,14 +408,20 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 				return nil, err
 			}
 
-			event.LogStatus(userLog)
+			if event.HealthCheckOnly {
+				if len(event.HealthChecks) > 0 {
+					event.LogStatus(userLog)
+				}
+			} else {
+				event.LogStatus(userLog)
+			}
 
 			err = mgr.RecordEvent(event)
 			if err != nil {
 				log.Error("Could not save event", "event", event.String())
 			}
 
-			if a.FailOnError() && event.Failed {
+			if !healthCheckOnly && a.FailOnError() && event.Failed {
 				userLog.Warn("Terminating manifest execution due to failed resource")
 				terminate = true
 			}

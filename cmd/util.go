@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,9 +6,12 @@ package main
 
 import (
 	"bufio"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/MatusOllah/slogcolor"
 
 	"github.com/choria-io/ccm/hiera"
 	iu "github.com/choria-io/ccm/internal/util"
@@ -27,8 +30,8 @@ func newManager(session string, hieraSource string, natsContext string, readEnv 
 		opts = append(opts, manager.WithNatsContext(natsContext))
 	}
 
-	out := newOutputLogger()
 	logger := newLogger()
+	out := newOutputLogger()
 
 	data, err := dotEnvData(readEnv, logger)
 	if err != nil {
@@ -51,7 +54,6 @@ func newManager(session string, hieraSource string, natsContext string, readEnv 
 	}
 
 	if hieraSource != "" && iu.FileExists(hieraSource) {
-
 		facts, err := mgr.Facts(ctx)
 		if err != nil {
 			return nil, nil, err
@@ -107,4 +109,33 @@ func dotEnvData(readEnv bool, log model.Logger) (map[string]string, error) {
 	}
 
 	return res, nil
+}
+
+func newOutputLogger() model.Logger {
+	var level slog.Level
+
+	switch {
+	case debug:
+		level = slog.LevelDebug
+	default:
+		level = slog.LevelInfo
+	}
+
+	return manager.NewSlogLogger(slog.New(slogcolor.NewHandler(os.Stdout, &slogcolor.Options{Level: level})))
+}
+
+func newLogger() model.Logger {
+	var level slog.Level
+
+	switch {
+	case debug:
+		level = slog.LevelDebug
+	case info:
+		level = slog.LevelInfo
+	default:
+		level = slog.LevelWarn
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	return manager.NewSlogLogger(logger)
 }

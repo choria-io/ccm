@@ -35,7 +35,7 @@ func (s *MemorySessionStore) StartSession(manifest model.Apply) error {
 	s.events = make([]model.SessionEvent, 0)
 	s.mu.Unlock()
 
-	s.log.Info("Creating new session record", "resources", len(manifest.Resources()), "store", "memory")
+	s.log.Debug("Creating new session record", "resources", len(manifest.Resources()), "store", "memory")
 	start := model.NewSessionStartEvent()
 	s.start = start.TimeStamp
 

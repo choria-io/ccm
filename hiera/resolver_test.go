@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -761,7 +761,7 @@ data:
   setting: from_yaml
   count: 42
 `
-		filePath := tempDir + "/config.yaml"
+		filePath := tempDir + "/agent.yaml"
 		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -809,7 +809,7 @@ overrides:
   env:production:
     log_level: WARN
 `
-		filePath := tempDir + "/config.yaml"
+		filePath := tempDir + "/agent.yaml"
 		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
 		Expect(err).NotTo(HaveOccurred())
 

@@ -20,7 +20,6 @@ builds:
       - linux
     goarch:
       - amd64
-      - arm
       - arm64
     goarm:
       - "6"
@@ -36,21 +35,49 @@ archives:
     files:
       - README.md
       - LICENSE
+      - src: build/ccm-agent.service
+        dst: ccm-agent.service
+      - src: build/agent.yaml
+        dst: agent.yaml
 
-brews:
+homebrew_casks:
   - name: ccm
     directory: Formula
     repository:
       owner: choria-io
       name: homebrew-tap
-    url_template: "https://github.com/choria-io/ccm/releases/download/{{ .Tag }}/ccm-{{.Version}}-{{ .Os }}-{{ .Arch }}{{if .Arm}}{{.Arm}}{{end}}.tar.gz"
+    url:
+      template: "https://github.com/choria-io/ccm/releases/download/{{ .Tag }}/ccm-{{.Version}}-{{ .Os }}-{{ .Arch }}{{if .Arm}}{{.Arm}}{{end}}.tar.gz"
     homepage: "https://github.com/choria-io/ccm"
     description: "Choria Configuration Management"
     skip_upload: false
-    test: |
-      system "#{bin}/ccm --version"
-    install: |
-      bin.install "ccm"
+
+nfpms:
+  - package_name: ccm
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Choria.IO
+    homepage: http://choria-io.github.io/ccm/
+    maintainer: R.I.Pienaar <rip@choria.io>
+    description: Choria Configuration Management
+    license: Apache 2.0
+    bindir: /usr/bin
+    epoch: 1
+    version_metadata: git
+    mtime: "{{ .CommitDate }}"
+    contents:
+      - src: build/ccm-agent.service
+        dst: /lib/systemd/system/ccm-agent.service
+      - dst: /etc/choria/ccm
+        type: dir
+        file_info:
+          mode: 0755
+      - src: build/agent.yaml
+        dst: /etc/choria/ccm/agent.yaml
+        type: config
+
+    formats:
+      - rpm
+      - deb
 
 checksum:
   name_template: "SHA256SUMS"

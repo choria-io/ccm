@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -53,7 +53,7 @@ func (cmd *ensureCommand) addCommonFlags(app *fisk.CmdClause) {
 	app.Flag("check-tries", "Number of times to execute the health check command").Default("5").IntVar(&cmd.healthCheckTries)
 	app.Flag("check-sleep", "Time to sleep between health check tries").Default("1s").DurationVar(&cmd.healthCheckSleep)
 	app.Flag("provider", "Resource provider").PlaceHolder("NAME").StringVar(&cmd.provider)
-	app.Flag("require", "Require success on an earlier resource").PlaceHolder("RESOURCES").StringsVar(&cmd.requires)
+	app.Flag("require", "Require success on an earlier resource").PlaceHolder("type#name").StringsVar(&cmd.requires)
 }
 
 func (cmd *ensureCommand) manager() (model.Manager, error) {

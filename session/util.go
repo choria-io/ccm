@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -15,21 +15,28 @@ func updateMetrics(event model.SessionEvent) {
 		return
 	}
 
-	metrics.ResourceStateTotal.WithLabelValues(e.ResourceType, e.Name).Inc()
+	name := e.Name
+	if e.Alias != "" {
+		name = e.Alias
+	}
+
+	metrics.ResourceStateTotal.WithLabelValues(e.ResourceType, name).Inc()
 
 	switch {
 	case e.Noop:
-		metrics.ResourceStateNoop.WithLabelValues(e.ResourceType, e.Name).Inc()
+		metrics.ResourceStateNoop.WithLabelValues(e.ResourceType, name).Inc()
 	case e.Changed:
-		metrics.ResourceStateChanged.WithLabelValues(e.ResourceType, e.Name).Inc()
+		metrics.ResourceStateChanged.WithLabelValues(e.ResourceType, name).Inc()
 	case e.Skipped:
-		metrics.ResourceStateSkipped.WithLabelValues(e.ResourceType, e.Name).Inc()
+		metrics.ResourceStateSkipped.WithLabelValues(e.ResourceType, name).Inc()
 	case e.Refreshed:
-		metrics.ResourceStateRefreshed.WithLabelValues(e.ResourceType, e.Name).Inc()
+		metrics.ResourceStateRefreshed.WithLabelValues(e.ResourceType, name).Inc()
 	case e.Failed:
-		metrics.ResourceStateFailed.WithLabelValues(e.ResourceType, e.Name).Inc()
+		metrics.ResourceStateFailed.WithLabelValues(e.ResourceType, name).Inc()
 	case len(e.Errors) > 0:
-		metrics.ResourceStateError.WithLabelValues(e.ResourceType, e.Name).Inc()
+		metrics.ResourceStateError.WithLabelValues(e.ResourceType, name).Inc()
+	default:
+		metrics.ResourceStateStable.WithLabelValues(e.ResourceType, name).Inc()
 	}
 }
 

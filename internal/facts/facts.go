@@ -12,6 +12,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/goccy/go-yaml"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
@@ -19,11 +20,15 @@ import (
 	"github.com/shirou/gopsutil/v4/net"
 
 	iu "github.com/choria-io/ccm/internal/util"
+	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 )
 
 // StandardFacts returns a map of standard facts
 func StandardFacts(ctx context.Context, log model.Logger) (map[string]any, error) {
+	timer := prometheus.NewTimer(metrics.FactGatherTime.WithLabelValues())
+	defer timer.ObserveDuration()
+
 	sf, err := standardFacts(ctx)
 	if err != nil {
 		return nil, err
@@ -37,7 +42,7 @@ func StandardFacts(ctx context.Context, log model.Logger) (map[string]any, error
 		yf := filepath.Join(dir, "facts.yaml")
 
 		if iu.FileExists(jf) {
-			log.Debug("Reading facts from %v", jf)
+			log.Debug("Reading facts", "file", jf)
 			jb, err := os.ReadFile(jf)
 			if err != nil {
 				log.Error("Failed to read facts file", "file", jf, "error", err)
@@ -53,7 +58,7 @@ func StandardFacts(ctx context.Context, log model.Logger) (map[string]any, error
 		}
 
 		if iu.FileExists(yf) {
-			log.Debug("Reading facts from %v", yf)
+			log.Debug("Reading facts", "file", yf)
 			jb, err := os.ReadFile(yf)
 			if err == nil {
 				var f map[string]any
