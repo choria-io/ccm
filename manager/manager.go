@@ -17,6 +17,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/synadia-io/orbit.go/natscontext"
 
+	"github.com/choria-io/ccm/internal/backoff"
 	"github.com/choria-io/ccm/internal/cmdrunner"
 	"github.com/choria-io/ccm/internal/facts"
 	iu "github.com/choria-io/ccm/internal/util"
@@ -35,6 +36,7 @@ type CCM struct {
 	userLogger model.Logger
 	js         jetstream.JetStream
 	nc         *nats.Conn
+	ncProvider model.NatsConnProvider
 
 	noop        bool
 	workingDir  string
@@ -73,6 +75,49 @@ func NewManager(log model.Logger, userLogger model.Logger, opts ...Option) (*CCM
 	return mgr, nil
 }
 
+func (m *CCM) Close() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.nc != nil {
+		m.nc.Close()
+	}
+
+	m.js = nil
+	m.data = nil
+	m.facts = nil
+	m.env = nil
+	m.externData = nil
+
+	return nil
+}
+
+// CopyFrom copies settings, data etc from source into m
+func (m *CCM) CopyFrom(source model.Manager) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	src, ok := source.(*CCM)
+	if !ok {
+		return fmt.Errorf("cannot copy from non *CCM source %T", source)
+	}
+
+	src.mu.Lock()
+	defer src.mu.Unlock()
+
+	m.noop = src.noop
+	m.workingDir = src.workingDir
+	m.data = iu.CloneMap(src.data)
+	m.facts = iu.CloneMap(src.facts)
+	m.env = iu.CloneMapStrings(src.env)
+	m.externData = iu.CloneMap(src.externData)
+	m.natsContext = src.natsContext
+	m.ncProvider = src.ncProvider
+	m.nc = src.nc
+
+	return nil
+}
+
 // JetStream returns a JetStream connection, requires the context be set using WithNatsContext()
 func (m *CCM) JetStream() (jetstream.JetStream, error) {
 	m.mu.Lock()
@@ -88,7 +133,11 @@ func (m *CCM) JetStream() (jetstream.JetStream, error) {
 
 	var err error
 
-	m.nc, _, err = natscontext.Connect(m.natsContext, m.natsOptions(m.log)...)
+	if m.ncProvider != nil {
+		m.nc, err = m.ncProvider.Connect(m.natsContext, DefaultNatsOptions(m.log)...)
+	} else {
+		m.nc, _, err = natscontext.Connect(m.natsContext, DefaultNatsOptions(m.log)...)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("nats connection error: %w", err)
 	}
@@ -101,10 +150,15 @@ func (m *CCM) JetStream() (jetstream.JetStream, error) {
 	return m.js, nil
 }
 
-func (m *CCM) natsOptions(log model.Logger) []nats.Option {
+func DefaultNatsOptions(log model.Logger) []nats.Option {
 	return []nats.Option{
 		nats.Name("choria-ccm"),
 		nats.MaxReconnects(-1),
+		nats.IgnoreAuthErrorAbort(),
+		nats.CustomReconnectDelay(func(attempt int) time.Duration {
+			return backoff.Default.Duration(attempt)
+		}),
+		nats.RetryOnFailedConnect(true),
 		nats.ReconnectErrHandler(func(conn *nats.Conn, err error) {
 			if conn != nil {
 				log.Error("NATS connection lost, attempting to reconnect", "error", conn.LastError())
@@ -116,16 +170,28 @@ func (m *CCM) natsOptions(log model.Logger) []nats.Option {
 			log.Debug("Connected to NATS Server", "server", conn.ConnectedUrlRedacted())
 		}),
 		nats.ClosedHandler(func(conn *nats.Conn) {
-			log.Error("NATS connection closed", "error", conn.LastError())
+			if conn == nil || conn.LastError() == nil {
+				log.Error("NATS connection closed")
+			} else {
+				log.Error("NATS connection closed", "error", conn.LastError())
+			}
 		}),
 		nats.DisconnectErrHandler(func(conn *nats.Conn, err error) {
-			log.Error("NATS connection disconnected", "error", err.Error(), "server", conn.ConnectedUrlRedacted())
+			if err == nil && conn != nil {
+				err = conn.LastError()
+			}
+			opts := []any{}
+			if err != nil {
+				opts = append(opts, "error", err.Error())
+			}
+
+			log.Error("NATS connection disconnected", opts...)
 		}),
 		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
 			if subscription != nil {
-				log.Error("NATS subscription error", "error", err.Error(), "subject", subscription.Subject)
+				log.Error("NATS subscription error", "error", err, "subject", subscription.Subject)
 			} else {
-				log.Error("NATS connection error", "error", err.Error())
+				log.Error("NATS connection error", "error", err)
 			}
 
 		}),
@@ -280,6 +346,13 @@ func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, err
 }
 
 func (m *CCM) StartSession(apply model.Apply) (model.SessionStore, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.session == nil {
+		return nil, fmt.Errorf("no session store available")
+	}
+
 	return m.session, m.session.StartSession(apply)
 }
 

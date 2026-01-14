@@ -46,6 +46,102 @@ var _ = Describe("Apply", func() {
 		mockctl.Finish()
 	})
 
+	Describe("String", func() {
+		It("Should return a string representation", func() {
+			apply := &Apply{
+				source: "/path/to/manifest.yaml",
+				resources: []map[string]model.ResourceProperties{
+					{model.PackageTypeName: &model.PackageResourceProperties{}},
+					{model.FileTypeName: &model.FileResourceProperties{}},
+				},
+			}
+
+			result := apply.String()
+			Expect(result).To(Equal("/path/to/manifest.yaml with 2 resources"))
+		})
+
+		It("Should handle empty source and resources", func() {
+			apply := &Apply{}
+			result := apply.String()
+			Expect(result).To(Equal(" with 0 resources"))
+		})
+	})
+
+	Describe("Source", func() {
+		It("Should return the source path", func() {
+			apply := &Apply{
+				source: "/path/to/manifest.yaml",
+			}
+
+			Expect(apply.Source()).To(Equal("/path/to/manifest.yaml"))
+		})
+
+		It("Should return empty string when no source", func() {
+			apply := &Apply{}
+			Expect(apply.Source()).To(BeEmpty())
+		})
+	})
+
+	Describe("MarshalYAML", func() {
+		It("Should marshal to YAML correctly", func() {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{
+					{model.PackageTypeName: &model.PackageResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name: "test",
+						}},
+					},
+				},
+				data: map[string]any{
+					"key": "value",
+				},
+			}
+
+			yamlBytes, err := apply.MarshalYAML()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(yamlBytes).NotTo(BeEmpty())
+			Expect(string(yamlBytes)).To(ContainSubstring("resources:"))
+			Expect(string(yamlBytes)).To(ContainSubstring("data:"))
+		})
+
+		It("Should handle empty apply", func() {
+			apply := &Apply{}
+			yamlBytes, err := apply.MarshalYAML()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(yamlBytes).NotTo(BeEmpty())
+		})
+	})
+
+	Describe("MarshalJSON", func() {
+		It("Should marshal to JSON correctly", func() {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{
+					{model.PackageTypeName: &model.PackageResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name: "test",
+						}},
+					},
+				},
+				data: map[string]any{
+					"key": "value",
+				},
+			}
+
+			jsonBytes, err := apply.MarshalJSON()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jsonBytes).NotTo(BeEmpty())
+			Expect(string(jsonBytes)).To(ContainSubstring(`"resources"`))
+			Expect(string(jsonBytes)).To(ContainSubstring(`"data"`))
+		})
+
+		It("Should handle empty apply", func() {
+			apply := &Apply{}
+			jsonBytes, err := apply.MarshalJSON()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jsonBytes).NotTo(BeEmpty())
+		})
+	})
+
 	Describe("Resources", func() {
 		It("Should return the resources list", func() {
 			apply := &Apply{
@@ -247,6 +343,9 @@ var _ = Describe("Apply", func() {
 				resources: []map[string]model.ResourceProperties{},
 			}
 
+			healthcheckLogger := modelmocks.NewMockLogger(mockctl)
+			healthcheckLogger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+			userLogger.EXPECT().With("healthcheck", true).Return(healthcheckLogger)
 			mgr.EXPECT().StartSession(apply).Return(session, nil)
 
 			result, err := apply.Execute(ctx, mgr, true, userLogger)
@@ -348,6 +447,71 @@ var _ = Describe("Apply", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("no suitable provider found"))
 			Expect(result).To(BeNil())
+		})
+
+		Context("healthcheck logging", func() {
+			It("Should add healthcheck attribute to logger when healthCheckOnly is true", func(ctx context.Context) {
+				apply := &Apply{
+					resources: []map[string]model.ResourceProperties{},
+				}
+
+				healthcheckLogger := modelmocks.NewMockLogger(mockctl)
+				healthcheckLogger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+
+				userLogger.EXPECT().With("healthcheck", true).Return(healthcheckLogger)
+				mgr.EXPECT().StartSession(apply).Return(session, nil)
+
+				result, err := apply.Execute(ctx, mgr, true, userLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(session))
+			})
+
+			It("Should not add healthcheck attribute when healthCheckOnly is false", func(ctx context.Context) {
+				apply := &Apply{
+					resources: []map[string]model.ResourceProperties{},
+				}
+
+				// userLogger.With should NOT be called when healthCheckOnly is false
+				mgr.EXPECT().StartSession(apply).Return(session, nil)
+
+				result, err := apply.Execute(ctx, mgr, false, userLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(session))
+			})
+		})
+
+		Context("fail on error behavior", func() {
+			It("Should not terminate on failed resource when healthCheckOnly is true", func(ctx context.Context) {
+				apply := &Apply{
+					resources:   []map[string]model.ResourceProperties{},
+					failOnError: true,
+				}
+
+				healthcheckLogger := modelmocks.NewMockLogger(mockctl)
+				healthcheckLogger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+
+				userLogger.EXPECT().With("healthcheck", true).Return(healthcheckLogger)
+				mgr.EXPECT().StartSession(apply).Return(session, nil)
+
+				// When healthCheckOnly is true and failOnError is true,
+				// it should NOT log a warning about termination
+				result, err := apply.Execute(ctx, mgr, true, userLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(session))
+			})
+
+			It("Should not terminate on failed resource when failOnError is false", func(ctx context.Context) {
+				apply := &Apply{
+					resources:   []map[string]model.ResourceProperties{},
+					failOnError: false,
+				}
+
+				mgr.EXPECT().StartSession(apply).Return(session, nil)
+
+				result, err := apply.Execute(ctx, mgr, false, userLogger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(session))
+			})
 		})
 	})
 })
@@ -907,5 +1071,163 @@ data:
 				},
 			),
 		)
+	})
+
+	Describe("WithOverridingResolvedData", func() {
+		It("should set the overridingResolvedData field", func() {
+			apply := &Apply{}
+			overrideData := map[string]any{"key": "value"}
+			opt := WithOverridingResolvedData(overrideData)
+			err := opt(apply)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply.overridingResolvedData).To(Equal(overrideData))
+		})
+
+		It("should merge overriding data into resolved data", func() {
+			manifestContent := `
+data:
+  app_name: original
+  log_level: INFO
+ccm:
+  resources:
+    - package:
+        name: test-pkg
+        ensure: present
+`
+			manifestPath := tempDir + "/override-resolved-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			overrideData := map[string]any{
+				"app_name":  "overridden",
+				"extra_key": "extra_value",
+			}
+
+			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+				WithOverridingResolvedData(overrideData))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply).NotTo(BeNil())
+
+			data := apply.Data()
+			Expect(data).To(HaveKeyWithValue("app_name", "overridden"))
+			Expect(data).To(HaveKeyWithValue("log_level", "INFO"))
+			Expect(data).To(HaveKeyWithValue("extra_key", "extra_value"))
+		})
+
+		It("should deep merge nested structures", func() {
+			manifestContent := `
+data:
+  config:
+    database:
+      host: localhost
+      port: 5432
+    cache:
+      enabled: true
+ccm:
+  resources:
+    - package:
+        name: test-pkg
+        ensure: present
+`
+			manifestPath := tempDir + "/override-nested-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			overrideData := map[string]any{
+				"config": map[string]any{
+					"database": map[string]any{
+						"host": "production-db",
+					},
+				},
+			}
+
+			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+				WithOverridingResolvedData(overrideData))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply).NotTo(BeNil())
+
+			data := apply.Data()
+			config, ok := data["config"].(map[string]any)
+			Expect(ok).To(BeTrue())
+
+			database, ok := config["database"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			Expect(database["host"]).To(Equal("production-db"))
+			Expect(database["port"]).To(BeNumerically("==", 5432))
+
+			cache, ok := config["cache"].(map[string]any)
+			Expect(ok).To(BeTrue())
+			Expect(cache["enabled"]).To(BeTrue())
+		})
+
+		It("should apply after hiera overrides", func() {
+			manifestContent := `
+data:
+  key1: original1
+  key2: original2
+ccm:
+  resources:
+    - package:
+        name: test-pkg
+        ensure: present
+`
+			manifestPath := tempDir + "/combined-override-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			hieraContent := `
+data:
+  key1: hiera_value
+  key3: hiera_only
+`
+			hieraPath := tempDir + "/hiera-for-combined.yaml"
+			err = os.WriteFile(hieraPath, []byte(hieraContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			resolvedOverride := map[string]any{
+				"key1": "resolved_final",
+				"key4": "resolved_only",
+			}
+
+			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+				WithOverridingHieraData(hieraPath),
+				WithOverridingResolvedData(resolvedOverride))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply).NotTo(BeNil())
+
+			data := apply.Data()
+			// key1 should have the resolved override value (applied last)
+			Expect(data).To(HaveKeyWithValue("key1", "resolved_final"))
+			// key2 should have the original manifest value
+			Expect(data).To(HaveKeyWithValue("key2", "original2"))
+			// key3 should have the hiera override value
+			Expect(data).To(HaveKeyWithValue("key3", "hiera_only"))
+			// key4 should have the resolved override value
+			Expect(data).To(HaveKeyWithValue("key4", "resolved_only"))
+		})
+
+		It("should handle nil overriding data gracefully", func() {
+			manifestContent := `
+data:
+  key: value
+ccm:
+  resources:
+    - package:
+        name: test-pkg
+        ensure: present
+`
+			manifestPath := tempDir + "/nil-override-test.yaml"
+			err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			// nil override should not cause issues
+			_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath,
+				WithOverridingResolvedData(nil))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(apply).NotTo(BeNil())
+
+			data := apply.Data()
+			Expect(data).To(HaveKeyWithValue("key", "value"))
+		})
 	})
 })

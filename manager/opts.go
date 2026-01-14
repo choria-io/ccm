@@ -1,10 +1,11 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
 package manager
 
 import (
+	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/session"
 )
 
@@ -54,6 +55,13 @@ func WithEnvironmentData(data map[string]string) Option {
 func WithNoop() Option {
 	return func(ccm *CCM) error {
 		ccm.noop = true
+		return nil
+	}
+}
+
+func WithNatsConnection(p model.NatsConnProvider) Option {
+	return func(ccm *CCM) error {
+		ccm.ncProvider = p
 		return nil
 	}
 }

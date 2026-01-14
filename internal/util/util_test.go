@@ -645,3 +645,61 @@ var _ = Describe("normalize", func() {
 		Expect(normalize("")).To(Equal(""))
 	})
 })
+
+var _ = Describe("CloneMapStrings", func() {
+	It("creates a copy of the map", func() {
+		source := map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+		}
+
+		result := CloneMapStrings(source)
+
+		Expect(result).To(Equal(source))
+		Expect(result).NotTo(BeIdenticalTo(source))
+	})
+
+	It("returns an independent copy that can be modified without affecting original", func() {
+		source := map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+		}
+
+		result := CloneMapStrings(source)
+		result["key1"] = "modified"
+		result["key3"] = "new"
+
+		Expect(source["key1"]).To(Equal("value1"))
+		Expect(source).NotTo(HaveKey("key3"))
+	})
+
+	It("handles empty map", func() {
+		source := map[string]string{}
+
+		result := CloneMapStrings(source)
+
+		Expect(result).To(BeEmpty())
+		Expect(result).NotTo(BeNil())
+	})
+
+	It("handles nil map", func() {
+		var source map[string]string
+
+		result := CloneMapStrings(source)
+
+		Expect(result).To(BeEmpty())
+		Expect(result).NotTo(BeNil())
+	})
+
+	It("preserves empty string values", func() {
+		source := map[string]string{
+			"empty": "",
+			"space": " ",
+		}
+
+		result := CloneMapStrings(source)
+
+		Expect(result["empty"]).To(Equal(""))
+		Expect(result["space"]).To(Equal(" "))
+	})
+})

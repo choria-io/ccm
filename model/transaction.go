@@ -1,4 +1,4 @@
-// Copyright (c) 2025-2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +7,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,6 +57,7 @@ type TransactionEvent struct {
 	Status          any                  `json:"status" yaml:"status"`
 	NoopMessage     string               `json:"noop_message,omitempty" yaml:"noop_message,omitempty"`
 	HealthChecks    []*HealthCheckResult `json:"health_check,omitempty" yaml:"health_check,omitempty"`
+	HealthCheckOnly bool                 `json:"health_check_only,omitempty" yaml:"health_check_only,omitempty"`
 
 	Errors            []string `json:"error" yaml:"error"`
 	Changed           bool     `json:"changed" yaml:"changed"`
@@ -261,6 +263,31 @@ func BuildSessionSummary(events []SessionEvent) *SessionSummary {
 
 // String returns a human-readable summary of the session
 func (s *SessionSummary) String() string {
-	return fmt.Sprintf("Session: %d resources, %d changed, %d failed, %d skipped, %d stable, %d refreshed, duration=%v",
-		s.TotalResources, s.ChangedResources, s.FailedResources, s.SkippedResources, s.StableResources, s.RefreshedCount, s.TotalDuration)
+	parts := []string{
+		"resources=" + strconv.Itoa(s.TotalResources),
+		"changed=" + strconv.Itoa(s.ChangedResources),
+		"failed=" + strconv.Itoa(s.FailedResources),
+		"skipped=" + strconv.Itoa(s.SkippedResources),
+		"stable=" + strconv.Itoa(s.StableResources),
+		"refreshed=" + strconv.Itoa(s.RefreshedCount),
+	}
+
+	if s.HealthCheckedCount > 0 {
+		if s.HealthCheckCriticalCount > 0 {
+			parts = append(parts, "health_critical="+strconv.Itoa(s.HealthCheckCriticalCount))
+		}
+		if s.HealthCheckWarningCount > 0 {
+			parts = append(parts, "health_warning="+strconv.Itoa(s.HealthCheckWarningCount))
+		}
+		if s.HealthCheckOKCount > 0 {
+			parts = append(parts, "health_ok="+strconv.Itoa(s.HealthCheckOKCount))
+		}
+		if s.HealthCheckUnknownCount > 0 {
+			parts = append(parts, "health_unknown="+strconv.Itoa(s.HealthCheckUnknownCount))
+		}
+	}
+
+	parts = append(parts, "duration="+s.TotalDuration.Round(time.Millisecond).String())
+
+	return fmt.Sprintf("Session: %s", strings.Join(parts, ", "))
 }

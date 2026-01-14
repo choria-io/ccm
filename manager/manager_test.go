@@ -935,5 +935,207 @@ var _ = Describe("ResourceInfo", func() {
 	})
 })
 
+var _ = Describe("Close", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+		mockJS  *modelmocks.MockJetStream
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockJS = modelmocks.NewMockJetStream(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("clears all internal state", func() {
+		mgr, err := NewManager(mockLog, mockLog,
+			WithNatsContext("test-context"),
+			WithEnvironmentData(map[string]string{"KEY": "value"}),
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Set some state
+		mgr.SetFacts(map[string]any{"hostname": "test"})
+		mgr.SetData(map[string]any{"app": "myapp"})
+		mgr.SetExternalData(map[string]any{"external": "data"})
+		mgr.js = mockJS
+
+		// Close should clear all state
+		err = mgr.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(mgr.js).To(BeNil())
+		Expect(mgr.data).To(BeNil())
+		Expect(mgr.facts).To(BeNil())
+		Expect(mgr.env).To(BeNil())
+		Expect(mgr.externData).To(BeNil())
+	})
+
+	It("handles nil NATS connection gracefully", func() {
+		mgr, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		// nc is nil by default
+		Expect(mgr.nc).To(BeNil())
+
+		err = mgr.Close()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("can be called multiple times safely", func() {
+		mgr, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = mgr.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		err = mgr.Close()
+		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
+var _ = Describe("CopyFrom", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+		ctx     context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+		ctx = context.Background()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("copies all relevant fields from source", func() {
+		source, err := NewManager(mockLog, mockLog,
+			WithNatsContext("source-context"),
+			WithNoop(),
+			WithEnvironmentData(map[string]string{"ENV_VAR": "value"}),
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		source.SetWorkingDirectory("/source/dir")
+		source.SetFacts(map[string]any{"hostname": "source-host"})
+		source.SetData(map[string]any{"key": "source-data"})
+		source.SetExternalData(map[string]any{"external": "source-external"})
+
+		dest, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = dest.CopyFrom(source)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Verify all fields were copied
+		Expect(dest.NoopMode()).To(BeTrue())
+		Expect(dest.WorkingDirectory()).To(Equal("/source/dir"))
+		Expect(dest.natsContext).To(Equal("source-context"))
+		Expect(dest.Environment()).To(Equal(map[string]string{"ENV_VAR": "value"}))
+
+		facts, err := dest.Facts(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(facts).To(Equal(map[string]any{"hostname": "source-host"}))
+
+		Expect(dest.Data()).To(Equal(map[string]any{"key": "source-data"}))
+		Expect(dest.externData).To(Equal(map[string]any{"external": "source-external"}))
+	})
+
+	It("creates independent copies of map fields", func() {
+		source, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		source.SetFacts(map[string]any{"key": "original"})
+		source.SetData(map[string]any{"data": "original"})
+		source.SetExternalData(map[string]any{"ext": "original"})
+		source.SetEnviron(map[string]string{"ENV": "original"})
+
+		dest, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = dest.CopyFrom(source)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Modify destination maps
+		dest.facts["key"] = "modified"
+		dest.data["data"] = "modified"
+		dest.externData["ext"] = "modified"
+		dest.env["ENV"] = "modified"
+
+		// Source should be unaffected
+		sourceFacts, _ := source.Facts(ctx)
+		Expect(sourceFacts["key"]).To(Equal("original"))
+		Expect(source.Data()["data"]).To(Equal("original"))
+		Expect(source.externData["ext"]).To(Equal("original"))
+		Expect(source.Environment()["ENV"]).To(Equal("original"))
+	})
+
+	It("returns an error when source is not *CCM type", func() {
+		dest, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create a mock manager (not *CCM)
+		mockMgr := modelmocks.NewMockManager(ctrl)
+
+		err = dest.CopyFrom(mockMgr)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("cannot copy from non *CCM source"))
+	})
+
+	It("handles nil source fields gracefully", func() {
+		source, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		// Don't set any optional fields on source
+
+		dest, err := NewManager(mockLog, mockLog,
+			WithEnvironmentData(map[string]string{"EXISTING": "value"}),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		dest.SetFacts(map[string]any{"existing": "fact"})
+
+		err = dest.CopyFrom(source)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Dest should now have empty values from source (CloneMap returns empty map for nil)
+		Expect(dest.facts).To(BeEmpty())
+		Expect(dest.env).To(BeEmpty())
+	})
+
+	It("does not copy session, loggers, or NATS connection", func() {
+		source, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		dest, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Store original dest values
+		originalSession := dest.session
+		originalLog := dest.log
+		originalUserLog := dest.userLogger
+
+		err = dest.CopyFrom(source)
+		Expect(err).NotTo(HaveOccurred())
+
+		// These should remain unchanged
+		Expect(dest.session).To(Equal(originalSession))
+		Expect(dest.log).To(Equal(originalLog))
+		Expect(dest.userLogger).To(Equal(originalUserLog))
+		Expect(dest.nc).To(BeNil())
+		Expect(dest.js).To(BeNil())
+	})
+})
+
 // Verify JetStream interface compliance
 var _ jetstream.JetStream = (*modelmocks.MockJetStream)(nil)

@@ -1,0 +1,42 @@
+# CCM Agent Configuration Example
+#
+# This file configures the CCM agent that manages manifest apply cycles.
+
+# Time between scheduled manifest apply runs.
+# Must be at least 30s. Defaults to 5m.
+# Supports duration strings like "30s", "5m", "1h".
+interval: 5m
+
+# Time between health check runs.
+# When set, health checks run independently of apply runs and can trigger
+# remediation applies when critical issues are detected.
+# Leave empty or omit to disable periodic health checks.
+health_check_interval: 1m
+
+# List of manifest sources to apply. Each source creates a separate worker
+# that manages its own apply cycle.
+# Supported formats:
+#   - File paths: /path/to/manifest.yaml
+#   - Object store URLs: obj://bucket/key.tar.gz
+manifests:
+  - /etc/choria/ccm/manifests/base.yaml
+  - obj://ccm-manifests/app.tar.gz
+
+# Optional URL to fetch external data from using hiera resolution.
+# The resolved data is merged into the manifest data context.
+# Supports file:// and obj:// URLs.
+# Leave empty or omit if not using external data.
+external_data_url: obj://ccm-data/common
+
+# Directory used to cache manifest sources fetched from remote locations.
+# Defaults to /etc/choria/ccm/source.
+cache_dir: /etc/choria/ccm/source
+
+# If set, a HTTP listener will be started that expose Prometheus metrics on /metrics
+monitor_port: 0
+
+# Configures the logging level to use, one of debug, info, warn, error
+log_level: info
+
+# Sets the NATS context to use for authentication, defaults to 'CCM' when not set
+nats_context: CCM

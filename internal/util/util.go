@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -16,9 +16,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/term"
 )
 
-// ExecutableInPath finds command name in path
+// ExecutableInPath finds the command name in path
 func ExecutableInPath(file string) (string, bool, error) {
 	f, err := exec.LookPath(file)
 
@@ -186,6 +188,15 @@ func CloneMap(source map[string]any) map[string]any {
 	return result
 }
 
+// CloneMapStrings creates a shallow copy of the provided map with cloned values.
+func CloneMapStrings(source map[string]string) map[string]string {
+	result := make(map[string]string, len(source))
+	for key, value := range source {
+		result[key] = CloneValue(value).(string)
+	}
+	return result
+}
+
 // CloneSlice returns a shallow copy of a slice with cloned elements.
 func CloneSlice(source []any) []any {
 	result := make([]any, len(source))
@@ -298,4 +309,9 @@ func IsValidResourceRef(refs ...string) bool {
 	}
 
 	return true
+}
+
+// IsTerminal determines if stdout is a terminal
+func IsTerminal() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 }
