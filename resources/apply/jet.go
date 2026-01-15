@@ -6,6 +6,7 @@ package apply
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"reflect"
 
@@ -40,6 +41,10 @@ func jetParseManifestResources(path string, env *templates.Env) (yaml.RawMessage
 	err = tpl.Execute(buff, variables, env)
 	if err != nil {
 		return nil, err
+	}
+
+	if buff.Len() == 0 {
+		return nil, fmt.Errorf("resources jet template produced no output, check for syntax errors")
 	}
 
 	return buff.Bytes(), nil

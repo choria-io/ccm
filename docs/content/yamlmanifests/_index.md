@@ -56,7 +56,7 @@ overrides:
     package_name: apache2
 ```
 
-##### Applying the manifest
+### Applying the manifest
 
 Let’s apply the manifest, this is how it should look now:
 

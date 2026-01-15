@@ -45,14 +45,14 @@ When accessing manifests via NATS use the --context flag to provide
 server urls and authentication parameters.
 `)
 	apply.Arg("manifest", "Path to manifest to apply").PlaceHolder("URL").Required().StringVar(&cmd.manifest)
-	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
-	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	apply.Flag("fact", "Set additional facts to merge with the system facts").StringMapVar(&cmd.facts)
 	apply.Flag("facts", "File holding additional facts to merge with the system facts").PlaceHolder("FILE").ExistingFileVar(&cmd.factsFile)
+	apply.Flag("hiera", "Hiera data file to use as overriding data source").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
 	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
 	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
-	apply.Flag("hiera", "Hiera data file to use as overriding data source").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
+	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
+	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	apply.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 }
 
@@ -83,10 +83,15 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	_, manifest, wd, err := apply.ResolveManifestUrl(ctx, mgr, c.manifest, userLogger, apply.WithOverridingHieraData(c.hieraFile))
+	opts := []apply.Option{
+		apply.WithOverridingHieraData(c.hieraFile),
+	}
+
+	_, manifest, wd, err := apply.ResolveManifestUrl(ctx, mgr, c.manifest, userLogger, opts...)
 	if err != nil {
 		return err
 	}
+
 	if wd != "" {
 		mgr.SetWorkingDirectory(wd)
 		defer os.RemoveAll(wd)
@@ -125,7 +130,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		fmt.Printf("    Skipped Resources: %d\n", summary.SkippedResources)
 		fmt.Printf("  Refreshed Resources: %d\n", summary.RefreshedCount)
 		fmt.Printf("   Unmet Requirements: %d\n", summary.RequirementsUnMetCount)
-		if summary.HealthCheckOKCount > 0 {
+		if summary.HealthCheckOKCount > 0 || summary.HealthCheckWarningCount > 0 || summary.HealthCheckCriticalCount > 0 || summary.HealthCheckUnknownCount > 0 {
 			fmt.Printf("    Checked Resources: %d (ok: %d, critical: %d, warning: %d unknown: %d)\n", summary.HealthCheckedCount, summary.HealthCheckOKCount, summary.HealthCheckCriticalCount, summary.HealthCheckWarningCount, summary.HealthCheckUnknownCount)
 		} else {
 			fmt.Printf("    Checked Resources: %d\n", summary.HealthCheckedCount)

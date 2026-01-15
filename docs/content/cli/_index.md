@@ -1,5 +1,5 @@
 +++
-title = "CLI Usage"
+title = "Shell Usage"
 toc = true
 weight = 40
 pre = "<b>4. </b>"
@@ -35,9 +35,11 @@ When managing multiple resources, in a script it is worth creating a session and
 ```bash
 #!/bin/bash
 
-eval $(ccm session new)
+eval "$(ccm session new)"
+trap 'rm -rf -- "$CCM_SESSION_STORE"' EXIT
+
 ccm ensure package httpd
-ccm ensure file /etc/httpd/conf/httpd.conf ....
+ccm ensure file /etc/httpd/conf/httpd.conf .... --require package#httpd
 ccm ensure service httpd --subscribe file#/etc/httpd/conf/httpd.conf
 ccm session report
 ```

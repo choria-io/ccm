@@ -5,6 +5,7 @@
 package apply
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,8 +19,10 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/choria-io/ccm/hiera"
+	"github.com/choria-io/ccm/internal/fs"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
@@ -37,6 +40,7 @@ type Apply struct {
 	failOnError            bool
 	overridingHieraData    string
 	overridingResolvedData map[string]any
+	manifestBytes          []byte
 
 	mu sync.Mutex
 }
@@ -55,13 +59,70 @@ func (a *Apply) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.toMap())
 }
 
+func (a *Apply) validateManifestAny(m any) error {
+	yp, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	jp, err := yaml.JSONToYAML(yp)
+	if err != nil {
+		return err
+	}
+
+	return a.validateManifest(jp)
+}
+
+func (a *Apply) validateManifest(mb []byte) error {
+	if len(mb) == 0 {
+		return fmt.Errorf("manifest not parsed")
+	}
+
+	jmb, err := yaml.YAMLToJSON(mb)
+	if err != nil {
+		return err
+	}
+
+	rawSchema, err := fs.FS.Open("schemas/manifest.json")
+	if err != nil {
+		return err
+	}
+	defer rawSchema.Close()
+
+	parsedSchema, err := jsonschema.UnmarshalJSON(rawSchema)
+	if err != nil {
+		return fmt.Errorf("invalid manifest schema: %v", err)
+	}
+
+	manifestInstance, err := jsonschema.UnmarshalJSON(bytes.NewReader(jmb))
+	if err != nil {
+		return fmt.Errorf("invalid instance: %v", err)
+	}
+
+	c := jsonschema.NewCompiler()
+	err = c.AddResource("manifest.json", parsedSchema)
+	if err != nil {
+		return err
+	}
+
+	sch, err := c.Compile("manifest.json")
+	if err != nil {
+		return err
+	}
+
+	return sch.Validate(manifestInstance)
+}
+
 func (a *Apply) toMap() map[string]any {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	return map[string]any{
-		"resources": a.resources,
-		"data":      a.data,
+		"ccm": map[string]any{
+			"fail_on_error": a.failOnError,
+			"resources":     a.resources,
+		},
+		"data": a.data,
 	}
 }
 
@@ -213,9 +274,9 @@ func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string
 }
 
 type manifestParser struct {
-	Hierarchy yaml.RawMessage         `json:"hierarchy" yaml:"hierarchy"`
+	Hierarchy yaml.RawMessage         `json:"hierarchy,omitempty" yaml:"hierarchy,omitempty"`
 	Data      yaml.RawMessage         `json:"data" yaml:"data"`
-	Overrides yaml.RawMessage         `json:"overrides" yaml:"overrides"`
+	Overrides yaml.RawMessage         `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 	CCM       manifestResourcesParser `json:"ccm" yaml:"ccm"`
 }
 
@@ -238,7 +299,8 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		}
 	}
 
-	mb, err := io.ReadAll(manifest)
+	var err error
+	apply.manifestBytes, err = io.ReadAll(manifest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -254,7 +316,7 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 	}
 
 	var parser manifestParser
-	err = yaml.Unmarshal(mb, &parser)
+	err = yaml.Unmarshal(apply.manifestBytes, &parser)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -268,7 +330,7 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		return nil, nil, fmt.Errorf("jet_file requires a directory to be set")
 	}
 
-	resolved, err := hiera.ResolveYaml(mb, facts, hiera.DefaultOptions, hieraLogger)
+	resolved, err := hiera.ResolveYaml(apply.manifestBytes, facts, hiera.DefaultOptions, hieraLogger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -293,6 +355,10 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 
 	env.Data = data
 	apply.data = data
+	parser.Data, err = yaml.Marshal(data)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	var resources []map[string]yaml.RawMessage
 	manifestData := map[string]any{
@@ -316,9 +382,16 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		if err != nil {
 			return nil, nil, err
 		}
+		parser.CCM.Resources = parsed
+	}
+
+	err = apply.validateManifestAny(parser)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	manifestData["resources"] = resources
+
 	if len(resources) == 0 {
 		return nil, nil, fmt.Errorf("manifest must contain resources")
 	}
