@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"testing"
 
@@ -712,6 +713,48 @@ var _ = Describe("ResolveManifestHttpUrl", func() {
 		_, _, _, err := ResolveManifestHttpUrl(ctx, mockMgr, "http://localhost:59999/manifest.tar.gz", mockLog)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("failed to fetch manifest from URL"))
+	})
+
+	It("returns an error when URL with credentials fails to connect", func() {
+		// Use an invalid host with credentials that will fail to connect
+		_, _, _, err := ResolveManifestHttpUrl(ctx, mockMgr, "http://user:pass@localhost:59999/manifest.tar.gz", mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to fetch manifest from URL"))
+	})
+})
+
+var _ = Describe("redactUrlCredentials", func() {
+	It("returns URL unchanged when no credentials present", func() {
+		u, _ := url.Parse("https://example.com/path/to/file.tar.gz")
+		result := redactUrlCredentials(u)
+		Expect(result).To(Equal("https://example.com/path/to/file.tar.gz"))
+	})
+
+	It("redacts username and password from URL", func() {
+		u, _ := url.Parse("https://myuser:secretpass@example.com/path/to/file.tar.gz")
+		result := redactUrlCredentials(u)
+		Expect(result).To(Equal("https://%5BREDACTED%5D@example.com/path/to/file.tar.gz"))
+		Expect(result).NotTo(ContainSubstring("myuser"))
+		Expect(result).NotTo(ContainSubstring("secretpass"))
+	})
+
+	It("redacts username-only credentials from URL", func() {
+		u, _ := url.Parse("https://myuser@example.com/path/to/file.tar.gz")
+		result := redactUrlCredentials(u)
+		Expect(result).To(Equal("https://%5BREDACTED%5D@example.com/path/to/file.tar.gz"))
+		Expect(result).NotTo(ContainSubstring("myuser"))
+	})
+
+	It("preserves query parameters and fragments", func() {
+		u, _ := url.Parse("https://user:pass@example.com/path?query=value#fragment")
+		result := redactUrlCredentials(u)
+		Expect(result).To(Equal("https://%5BREDACTED%5D@example.com/path?query=value#fragment"))
+	})
+
+	It("preserves port numbers", func() {
+		u, _ := url.Parse("https://user:pass@example.com:8443/path/to/file.tar.gz")
+		result := redactUrlCredentials(u)
+		Expect(result).To(Equal("https://%5BREDACTED%5D@example.com:8443/path/to/file.tar.gz"))
 	})
 })
 
