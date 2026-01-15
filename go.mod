@@ -15,9 +15,10 @@ require (
 	github.com/onsi/ginkgo/v2 v2.27.5
 	github.com/onsi/gomega v1.39.0
 	github.com/prometheus/client_golang v1.23.2
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shirou/gopsutil/v4 v4.25.12
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/synadia-io/orbit.go/natscontext v0.1.1
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/mock v0.6.0
@@ -42,7 +43,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20260111202518-71be6bfdd440 // indirect
+	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/guptarohit/asciigraph v0.7.3 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect

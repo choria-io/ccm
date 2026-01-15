@@ -907,7 +907,8 @@ ccm:
 
 		_, _, err = ResolveManifestFilePath(ctx, mockMgr, manifestPath)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("manifest must contain resources"))
+		// Schema validation catches this first - unknown property 'other' and missing resources
+		Expect(err.Error()).To(ContainSubstring("jsonschema validation failed"))
 	})
 
 	It("parses fail_on_error as true when set", func() {
@@ -1228,6 +1229,436 @@ ccm:
 
 			data := apply.Data()
 			Expect(data).To(HaveKeyWithValue("key", "value"))
+		})
+	})
+})
+
+var _ = Describe("validateManifest", func() {
+	var apply *Apply
+
+	BeforeEach(func() {
+		apply = &Apply{}
+	})
+
+	Describe("validateManifest", func() {
+		It("Should return error for empty manifest", func() {
+			err := apply.validateManifest([]byte{})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("manifest not parsed"))
+		})
+
+		It("Should validate a minimal valid manifest", func() {
+			manifest := `
+ccm:
+  resources:
+    - package:
+        - vim:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should validate manifest with all top-level sections", func() {
+			manifest := `
+data:
+  package_name: httpd
+  service_name: httpd
+ccm:
+  fail_on_error: true
+  resources:
+    - package:
+        - httpd:
+            ensure: present
+hierarchy:
+  order:
+    - "os:linux"
+  merge: deep
+overrides:
+  "os:linux":
+    package_name: apache2
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should validate manifest without optional sections", func() {
+			manifest := `
+ccm:
+  resources:
+    - package:
+        - vim:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject unknown top-level properties", func() {
+			manifest := `
+unknown_property: value
+ccm:
+  resources:
+    - package:
+        - vim:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should reject unknown ccm properties", func() {
+			manifest := `
+ccm:
+  unknown_field: true
+  resources:
+    - package:
+        - vim:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should reject unknown resource types", func() {
+			manifest := `
+ccm:
+  resources:
+    - unknown_type:
+        - something:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate package resource properties", func() {
+			manifest := `
+ccm:
+  resources:
+    - package:
+        - vim:
+            ensure: present
+            provider: apt
+            alias: editor
+            require:
+              - file#/etc/apt/sources.list
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject unknown package resource properties", func() {
+			manifest := `
+ccm:
+  resources:
+    - package:
+        - vim:
+            ensure: present
+            unknown_prop: value
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate service resource properties", func() {
+			manifest := `
+ccm:
+  resources:
+    - service:
+        - nginx:
+            ensure: running
+            enable: true
+            subscribe:
+              - file#/etc/nginx/nginx.conf
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject invalid service ensure value", func() {
+			manifest := `
+ccm:
+  resources:
+    - service:
+        - nginx:
+            ensure: invalid
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate file resource properties", func() {
+			manifest := `
+ccm:
+  resources:
+    - file:
+        - /etc/config.conf:
+            ensure: present
+            content: "config data"
+            owner: root
+            group: root
+            mode: "0644"
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject invalid file ensure value", func() {
+			manifest := `
+ccm:
+  resources:
+    - file:
+        - /etc/config.conf:
+            ensure: invalid
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate exec resource properties", func() {
+			manifest := `
+ccm:
+  resources:
+    - exec:
+        - "/usr/bin/setup.sh":
+            ensure: present
+            cwd: /tmp
+            timeout: 30s
+            creates: /tmp/done
+            refreshonly: true
+            logoutput: true
+            environment:
+              - FOO=bar
+            returns:
+              - 0
+              - 1
+            subscribe:
+              - file#/etc/config.conf
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject unknown exec resource properties", func() {
+			manifest := `
+ccm:
+  resources:
+    - exec:
+        - "/usr/bin/setup.sh":
+            ensure: present
+            unknown_prop: value
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate hierarchy merge values", func() {
+			manifest := `
+hierarchy:
+  order:
+    - default
+  merge: first
+ccm:
+  resources:
+    - package:
+        - vim:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject invalid hierarchy merge value", func() {
+			manifest := `
+hierarchy:
+  order:
+    - default
+  merge: invalid
+ccm:
+  resources:
+    - package:
+        - vim:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate health_checks on resources", func() {
+			manifest := `
+ccm:
+  resources:
+    - package:
+        - nginx:
+            ensure: present
+            health_checks:
+              - command: "curl -s localhost"
+                timeout: 10s
+                tries: 3
+                try_sleep: 1s
+                format: nagios
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject health_check without command", func() {
+			manifest := `
+ccm:
+  resources:
+    - package:
+        - nginx:
+            ensure: present
+            health_checks:
+              - timeout: 10s
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate resources_jet_file property", func() {
+			manifest := `
+ccm:
+  resources_jet_file: resources.jet
+  resources:
+    - package:
+        - vim:
+            ensure: present
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject invalid YAML", func() {
+			manifest := `
+ccm:
+  resources: [unclosed
+`
+			err := apply.validateManifest([]byte(manifest))
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("validateManifestAny", func() {
+		It("Should validate a valid manifest struct", func() {
+			manifest := map[string]any{
+				"ccm": map[string]any{
+					"fail_on_error": true,
+					"resources": []any{
+						map[string]any{
+							"package": []any{
+								map[string]any{
+									"vim": map[string]any{
+										"ensure": "present",
+									},
+								},
+							},
+						},
+					},
+				},
+				"data": map[string]any{
+					"key": "value",
+				},
+			}
+
+			err := apply.validateManifestAny(manifest)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should reject invalid manifest struct", func() {
+			manifest := map[string]any{
+				"ccm": map[string]any{
+					"unknown_field": true,
+					"resources": []any{
+						map[string]any{
+							"package": []any{
+								map[string]any{
+									"vim": map[string]any{
+										"ensure": "present",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			err := apply.validateManifestAny(manifest)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should validate complex manifest with all resource types", func() {
+			manifest := map[string]any{
+				"data": map[string]any{
+					"app_name": "myapp",
+				},
+				"hierarchy": map[string]any{
+					"order": []any{"default"},
+					"merge": "deep",
+				},
+				"overrides": map[string]any{
+					"default": map[string]any{
+						"app_name": "overridden",
+					},
+				},
+				"ccm": map[string]any{
+					"fail_on_error": false,
+					"resources": []any{
+						map[string]any{
+							"package": []any{
+								map[string]any{
+									"nginx": map[string]any{
+										"ensure": "present",
+									},
+								},
+							},
+						},
+						map[string]any{
+							"file": []any{
+								map[string]any{
+									"/etc/nginx/nginx.conf": map[string]any{
+										"ensure":  "present",
+										"content": "server {}",
+										"owner":   "root",
+										"group":   "root",
+										"mode":    "0644",
+									},
+								},
+							},
+						},
+						map[string]any{
+							"service": []any{
+								map[string]any{
+									"nginx": map[string]any{
+										"ensure": "running",
+										"enable": true,
+										"subscribe": []any{
+											"file#/etc/nginx/nginx.conf",
+										},
+									},
+								},
+							},
+						},
+						map[string]any{
+							"exec": []any{
+								map[string]any{
+									"nginx -t": map[string]any{
+										"ensure":      "present",
+										"refreshonly": true,
+										"subscribe": []any{
+											"file#/etc/nginx/nginx.conf",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			err := apply.validateManifestAny(manifest)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

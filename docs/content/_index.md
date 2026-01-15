@@ -18,7 +18,7 @@ This then is a new system designed for small-scale Configuration Management desi
  * Designed to work at a first-class level in many environments:
    * Command Line.
    * Shell scripts.
-   * Single-file manifests in YAML format.
+   * Single-file manifests in YAML format run manually or continuously.
    * Choria Autonomous Agents.
    * Choria RPC.
    * Embedded in Go applications.
@@ -28,6 +28,8 @@ This then is a new system designed for small-scale Configuration Management desi
 This is an experimental work in progress, there are only `exec`, `file` (very basic), `service` and `package` resources implemented so far, they support only `dnf` and `systemd`.
 
 We've got the CLI/shell interaction to a quite mature state, next we're exploring network related features and deeper monitoring integration.
+
+Manifests are supported, in YAML format, and can be run manually or continuously using an agent. Manifests and Data can be store in Key-Value and Object stores.
 
 At this point we think the idea has legs and will keep working on it. Keeping in mind the minimal focus of this is to deliver something that can do package-config-service style deployments and as such will have minimal resource types (`file`, `package`, `service` and `exec` are the current targets).
 
