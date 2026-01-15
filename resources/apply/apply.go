@@ -191,6 +191,7 @@ func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, l
 // ResolveManifestHttpUrl reads a manifest from an HTTP(S) URL and resolves it using ResolveManifestReader()
 //
 // The URL should point to a tar.gz archive containing a manifest.yaml file.
+// HTTP Basic Authentication is supported via URL credentials (e.g., https://user:pass@host/path).
 // If a value for `dir` is returned it should be cleaned up after use.
 func ResolveManifestHttpUrl(ctx context.Context, mgr model.Manager, manifestUrl string, log model.Logger, opts ...Option) (manifest map[string]any, apply model.Apply, dir string, err error) {
 	if manifestUrl == "" {
@@ -206,7 +207,10 @@ func ResolveManifestHttpUrl(ctx context.Context, mgr model.Manager, manifestUrl 
 		return nil, nil, "", fmt.Errorf("URL scheme must be http or https, got %q", parsedUrl.Scheme)
 	}
 
-	log.Debug("Getting manifest data from HTTP URL", "url", manifestUrl)
+	// Create a redacted URL for logging (without credentials)
+	redactedUrl := redactUrlCredentials(parsedUrl)
+
+	log.Debug("Getting manifest data from HTTP URL", "url", redactedUrl)
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
@@ -214,6 +218,13 @@ func ResolveManifestHttpUrl(ctx context.Context, mgr model.Manager, manifestUrl 
 	req, err := http.NewRequestWithContext(timeoutCtx, http.MethodGet, manifestUrl, nil)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Add Basic Auth if credentials are provided in the URL
+	if parsedUrl.User != nil {
+		username := parsedUrl.User.Username()
+		password, _ := parsedUrl.User.Password()
+		req.SetBasicAuth(username, password)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -237,11 +248,24 @@ func ResolveManifestHttpUrl(ctx context.Context, mgr model.Manager, manifestUrl 
 		return nil, nil, "", err
 	}
 
-	apply.(*Apply).source = manifestUrl
+	// Store the redacted URL as source to avoid exposing credentials
+	apply.(*Apply).source = redactedUrl
 
-	log.Info("Using manifest from HTTP URL in temporary directory", "manifest", manifestPath, "url", manifestUrl)
+	log.Info("Using manifest from HTTP URL in temporary directory", "manifest", manifestPath, "url", redactedUrl)
 
 	return resolved, apply, filepath.Dir(manifestPath), nil
+}
+
+// redactUrlCredentials returns a URL string with credentials replaced by REDACTED
+func redactUrlCredentials(u *url.URL) string {
+	if u.User == nil {
+		return u.String()
+	}
+
+	// Copy the URL and overwrite credentials
+	redacted := *u
+	redacted.User = url.User("[REDACTED]")
+	return redacted.String()
 }
 
 // ResolveManifestObjectValue reads a manifest from an object store and resolves it using ResolveManifestReader()
