@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -169,6 +170,9 @@ func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, l
 	case "obj":
 		res, apply, wd, err = ResolveManifestObjectValue(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), log, opts...)
 
+	case "http", "https":
+		res, apply, wd, err = ResolveManifestHttpUrl(ctx, mgr, source, log, opts...)
+
 	case "":
 		res, apply, err = ResolveManifestFilePath(ctx, mgr, source, opts...)
 
@@ -182,6 +186,62 @@ func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, l
 	apply.(*Apply).source = source
 
 	return res, apply, wd, nil
+}
+
+// ResolveManifestHttpUrl reads a manifest from an HTTP(S) URL and resolves it using ResolveManifestReader()
+//
+// The URL should point to a tar.gz archive containing a manifest.yaml file.
+// If a value for `dir` is returned it should be cleaned up after use.
+func ResolveManifestHttpUrl(ctx context.Context, mgr model.Manager, manifestUrl string, log model.Logger, opts ...Option) (manifest map[string]any, apply model.Apply, dir string, err error) {
+	if manifestUrl == "" {
+		return nil, nil, "", fmt.Errorf("URL is required for HTTP manifest source")
+	}
+
+	parsedUrl, err := url.Parse(manifestUrl)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("invalid URL: %w", err)
+	}
+
+	if parsedUrl.Scheme != "http" && parsedUrl.Scheme != "https" {
+		return nil, nil, "", fmt.Errorf("URL scheme must be http or https, got %q", parsedUrl.Scheme)
+	}
+
+	log.Debug("Getting manifest data from HTTP URL", "url", manifestUrl)
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(timeoutCtx, http.MethodGet, manifestUrl, nil)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("failed to fetch manifest from URL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, nil, "", fmt.Errorf("HTTP request failed with status %d: %s", resp.StatusCode, resp.Status)
+	}
+
+	td, err := os.MkdirTemp("", "manifest-*")
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	resolved, apply, manifestPath, err := unTarAndResolve(ctx, resp.Body, mgr, td, opts...)
+	if err != nil {
+		os.RemoveAll(td)
+		return nil, nil, "", err
+	}
+
+	apply.(*Apply).source = manifestUrl
+
+	log.Info("Using manifest from HTTP URL in temporary directory", "manifest", manifestPath, "url", manifestUrl)
+
+	return resolved, apply, filepath.Dir(manifestPath), nil
 }
 
 // ResolveManifestObjectValue reads a manifest from an object store and resolves it using ResolveManifestReader()
@@ -221,9 +281,22 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 		return nil, nil, "", err
 	}
 
-	files, err := iu.UntarGz(res, td)
+	resolved, apply, manifestPath, err := unTarAndResolve(ctx, res, mgr, td, opts...)
 	if err != nil {
 		os.RemoveAll(td)
+		return nil, nil, "", err
+	}
+
+	apply.(*Apply).source = fmt.Sprintf("obj://%s/%s", bucket, file)
+
+	log.Info("Using manifest from Object Store in temporary directory", "manifest", manifestPath, "bucket", bucket, "file", file)
+
+	return resolved, apply, filepath.Dir(manifestPath), nil
+}
+
+func unTarAndResolve(ctx context.Context, r io.Reader, mgr model.Manager, path string, opts ...Option) (map[string]any, model.Apply, string, error) {
+	files, err := iu.UntarGz(r, path)
+	if err != nil {
 		return nil, nil, "", err
 	}
 
@@ -236,7 +309,6 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 	}
 
 	if manifestPath == "" {
-		os.RemoveAll(td)
 		return nil, nil, "", fmt.Errorf("manifest.yaml not found in object store")
 	}
 	manifestParent := filepath.Dir(manifestPath)
@@ -244,15 +316,10 @@ func ResolveManifestObjectValue(ctx context.Context, mgr model.Manager, bucket s
 
 	resolved, apply, err := ResolveManifestFilePath(ctx, mgr, manifestPath, opts...)
 	if err != nil {
-		os.RemoveAll(td)
 		return nil, nil, "", err
 	}
 
-	apply.(*Apply).source = fmt.Sprintf("obj://%s/%s", bucket, file)
-
-	log.Info("Using manifest from Object Store in temporary directory", "manifest", manifestPath, "bucket", bucket, "file", file)
-
-	return resolved, apply, manifestParent, nil
+	return resolved, apply, manifestPath, nil
 }
 
 // ResolveManifestFilePath reads a file and resolves the manifest using ResolveManifestReader()

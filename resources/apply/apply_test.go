@@ -599,7 +599,7 @@ var _ = Describe("ResolveManifestUrl", func() {
 	})
 
 	It("returns an error for unsupported URL scheme", func() {
-		_, _, _, err := ResolveManifestUrl(ctx, mockMgr, "http://example.com/manifest", mockLog)
+		_, _, _, err := ResolveManifestUrl(ctx, mockMgr, "ftp://example.com/manifest", mockLog)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("unsupported manifest source"))
 	})
@@ -661,6 +661,57 @@ ccm:
 
 		// Cleanup the temp directory
 		os.RemoveAll(wd)
+	})
+})
+
+var _ = Describe("ResolveManifestHttpUrl", func() {
+	var (
+		mockctl *gomock.Controller
+		mockMgr *modelmocks.MockManager
+		mockLog *modelmocks.MockLogger
+		ctx     context.Context
+		facts   map[string]any
+		data    map[string]any
+	)
+
+	BeforeEach(func() {
+		mockctl = gomock.NewController(GinkgoT())
+		facts = map[string]any{"os": "linux"}
+		data = make(map[string]any)
+		mockMgr, mockLog = modelmocks.NewManager(facts, data, false, mockctl)
+		ctx = context.Background()
+
+		mockLog.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+		mockMgr.EXPECT().SetData(gomock.Any()).AnyTimes().Return(data)
+	})
+
+	AfterEach(func() {
+		mockctl.Finish()
+	})
+
+	It("returns an error when URL is empty", func() {
+		_, _, _, err := ResolveManifestHttpUrl(ctx, mockMgr, "", mockLog)
+		Expect(err).To(MatchError("URL is required for HTTP manifest source"))
+	})
+
+	It("returns an error when URL is invalid", func() {
+		_, _, _, err := ResolveManifestHttpUrl(ctx, mockMgr, "://invalid", mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("invalid URL"))
+	})
+
+	It("returns an error when URL scheme is not http or https", func() {
+		_, _, _, err := ResolveManifestHttpUrl(ctx, mockMgr, "ftp://example.com/manifest.tar.gz", mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("URL scheme must be http or https"))
+	})
+
+	It("returns an error when HTTP request fails with connection error", func() {
+		// Use an invalid host that will fail to connect
+		_, _, _, err := ResolveManifestHttpUrl(ctx, mockMgr, "http://localhost:59999/manifest.tar.gz", mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to fetch manifest from URL"))
 	})
 })
 

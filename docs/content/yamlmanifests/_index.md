@@ -266,3 +266,13 @@ $ ccm apply obj://CCM/manifest.tgz --context local
  INFO  Using manifest from Object Store in temporary directory bucket=CCM file=manifest.tgz
  INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix 
 ```
+
+### Manifests on Web Servers
+
+As for Object Store data, you can store gzipped tar files on a web server and apply those from the CLI:
+
+```
+$ ccm apply https://example.net/manifest.tar.gz
+ INFO  Executing manifest manifest=https://example.net/manifest.tar.gz resources=1
+ INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix 
+```
