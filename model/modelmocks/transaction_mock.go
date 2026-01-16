@@ -138,6 +138,34 @@ func (mr *MockApplyMockRecorder) FailOnError() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailOnError", reflect.TypeOf((*MockApply)(nil).FailOnError))
 }
 
+// PostMessage mocks base method.
+func (m *MockApply) PostMessage() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostMessage")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// PostMessage indicates an expected call of PostMessage.
+func (mr *MockApplyMockRecorder) PostMessage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostMessage", reflect.TypeOf((*MockApply)(nil).PostMessage))
+}
+
+// PreMessage mocks base method.
+func (m *MockApply) PreMessage() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreMessage")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// PreMessage indicates an expected call of PreMessage.
+func (mr *MockApplyMockRecorder) PreMessage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreMessage", reflect.TypeOf((*MockApply)(nil).PreMessage))
+}
+
 // Resources mocks base method.
 func (m *MockApply) Resources() []map[string]model.ResourceProperties {
 	m.ctrl.T.Helper()

@@ -390,18 +390,6 @@ func (mr *MockManagerMockRecorder) SetFacts(facts any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFacts", reflect.TypeOf((*MockManager)(nil).SetFacts), facts)
 }
 
-// SetNatsConnProvider mocks base method.
-func (m *MockManager) SetNatsConnProvider(provider model.NatsConnProvider) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetNatsConnProvider", provider)
-}
-
-// SetNatsConnProvider indicates an expected call of SetNatsConnProvider.
-func (mr *MockManagerMockRecorder) SetNatsConnProvider(provider any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNatsConnProvider", reflect.TypeOf((*MockManager)(nil).SetNatsConnProvider), provider)
-}
-
 // SetWorkingDirectory mocks base method.
 func (m *MockManager) SetWorkingDirectory(dir string) {
 	m.ctrl.T.Helper()
