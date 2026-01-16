@@ -9,6 +9,10 @@ A manifest is a YAML file that combines data, platform-specific configuration an
 
 There is no logic - other than what expressions can do, consider it to be no more complex than basic example multi-resource shell scripts.
 
+> [!info] Note
+>
+> We publish a JSON Schema for the manifest at [ttps://choria.io/schemas/ccm/v1/manifest.json](ttps://choria.io/schemas/ccm/v1/manifest.json), you can configure in your editor to provide completion and validation while editing.
+
 The YAML file resolves the manifest using [Choria Hierarchical Data Resolver](https://github.com/choria-io/tinyhiera), our single-file implementation of Hiera.
 
 ### Full Example
