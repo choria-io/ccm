@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -27,6 +27,7 @@ const (
 // ExecResourceProperties defines the properties for an exec resource
 type ExecResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
+	Command                  string   `json:"command" yaml:"command"`                             // Command specifies the command to run, when not set will use the name property
 	Cwd                      string   `json:"cwd,omitempty" yaml:"cwd,omitempty"`                 // Cwd specifies the working directory from which to run the command
 	Environment              []string `json:"environment,omitempty" yaml:"environment,omitempty"` // Environment specifies additional environment variables to set when running the command
 	Path                     string   `json:"path,omitempty" yaml:"path,omitempty"`               // Path specifies the search path for executable commands, as an array of directories or a colon-separated list

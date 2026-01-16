@@ -318,6 +318,120 @@ var _ = Describe("Posix Provider", func() {
 			Expect(exitCode).To(Equal(0))
 		})
 
+		Context("with Command property", func() {
+			It("Should use Command instead of Name when Command is set", func() {
+				properties := &model.ExecResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name: "my-descriptive-name",
+					},
+					Command: "/bin/echo hello",
+				}
+
+				runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+					Command: "/bin/echo",
+					Args:    []string{"hello"},
+				}).Return([]byte("hello\n"), []byte{}, 0, nil)
+
+				exitCode, err := provider.Execute(context.Background(), properties, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+			})
+
+			It("Should use Name when Command is empty", func() {
+				properties := &model.ExecResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name: "/bin/echo from-name",
+					},
+					Command: "",
+				}
+
+				runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+					Command: "/bin/echo",
+					Args:    []string{"from-name"},
+				}).Return([]byte("from-name\n"), []byte{}, 0, nil)
+
+				exitCode, err := provider.Execute(context.Background(), properties, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+			})
+
+			It("Should handle Command with multiple arguments", func() {
+				properties := &model.ExecResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name: "download-binary",
+					},
+					Command: "/usr/bin/curl -fsSL https://example.com/file.tar.gz -o /tmp/file.tar.gz",
+				}
+
+				runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+					Command: "/usr/bin/curl",
+					Args:    []string{"-fsSL", "https://example.com/file.tar.gz", "-o", "/tmp/file.tar.gz"},
+				}).Return([]byte{}, []byte{}, 0, nil)
+
+				exitCode, err := provider.Execute(context.Background(), properties, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+			})
+
+			It("Should handle Command without arguments", func() {
+				properties := &model.ExecResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name: "reload-systemd",
+					},
+					Command: "/bin/systemctl",
+				}
+
+				runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+					Command: "/bin/systemctl",
+					Args:    nil,
+				}).Return([]byte{}, []byte{}, 0, nil)
+
+				exitCode, err := provider.Execute(context.Background(), properties, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+			})
+
+			It("Should return error for invalid shell quote in Command", func() {
+				properties := &model.ExecResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name: "broken-command",
+					},
+					Command: "/bin/echo 'unterminated",
+				}
+
+				exitCode, err := provider.Execute(context.Background(), properties, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Unterminated"))
+				Expect(exitCode).To(Equal(-1))
+			})
+
+			It("Should pass all options with Command property", func() {
+				properties := &model.ExecResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name: "run-migration",
+					},
+					Command:       "/opt/app/bin/migrate --run",
+					Cwd:           "/opt/app",
+					Environment:   []string{"DB_HOST=localhost"},
+					Path:          "/opt/app/bin",
+					ParsedTimeout: 120 * time.Second,
+				}
+
+				runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+					Command:     "/opt/app/bin/migrate",
+					Args:        []string{"--run"},
+					Cwd:         "/opt/app",
+					Environment: []string{"DB_HOST=localhost"},
+					Path:        "/opt/app/bin",
+					Timeout:     120 * time.Second,
+				}).Return([]byte{}, []byte{}, 0, nil)
+
+				exitCode, err := provider.Execute(context.Background(), properties, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+			})
+		})
+
 		Context("with LogOutput", func() {
 			It("Should log output when LogOutput is true and logger is provided", func() {
 				userLogger := modelmocks.NewMockLogger(mockctl)

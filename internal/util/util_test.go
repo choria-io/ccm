@@ -8,9 +8,14 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -701,5 +706,229 @@ var _ = Describe("CloneMapStrings", func() {
 
 		Expect(result["empty"]).To(Equal(""))
 		Expect(result["space"]).To(Equal(" "))
+	})
+})
+
+var _ = Describe("RedactUrlCredentials", func() {
+	It("returns URL unchanged when no credentials present", func() {
+		u, err := url.Parse("https://example.com/path/to/file.yaml")
+		Expect(err).ToNot(HaveOccurred())
+
+		result := RedactUrlCredentials(u)
+		Expect(result).To(Equal("https://example.com/path/to/file.yaml"))
+	})
+
+	It("redacts username and password from URL", func() {
+		u, err := url.Parse("https://myuser:secretpass@example.com/path/to/file.yaml")
+		Expect(err).ToNot(HaveOccurred())
+
+		result := RedactUrlCredentials(u)
+		Expect(result).NotTo(ContainSubstring("myuser"))
+		Expect(result).NotTo(ContainSubstring("secretpass"))
+		// URL encoding converts [ to %5B and ] to %5D
+		Expect(result).To(ContainSubstring("REDACTED"))
+		Expect(result).To(ContainSubstring("example.com/path/to/file.yaml"))
+	})
+
+	It("redacts username-only credentials from URL", func() {
+		u, err := url.Parse("https://myuser@example.com/path/to/file.yaml")
+		Expect(err).ToNot(HaveOccurred())
+
+		result := RedactUrlCredentials(u)
+		Expect(result).NotTo(ContainSubstring("myuser"))
+		// URL encoding converts [ to %5B and ] to %5D
+		Expect(result).To(ContainSubstring("REDACTED"))
+	})
+
+	It("preserves query parameters and fragments", func() {
+		u, err := url.Parse("https://user:pass@example.com/path?query=value#fragment")
+		Expect(err).ToNot(HaveOccurred())
+
+		result := RedactUrlCredentials(u)
+		Expect(result).To(ContainSubstring("query=value"))
+		Expect(result).To(ContainSubstring("fragment"))
+	})
+
+	It("preserves port numbers", func() {
+		u, err := url.Parse("https://user:pass@example.com:8443/path/to/file.yaml")
+		Expect(err).ToNot(HaveOccurred())
+
+		result := RedactUrlCredentials(u)
+		Expect(result).To(ContainSubstring(":8443"))
+	})
+})
+
+var _ = Describe("HttpGet", func() {
+	It("returns error for empty URL", func() {
+		_, err := HttpGet(context.Background(), "", 0)
+		Expect(err).To(MatchError("URL is required"))
+	})
+
+	It("returns error for invalid URL", func() {
+		_, err := HttpGet(context.Background(), "://invalid", 0)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("invalid URL"))
+	})
+
+	It("returns error for unsupported scheme", func() {
+		_, err := HttpGet(context.Background(), "ftp://example.com/file", 0)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("URL scheme must be http or https"))
+	})
+
+	It("returns error when connection fails", func() {
+		_, err := HttpGet(context.Background(), "http://localhost:59999/nonexistent", time.Second)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("HTTP request failed"))
+	})
+
+	Context("with HTTP test server", func() {
+		var server *httptest.Server
+
+		AfterEach(func() {
+			if server != nil {
+				server.Close()
+			}
+		})
+
+		It("fetches content from HTTP server", func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"key": "value"}`))
+			}))
+
+			result, err := HttpGet(context.Background(), server.URL, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.StatusCode).To(Equal(200))
+			Expect(string(result.Body)).To(Equal(`{"key": "value"}`))
+		})
+
+		It("returns non-200 status codes without error", func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = w.Write([]byte("not found"))
+			}))
+
+			result, err := HttpGet(context.Background(), server.URL, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.StatusCode).To(Equal(404))
+			Expect(result.Status).To(ContainSubstring("404"))
+		})
+
+		It("handles Basic Auth from URL credentials", func() {
+			var receivedAuth string
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				receivedAuth = r.Header.Get("Authorization")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte("ok"))
+			}))
+
+			parsedURL, err := url.Parse(server.URL)
+			Expect(err).ToNot(HaveOccurred())
+			parsedURL.User = url.UserPassword("testuser", "testpass")
+
+			result, err := HttpGet(context.Background(), parsedURL.String(), 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.StatusCode).To(Equal(200))
+			Expect(receivedAuth).To(HavePrefix("Basic "))
+		})
+
+		It("respects context cancellation", func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				time.Sleep(5 * time.Second)
+				w.WriteHeader(http.StatusOK)
+			}))
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel() // Cancel immediately
+
+			_, err := HttpGet(ctx, server.URL, time.Minute)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("uses default timeout when timeout is zero", func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte("ok"))
+			}))
+
+			result, err := HttpGet(context.Background(), server.URL, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.StatusCode).To(Equal(200))
+		})
+
+		It("uses default timeout when timeout is negative", func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte("ok"))
+			}))
+
+			result, err := HttpGet(context.Background(), server.URL, -1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.StatusCode).To(Equal(200))
+		})
+	})
+})
+
+var _ = Describe("FindManifestInFiles", func() {
+	It("finds manifest.yaml in file list", func() {
+		files := []string{
+			"/tmp/extract/config.yaml",
+			"/tmp/extract/manifest.yaml",
+			"/tmp/extract/data.json",
+		}
+
+		result, err := FindManifestInFiles(files, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal("/tmp/extract/manifest.yaml"))
+	})
+
+	It("finds manifest.yaml in nested directory", func() {
+		files := []string{
+			"/tmp/extract/subdir/manifest.yaml",
+			"/tmp/extract/other.yaml",
+		}
+
+		result, err := FindManifestInFiles(files, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal("/tmp/extract/subdir/manifest.yaml"))
+	})
+
+	It("strips prefix when provided", func() {
+		files := []string{
+			"/tmp/extract/manifest.yaml",
+		}
+
+		result, err := FindManifestInFiles(files, "/tmp/extract")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal("/manifest.yaml"))
+	})
+
+	It("returns error when manifest.yaml not found", func() {
+		files := []string{
+			"/tmp/extract/config.yaml",
+			"/tmp/extract/data.json",
+		}
+
+		_, err := FindManifestInFiles(files, "")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("manifest.yaml not found"))
+	})
+
+	It("returns error for empty file list", func() {
+		files := []string{}
+
+		_, err := FindManifestInFiles(files, "")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("manifest.yaml not found"))
+	})
+
+	It("does not match files with manifest.yaml in directory name", func() {
+		files := []string{
+			"/tmp/manifest.yaml.d/config.yaml",
+		}
+
+		_, err := FindManifestInFiles(files, "")
+		Expect(err).To(HaveOccurred())
 	})
 })
