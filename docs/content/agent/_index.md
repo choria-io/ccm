@@ -22,6 +22,12 @@ By enabling both modes at the same time you can run monitoring very frequently -
 
 While enabling the combination is optional, it is recommended, and so we also recommend using health checks in your key resources.
 
+## Supported Manifest snd Data Sources
+
+For Hiera data we support Key-Value stores as a local file, Key-Value values and HTTP(s) URLs.
+
+For the manifest bundles you can point to a local file, a Object Storage URL or a HTTP(s) URL.
+
 ## Logical Flow
 
 The agent continuously run and manage manifests in the following way:
@@ -83,7 +89,7 @@ nats_context: CCM
 
 # Optional URL to fetch external data from using hiera resolution.
 # The resolved data is merged into the manifest data context.
-# Supports file:// and obj:// URLs.
+# Supports file paths, kv://bucket/key, obj://bucket/key, and http(s):// URLs.
 # Leave empty or omit if not using external data.
 external_data_url: obj://ccm-data/common
 
@@ -91,9 +97,17 @@ external_data_url: obj://ccm-data/common
 # Defaults to /etc/choria/ccm/source.
 cache_dir: /etc/choria/ccm/source
 
+# Optional broker authentication using Choria JWT credentials.
+# When set, nats_servers is required and nats_context is ignored.
+# nats_servers: "tls://broker.choria.local:4222"
+# choria_token_file: /root/.config/choria/client.jwt
+# choria_seed_file: /root/.config/choria/client.key
+# choria_collective: choria
+# nats_tls_ca: /etc/choria/credentials/broker/public.crt
+# nats_tls_insecure: false
+
 # If set, a HTTP listener will be started that expose Prometheus metrics on /metrics
 monitor_port: 0
 ```
 
 Follow the comments in the file and then start your service using `ccm ensure service ccm-agent running --enable`
-

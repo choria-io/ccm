@@ -17,6 +17,17 @@ All resources can have an `alias` set which will be used in logging and to find 
 
 All resources can have a `require` property that is a list of `type#name` or `type#alias` that must have succeeded before this resource can be applied.
 
+## About Names
+
+Resources can be specified like:
+
+```yaml
+/etc/motd:
+  ensure: present
+```
+
+This sets `name` to `/etc/motd`, in the following paragraphs we will refer to this as `name`.
+
 ## Exec
 
 When you manage an exec resource, you describe a command that should be executed to bring the system into the desired state. The exec resource is idempotent when used with the `creates` property or `refreshonly` mode.
@@ -27,8 +38,7 @@ When you manage an exec resource, you describe a command that should be executed
 In a manifest:
 
 ```yaml
-exec:
-  name: /usr/bin/touch /tmp/hello
+/usr/bin/touch /tmp/hello:
   ensure: present
   creates: /tmp/hello
   timeout: 30s
@@ -54,6 +64,7 @@ The `ensure` property does not have meaning for the exec resource.
 | Property                |                                                                                               |
 |-------------------------|-----------------------------------------------------------------------------------------------|
 | `name`                  | The command to execute                                                                        |
+| `command`               | When set will use this is the command to run instead of `name`                                |
 | `ensure`                | The desired state                                                                             |
 | `cwd`                   | The working directory from which to run the command                                           |
 | `environment` (array)   | Additional environment variables in KEY=VALUE format                                          |
@@ -82,8 +93,7 @@ The `file` type is very minimal at the moment, most important TODO items:
 In a manifest:
 
 ```yaml
-file:
-  name: /etc/motd
+/etc/motd:
   ensure: present
   content: |
     Managed by CCM {{ now() }}
@@ -173,8 +183,7 @@ Additionally, a service can listen to the state changes of another resource, and
 In a manifest:
 
 ```yaml
-service:
-  name: httpd
+httpd:
   ensure: running
   enable: true
   subscribe: package#httpd

@@ -7,6 +7,9 @@ package hiera
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 
@@ -695,8 +698,8 @@ var _ = Describe("ResolveUrl", func() {
 	})
 
 	It("returns an error for unsupported schemes", func() {
-		_, err := ResolveUrl(ctx, "http://example.com/data", mockMgr, nil, DefaultOptions, mockLog)
-		Expect(err).To(MatchError("unsupported hiera data source: http://example.com/data"))
+		_, err := ResolveUrl(ctx, "ftp://example.com/data", mockMgr, nil, DefaultOptions, mockLog)
+		Expect(err).To(MatchError("unsupported hiera data source: ftp://example.com/data"))
 	})
 
 	It("resolves kv:// URLs", func() {
@@ -841,6 +844,229 @@ overrides:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(Equal(map[string]any{
 			"log_level": "WARN",
+		}))
+	})
+})
+
+var _ = Describe("ResolveHttp", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+		ctx     context.Context
+		server  *httptest.Server
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		ctx = context.Background()
+
+		mockLog.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+		if server != nil {
+			server.Close()
+		}
+	})
+
+	It("returns an error when URL is empty", func() {
+		_, err := ResolveHttp(ctx, "", nil, DefaultOptions, mockLog)
+		Expect(err).To(MatchError("URL is required for HTTP hiera data source"))
+	})
+
+	It("returns an error when URL is invalid", func() {
+		_, err := ResolveHttp(ctx, "://invalid", nil, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("invalid URL"))
+	})
+
+	It("returns an error when connection fails", func() {
+		_, err := ResolveHttp(ctx, "http://localhost:59999/nonexistent", nil, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to fetch hiera data"))
+	})
+
+	It("resolves JSON data from HTTP URL", func() {
+		jsonData := `{
+			"hierarchy": {
+				"order": ["default"],
+				"merge": "first"
+			},
+			"data": {
+				"log_level": "INFO",
+				"port": 8080
+			}
+		}`
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(jsonData))
+		}))
+
+		result, err := ResolveHttp(ctx, server.URL+"/config.json", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"log_level": "INFO",
+			"port":      8080,
+		}))
+	})
+
+	It("resolves YAML data from HTTP URL", func() {
+		yamlData := `
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  log_level: DEBUG
+  timeout: 30
+`
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/yaml")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(yamlData))
+		}))
+
+		result, err := ResolveHttp(ctx, server.URL+"/config.yaml", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"log_level": "DEBUG",
+			"timeout":   30,
+		}))
+	})
+
+	It("resolves data with facts and hierarchy overrides", func() {
+		jsonData := `{
+			"hierarchy": {
+				"order": ["env:prod", "default"],
+				"merge": "deep"
+			},
+			"data": {
+				"log_level": "INFO",
+				"retries": 3
+			},
+			"overrides": {
+				"env:prod": {
+					"log_level": "WARN",
+					"retries": 5
+				}
+			}
+		}`
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(jsonData))
+		}))
+
+		facts := map[string]any{"env": "prod"}
+		result, err := ResolveHttp(ctx, server.URL+"/config.json", facts, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"log_level": "WARN",
+			"retries":   5,
+		}))
+	})
+
+	It("handles HTTP Basic Auth from URL credentials", func() {
+		var receivedAuth string
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			receivedAuth = r.Header.Get("Authorization")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"data": {"key": "value"}}`))
+		}))
+
+		parsedURL, err := url.Parse(server.URL)
+		Expect(err).ToNot(HaveOccurred())
+		parsedURL.User = url.UserPassword("testuser", "testpass")
+
+		_, err = ResolveHttp(ctx, parsedURL.String()+"/config.json", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(receivedAuth).To(HavePrefix("Basic "))
+	})
+
+	It("returns error for non-200 status codes", func() {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+
+		_, err := ResolveHttp(ctx, server.URL+"/notfound", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("status 404"))
+	})
+
+	It("returns error for empty response body", func() {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+
+		_, err := ResolveHttp(ctx, server.URL+"/empty", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("empty"))
+	})
+
+	It("returns error for invalid JSON", func() {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{invalid json`))
+		}))
+
+		_, err := ResolveHttp(ctx, server.URL+"/invalid", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to parse"))
+	})
+
+	It("returns error for invalid YAML", func() {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("invalid:\n  yaml:\n bad indentation"))
+		}))
+
+		_, err := ResolveHttp(ctx, server.URL+"/invalid", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("failed to parse"))
+	})
+})
+
+var _ = Describe("ResolveUrl with HTTP", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockMgr *modelmocks.MockManager
+		mockLog *modelmocks.MockLogger
+		ctx     context.Context
+		server  *httptest.Server
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockMgr = modelmocks.NewMockManager(ctrl)
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		ctx = context.Background()
+
+		mockLog.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+		if server != nil {
+			server.Close()
+		}
+	})
+
+	It("resolves http:// URLs", func() {
+		jsonData := `{
+			"hierarchy": {"order": ["default"], "merge": "first"},
+			"data": {"setting": "http_value"}
+		}`
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(jsonData))
+		}))
+
+		result, err := ResolveUrl(ctx, server.URL+"/config.json", mockMgr, map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(map[string]any{
+			"setting": "http_value",
 		}))
 	})
 })

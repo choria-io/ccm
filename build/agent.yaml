@@ -24,7 +24,7 @@ manifests:
 
 # Optional URL to fetch external data from using hiera resolution.
 # The resolved data is merged into the manifest data context.
-# Supports file:// and obj:// URLs.
+# Supports file paths, kv://bucket/key, obj://bucket/key, and http(s):// URLs.
 # Leave empty or omit if not using external data.
 external_data_url: obj://ccm-data/common
 
@@ -41,6 +41,7 @@ log_level: info
 # Sets the NATS context to use for authentication, defaults to 'CCM' when not set
 nats_context: CCM
 # NATS servers to use when authenticating with Choria JWTs (comma-separated).
+# When set, nats_context is ignored.
 # Required when choria_token_file/choria_seed_file are set.
 # nats_servers: "tls://broker.choria.local:4222"
 

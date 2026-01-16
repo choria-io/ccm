@@ -92,6 +92,7 @@ Running `ccm ensure package '{{ lookup("data.package_name") }}'` will install `h
 > See the [Hiera](../hiera) section for details on how to configure Hiera Data in NATS
 
 The data can also be stored in a NATS Key-Value store and read from there instead of from `./hiera` by passing `--context` and `--hiera kv://BUCKET/key` options.
+Object store and HTTP sources are also supported via `obj://BUCKET/key` and `https://example.net/data.yaml` when a NATS context is available.
 
 ## Environment
 

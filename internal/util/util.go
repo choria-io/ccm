@@ -7,15 +7,19 @@ package util
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/term"
 )
@@ -314,4 +318,91 @@ func IsValidResourceRef(refs ...string) bool {
 // IsTerminal determines if stdout is a terminal
 func IsTerminal() bool {
 	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
+}
+
+// FindManifestInFiles searches a list of file paths for manifest.yaml and returns its path.
+// If stripPrefix is provided, it will be removed from the returned path.
+// Returns an error if manifest.yaml is not found.
+func FindManifestInFiles(files []string, stripPrefix string) (string, error) {
+	for _, f := range files {
+		if filepath.Base(f) == "manifest.yaml" {
+			if stripPrefix != "" {
+				return strings.TrimPrefix(f, stripPrefix), nil
+			}
+			return f, nil
+		}
+	}
+	return "", fmt.Errorf("manifest.yaml not found")
+}
+
+// RedactUrlCredentials returns a URL string with credentials replaced by [REDACTED]
+func RedactUrlCredentials(u *url.URL) string {
+	if u.User == nil {
+		return u.String()
+	}
+
+	// Copy the URL and overwrite credentials
+	redacted := *u
+	redacted.User = url.User("REDACTED")
+	return redacted.String()
+}
+
+// HttpGetResult contains the result of an HTTP GET request
+type HttpGetResult struct {
+	Body       []byte
+	StatusCode int
+	Status     string
+}
+
+// HttpGet performs an HTTP GET request with optional timeout and basic auth from URL credentials.
+// If timeout is 0 or negative, defaults to 1 minute.
+func HttpGet(ctx context.Context, rawUrl string, timeout time.Duration) (*HttpGetResult, error) {
+	if rawUrl == "" {
+		return nil, fmt.Errorf("URL is required")
+	}
+
+	parsedUrl, err := url.Parse(rawUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+
+	if parsedUrl.Scheme != "http" && parsedUrl.Scheme != "https" {
+		return nil, fmt.Errorf("URL scheme must be http or https, got %q", parsedUrl.Scheme)
+	}
+
+	if timeout <= 0 {
+		timeout = time.Minute
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(timeoutCtx, http.MethodGet, rawUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Add Basic Auth if credentials are provided in the URL
+	if parsedUrl.User != nil {
+		username := parsedUrl.User.Username()
+		password, _ := parsedUrl.User.Password()
+		req.SetBasicAuth(username, password)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return &HttpGetResult{
+		Body:       body,
+		StatusCode: resp.StatusCode,
+		Status:     resp.Status,
+	}, nil
 }

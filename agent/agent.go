@@ -352,12 +352,10 @@ func (a *Agent) createWorkers() (map[string]*worker, error) {
 	workers := make(map[string]*worker)
 
 	for _, v := range a.cfg.Manifests {
-		log := a.log.With("source", v)
-
 		// each needs a manager as manager handles sessions etc
 		// later when doing wath for data or regular fact freshes
 		// we need to update them all
-		mgr, err := manager.NewManager(log, log)
+		mgr, err := manager.NewManager(a.log, a.log)
 		if err != nil {
 			return nil, err
 		}
@@ -371,7 +369,7 @@ func (a *Agent) createWorkers() (map[string]*worker, error) {
 			mgr:               mgr,
 			cacheDir:          a.cfg.CacheDir,
 			agentApplyTrigger: a.applyTrigger,
-			log:               log,
+			log:               a.log,
 		}
 	}
 
