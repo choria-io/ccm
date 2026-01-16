@@ -88,12 +88,14 @@ func (w *worker) cacheManifest(wg *sync.WaitGroup) error {
 	switch uri.Scheme {
 	case "obj":
 		f := strings.TrimPrefix(uri.Path, "/")
-		w.log.Info("Maintaining object cache for manifest", "bucket", uri.Host, "file", f)
+		w.log = w.log.With("bucket", uri.Host, "file", f)
+		w.log.Info("Maintaining object cache for manifest")
 		go w.maintainObjectCache(wg, uri.Host, f)
 
 	case "http", "https":
 		redactedUrl := iu.RedactUrlCredentials(uri)
-		w.log.Info("Maintaining HTTP cache for manifest", "url", redactedUrl)
+		w.log = w.log.With("url", redactedUrl)
+		w.log.Info("Maintaining HTTP cache for manifest")
 		go w.maintainHttpCache(wg, uri)
 
 	case "":

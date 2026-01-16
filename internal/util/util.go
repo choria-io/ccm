@@ -343,7 +343,7 @@ func RedactUrlCredentials(u *url.URL) string {
 
 	// Copy the URL and overwrite credentials
 	redacted := *u
-	redacted.User = url.User("[REDACTED]")
+	redacted.User = url.User("REDACTED")
 	return redacted.String()
 }
 
