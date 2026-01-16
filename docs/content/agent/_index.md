@@ -89,9 +89,9 @@ nats_context: CCM
 
 # Optional URL to fetch external data from using hiera resolution.
 # The resolved data is merged into the manifest data context.
-# Supports file paths, kv://bucket/key, obj://bucket/key, and http(s):// URLs.
+# Supports file paths, kv://bucket/key, and http(s):// URLs.
 # Leave empty or omit if not using external data.
-external_data_url: obj://ccm-data/common
+external_data_url: kv://ccm-data/common
 
 # Directory used to cache manifest sources fetched from remote locations.
 # Defaults to /etc/choria/ccm/source.

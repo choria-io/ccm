@@ -131,7 +131,7 @@ func (a *Agent) Run(ctx context.Context, wg *sync.WaitGroup) error {
 		return fmt.Errorf("no manifests configured")
 	}
 
-	// do this once at start so object store watcher based apply
+	// do this once at start so watcher based apply
 	// triggers already have correct data
 	a.updateData()
 

@@ -727,29 +727,6 @@ var _ = Describe("ResolveUrl", func() {
 			"setting": "value",
 		}))
 	})
-
-	It("resolves obj:// URLs", func() {
-		yamlData := []byte(`
-hierarchy:
-  order:
-    - default
-  merge: first
-data:
-  setting: from_object_store
-`)
-
-		mockObjStore := modelmocks.NewMockObjectStore(ctrl)
-
-		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
-		mockJS.EXPECT().ObjectStore(ctx, "databucket").Return(mockObjStore, nil)
-		mockObjStore.EXPECT().GetBytes(ctx, "data.yaml").Return(yamlData, nil)
-
-		result, err := ResolveUrl(ctx, "obj://databucket/data.yaml", mockMgr, map[string]any{}, DefaultOptions, mockLog)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
-			"setting": "from_object_store",
-		}))
-	})
 })
 
 var _ = Describe("ResolveFile", func() {

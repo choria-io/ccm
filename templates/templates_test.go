@@ -311,7 +311,7 @@ var _ = Describe("Templates", func() {
 			Entry("isset function", "{{ jet('[[ if isset(data.app_name) ]]exists[[ end ]]') }}", "exists"),
 
 			// Context map
-			Entry("context map variables", `{{ jet('[[ name ]]-[[ container.version ]]', {"name": "app", "container": {"version": "v1"}}) }}`, "app-v1"),
+			Entry("context map variables", `{{ jet('[[ name ]]-[[ container.version ]]', {"name": "app", "container": {"version": "v1"} }) }}`, "app-v1"),
 			Entry("context from lookup path", "{{ jet('[[ context_name ]]-[[ version ]]', 'data.container') }}", "container-v1"),
 
 			// Edge cases

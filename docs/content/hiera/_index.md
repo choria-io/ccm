@@ -175,8 +175,6 @@ We can now parse the hierarchy using system facts, this is identical to using th
 $ ccm hiera parse kv://CCM/data --context ccm -S
 ```
 
-> [!info] Note
-> Hiera data can also be stored in a NATS Object Store and referenced using `obj://BUCKET/key`, but KV is generally preferred for small, frequently updated data because it offers version history and lower overhead.
 
 ### Data on Web Servers
 
