@@ -208,7 +208,7 @@ func ResolveManifestHttpUrl(ctx context.Context, mgr model.Manager, manifestUrl 
 	}
 
 	// Create a redacted URL for logging (without credentials)
-	redactedUrl := redactUrlCredentials(parsedUrl)
+	redactedUrl := iu.RedactUrlCredentials(parsedUrl)
 
 	log.Debug("Getting manifest data from HTTP URL", "url", redactedUrl)
 
@@ -254,18 +254,6 @@ func ResolveManifestHttpUrl(ctx context.Context, mgr model.Manager, manifestUrl 
 	log.Info("Using manifest from HTTP URL in temporary directory", "manifest", manifestPath, "url", redactedUrl)
 
 	return resolved, apply, filepath.Dir(manifestPath), nil
-}
-
-// redactUrlCredentials returns a URL string with credentials replaced by REDACTED
-func redactUrlCredentials(u *url.URL) string {
-	if u.User == nil {
-		return u.String()
-	}
-
-	// Copy the URL and overwrite credentials
-	redacted := *u
-	redacted.User = url.User("[REDACTED]")
-	return redacted.String()
 }
 
 // ResolveManifestObjectValue reads a manifest from an object store and resolves it using ResolveManifestReader()
@@ -324,16 +312,9 @@ func unTarAndResolve(ctx context.Context, r io.Reader, mgr model.Manager, path s
 		return nil, nil, "", err
 	}
 
-	var manifestPath string
-	for _, f := range files {
-		if filepath.Base(f) == "manifest.yaml" {
-			manifestPath = f
-			break
-		}
-	}
-
-	if manifestPath == "" {
-		return nil, nil, "", fmt.Errorf("manifest.yaml not found in object store")
+	manifestPath, err := iu.FindManifestInFiles(files, "")
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("%w in archive", err)
 	}
 	manifestParent := filepath.Dir(manifestPath)
 	mgr.SetWorkingDirectory(manifestParent)

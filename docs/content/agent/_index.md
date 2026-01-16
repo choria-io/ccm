@@ -22,6 +22,12 @@ By enabling both modes at the same time you can run monitoring very frequently -
 
 While enabling the combination is optional, it is recommended, and so we also recommend using health checks in your key resources.
 
+## Supported Manifest snd Data Sources
+
+For Hiera data we support Key-Value stores as a local file, Key-Value values and HTTP(s) URLs.
+
+For the manifest bundles you can point to a local file, a Object Storage URL or a HTTP(s) URL.
+
 ## Logical Flow
 
 The agent continuously run and manage manifests in the following way:

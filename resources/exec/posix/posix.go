@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -28,7 +28,12 @@ func NewPosixProvider(log model.Logger, runner model.CommandRunner) (*Provider, 
 }
 
 func (p *Provider) Execute(ctx context.Context, properties *model.ExecResourceProperties, log model.Logger) (int, error) {
-	words, err := shellquote.Split(properties.Name)
+	cmd := properties.Name
+	if properties.Command != "" {
+		cmd = properties.Command
+	}
+
+	words, err := shellquote.Split(cmd)
 	if err != nil {
 		return -1, err
 	}

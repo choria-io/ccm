@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/expr-lang/expr"
 	"github.com/goccy/go-yaml"
@@ -166,7 +167,8 @@ func ResolveJson(data []byte, facts map[string]any, opts Options, log model.Logg
 	return Resolve(root, facts, opts, log)
 }
 
-// ResolveUrl parse a url that's either a file or kv://Bucket/Key and resolves the data using the correct helper
+// ResolveUrl parses a URL and resolves the data using the correct helper.
+// Supported URL schemes: file paths, kv://Bucket/Key, http://, and https://
 func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
 	if source == "" {
 		return nil, fmt.Errorf("source is required")
@@ -182,6 +184,9 @@ func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map
 	switch uri.Scheme {
 	case "kv":
 		res, err = ResolveKeyValue(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), facts, opts, log)
+
+	case "http", "https":
+		res, err = ResolveHttp(ctx, source, facts, opts, log)
 
 	case "":
 		res, err = ResolveFile(ctx, source, facts, opts, log)
@@ -219,6 +224,52 @@ func ResolveFile(ctx context.Context, file string, facts map[string]any, opts Op
 	}
 
 	return ResolveYaml(raw, facts, opts, log)
+}
+
+// ResolveHttp fetches hiera data from an HTTP(S) URL and resolves it.
+// Supports JSON and YAML formats. HTTP Basic Authentication is supported via URL credentials.
+func ResolveHttp(ctx context.Context, rawUrl string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+	if rawUrl == "" {
+		return nil, fmt.Errorf("URL is required for HTTP hiera data source")
+	}
+
+	parsedUrl, err := url.Parse(rawUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
+
+	// Create a redacted URL for logging (without credentials)
+	redactedUrl := iu.RedactUrlCredentials(parsedUrl)
+
+	log.Debug("Getting hiera data from HTTP URL", "url", redactedUrl)
+
+	result, err := iu.HttpGet(ctx, rawUrl, time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch hiera data from %s: %w", redactedUrl, err)
+	}
+
+	if result.StatusCode != 200 {
+		return nil, fmt.Errorf("HTTP request to %s failed with status %d: %s", redactedUrl, result.StatusCode, result.Status)
+	}
+
+	if len(result.Body) == 0 {
+		return nil, fmt.Errorf("HTTP response from %s is empty", redactedUrl)
+	}
+
+	root := map[string]any{}
+	if iu.IsJsonObject(result.Body) {
+		err = json.Unmarshal(result.Body, &root)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse JSON from %s: %w", redactedUrl, err)
+		}
+	} else {
+		err = yaml.Unmarshal(result.Body, &root)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse YAML from %s: %w", redactedUrl, err)
+		}
+	}
+
+	return Resolve(root, facts, opts, log)
 }
 
 // ResolveKeyValue consumes raw JSON bytes from a KV value and a map of facts to produce a final data map

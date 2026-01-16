@@ -175,6 +175,14 @@ We can now parse the hierarchy using system facts, this is identical to using th
 $ ccm hiera parse kv://CCM/data --context ccm -S
 ```
 
+### Data on Web Servers
+
+As above NATS example, you can also just store your Key-Value data on a web server and use the `http` protocol to fetch it.
+
+```
+$ ccm hiera parse https://example.net/site.yaml -S
+```
+
 ### Go example
 
 Supply a YAML document and a map of facts. The resolver will parse the hierarchy, replace `{{ lookup('facts.fact') }}` placeholders, and merge the matching sections.

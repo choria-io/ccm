@@ -315,7 +315,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The command to execute"
+          "description": "A descriptive name for the resource, or the command to execute if 'command' is not specified"
+        },
+        "command": {
+          "type": "string",
+          "description": "The command to execute. If not specified, the 'name' property will be used as the command."
         },
         "alias": {
           "type": "string",
@@ -547,6 +551,10 @@
       "type": "object",
       "description": "Properties for an exec resource that runs commands",
       "properties": {
+        "command": {
+          "type": "string",
+          "description": "The command to execute. If not specified, the resource name (key) will be used as the command."
+        },
         "alias": {
           "type": "string",
           "description": "An alternative name for the resource that can be used in require/subscribe references"
