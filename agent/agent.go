@@ -57,7 +57,14 @@ func New(cfg *Config, opts ...Option) (*Agent, error) {
 		return nil, err
 	}
 
-	mgr, err := manager.NewManager(logger, logger, manager.WithNatsContext(cfg.NatsContext), manager.WithNatsConnection(&cachingNatsProvider{}))
+	natsTarget := cfg.NatsContext
+	var natsProvider model.NatsConnProvider = &cachingNatsProvider{}
+	if cfg.ChoriaTokenFile != "" || cfg.ChoriaSeedFile != "" {
+		natsTarget = cfg.NatsServers
+		natsProvider = newChoriaNatsProvider(cfg)
+	}
+
+	mgr, err := manager.NewManager(logger, logger, manager.WithNatsContext(natsTarget), manager.WithNatsConnection(natsProvider))
 	if err != nil {
 		return nil, err
 	}

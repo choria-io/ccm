@@ -354,6 +354,8 @@ func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string
 	}
 	defer manifestFile.Close()
 
+	mgr.SetWorkingDirectory(filepath.Dir(path))
+
 	resolved, apply, err := ResolveManifestReader(ctx, mgr, filepath.Dir(path), manifestFile, opts...)
 	if err != nil {
 		return nil, nil, err

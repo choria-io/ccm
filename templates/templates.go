@@ -89,6 +89,7 @@ func (e *Env) jet(params ...any) (any, error) {
 	lpat := "[["
 	rpat := "]]"
 	body := ""
+	var context any
 	var ok bool
 
 	switch len(params) {
@@ -97,7 +98,12 @@ func (e *Env) jet(params ...any) (any, error) {
 		if !ok {
 			return "", fmt.Errorf("jet requires a string argument for template body")
 		}
-
+	case 2:
+		body, ok = params[0].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for template body")
+		}
+		context = params[1]
 	case 3:
 		body, ok = params[0].(string)
 		if !ok {
@@ -113,8 +119,24 @@ func (e *Env) jet(params ...any) (any, error) {
 		if !ok {
 			return "", fmt.Errorf("jet requires a string argument for right delimiter")
 		}
+	case 4:
+		body, ok = params[0].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for template body")
+		}
+		context = params[1]
+
+		lpat, ok = params[2].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for left delimiter")
+		}
+
+		rpat, ok = params[3].(string)
+		if !ok {
+			return "", fmt.Errorf("jet requires a string argument for right delimiter")
+		}
 	default:
-		return "", fmt.Errorf("jet requires 1 or 3 arguments")
+		return "", fmt.Errorf("jet requires 1, 2, 3 or 4 arguments")
 	}
 
 	if strings.HasSuffix(body, ".jet") {
@@ -142,6 +164,23 @@ func (e *Env) jet(params ...any) (any, error) {
 		"Environ": reflect.ValueOf(e.Environ),
 	}
 
+	if context != nil {
+		ctx, ctxMap, err := e.jetContext(context)
+		if err != nil {
+			return "", err
+		}
+
+		variables["context"] = reflect.ValueOf(ctx)
+		variables["Context"] = reflect.ValueOf(ctx)
+
+		for key, val := range ctxMap {
+			if _, exists := variables[key]; exists {
+				continue
+			}
+			variables[key] = reflect.ValueOf(val)
+		}
+	}
+
 	buff := bytes.NewBuffer([]byte{})
 	err = tpl.Execute(buff, variables, e)
 	if err != nil {
@@ -149,6 +188,57 @@ func (e *Env) jet(params ...any) (any, error) {
 	}
 
 	return buff.String(), nil
+}
+
+func (e *Env) jetContext(input any) (any, map[string]any, error) {
+	var ctx any
+	var contextName string
+	var ok bool
+
+	if input == nil {
+		return nil, nil, nil
+	}
+
+	if ctx, ok = input.(string); ok {
+		contextName = ctx.(string)
+		val, err := e.lookup(ctx, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		ctx = val
+	} else {
+		ctx = input
+	}
+
+	if contextName != "" {
+		parts := strings.Split(contextName, ".")
+		contextName = parts[len(parts)-1]
+	}
+
+	rv := reflect.ValueOf(ctx)
+	if rv.IsValid() && rv.Kind() == reflect.Map {
+		out := make(map[string]any, rv.Len())
+		for _, key := range rv.MapKeys() {
+			if key.Kind() != reflect.String {
+				return ctx, nil, fmt.Errorf("jet context map keys must be strings")
+			}
+			out[key.String()] = rv.MapIndex(key).Interface()
+		}
+
+		if contextName != "" {
+			if _, exists := out["context_name"]; !exists {
+				out["context_name"] = contextName
+			}
+		}
+
+		return ctx, out, nil
+	}
+
+	if contextName != "" {
+		return ctx, map[string]any{"context_name": contextName}, nil
+	}
+
+	return ctx, nil, nil
 }
 
 func (e *Env) jetLookup() jet.Func {

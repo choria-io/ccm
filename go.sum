@@ -31,6 +31,8 @@ github.com/choria-io/goform v0.0.3 h1:4LhR1Wwj1bre8ZHfhSIseGDhAzDL4U5LQcfYP75QGn
 github.com/choria-io/goform v0.0.3/go.mod h1:4GNaHJmxkdyotYENaUh/jXc3CESkdgnSDMBOOrwFrw8=
 github.com/choria-io/scaffold v0.0.5 h1:Nv8tY/CJtLNAmg4CqHXgY73rVuG1FCMQXRJp4VkAy2g=
 github.com/choria-io/scaffold v0.0.5/go.mod h1:4NvrSKLOjkMSxaTOdqNntNMJ5oE67jiu8d5PHzNBHMY=
+github.com/choria-io/tokens v0.0.4-0.20250903080437-7d289cbf3db9 h1:QzTsfk28/r4coX5jtQQhF7R7lG7griCuMLqB4curBoY=
+github.com/choria-io/tokens v0.0.4-0.20250903080437-7d289cbf3db9/go.mod h1:6Z0LvjOYLVOU3T0S5eBaSVJxbsb7aq6ggAROS3GHuVQ=
 github.com/creack/pty v1.1.17 h1:QeVUsEDNrLBW4tMgZHvxy18sKtr6VI492kBhUfhDJNI=
 github.com/creack/pty v1.1.17/go.mod h1:MOBLtS5ELjhRRrroQr9kyvTxUAFNvYEK993ew/Vr4O4=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -63,6 +65,8 @@ github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1v
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/goccy/go-yaml v1.19.2 h1:PmFC1S6h8ljIz6gMRBopkjP1TVT7xuwrButHID66PoM=
 github.com/goccy/go-yaml v1.19.2/go.mod h1:XBurs7gK8ATbW4ZPGKgcbrY1Br56PdM69F7LkFRi1kA=
+github.com/golang-jwt/jwt/v4 v4.5.0 h1:7cYmW1XlMY7h7ii7UhUyChSgS5wUJEnm9uZVTGqOWzg=
+github.com/golang-jwt/jwt/v4 v4.5.0/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 h1:z2ogiKUYzX5Is6zr/vP9vJGqPwcdqsWjOt+V8J7+bTc=

@@ -40,3 +40,13 @@ log_level: info
 
 # Sets the NATS context to use for authentication, defaults to 'CCM' when not set
 nats_context: CCM
+# NATS servers to use when authenticating with Choria JWTs (comma-separated).
+# Required when choria_token_file/choria_seed_file are set.
+# nats_servers: "tls://broker.choria.local:4222"
+
+# Choria JWT authentication for broker access (alternative to nats_context).
+# choria_token_file: /root/.config/choria/client.jwt
+# choria_seed_file: /root/.config/choria/client.key
+# choria_collective: choria
+# nats_tls_ca: /etc/choria/credentials/broker/public.crt
+# nats_tls_insecure: false

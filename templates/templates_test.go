@@ -32,6 +32,9 @@ var _ = Describe("Templates", func() {
 				"app_version": "1.2.3",
 				"port":        8080,
 				"enabled":     true,
+				"container": map[string]any{
+					"version": "v1",
+				},
 			},
 		}
 	})
@@ -307,6 +310,10 @@ var _ = Describe("Templates", func() {
 			// Built-in functions
 			Entry("isset function", "{{ jet('[[ if isset(data.app_name) ]]exists[[ end ]]') }}", "exists"),
 
+			// Context map
+			Entry("context map variables", `{{ jet('[[ name ]]-[[ container.version ]]', {"name": "app", "container": {"version": "v1"}}) }}`, "app-v1"),
+			Entry("context from lookup path", "{{ jet('[[ context_name ]]-[[ version ]]', 'data.container') }}", "container-v1"),
+
 			// Edge cases
 			Entry("empty template body", "{{ jet('') }}", ""),
 			Entry("plain text without expressions", "{{ jet('plain text without expressions') }}", "plain text without expressions"),
@@ -319,8 +326,7 @@ var _ = Describe("Templates", func() {
 				Expect(err.Error()).To(ContainSubstring(expectedError))
 			},
 			Entry("invalid jet syntax", "{{ jet('[[ if ]]') }}", ""),
-			Entry("no arguments", "{{ jet() }}", "jet requires 1 or 3 arguments"),
-			Entry("2 arguments", "{{ jet('body', 'left') }}", "jet requires 1 or 3 arguments"),
+			Entry("no arguments", "{{ jet() }}", "jet requires 1, 2, 3 or 4 arguments"),
 			Entry("non-string body", "{{ jet(123) }}", "jet requires a string argument for template body"),
 			Entry("non-string left delimiter", "{{ jet('body', 123, '>>') }}", "jet requires a string argument for left delimiter"),
 			Entry("non-string right delimiter", "{{ jet('body', '<<', 123) }}", "jet requires a string argument for right delimiter"),

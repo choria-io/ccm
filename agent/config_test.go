@@ -5,6 +5,7 @@
 package agent
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -132,6 +133,7 @@ nats_context: custom-context
 				intervalDuration: 5 * time.Minute,
 				CacheDir:         "/some/path",
 				LogLevel:         "info",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
@@ -143,6 +145,7 @@ nats_context: custom-context
 				intervalDuration: 0,
 				CacheDir:         "/some/path",
 				LogLevel:         "info",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
@@ -155,6 +158,7 @@ nats_context: custom-context
 				intervalDuration: -1 * time.Minute,
 				CacheDir:         "/some/path",
 				LogLevel:         "info",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
@@ -167,6 +171,7 @@ nats_context: custom-context
 				intervalDuration: 10 * time.Second,
 				CacheDir:         "/some/path",
 				LogLevel:         "info",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
@@ -179,6 +184,7 @@ nats_context: custom-context
 				intervalDuration: MinInterval,
 				CacheDir:         "/some/path",
 				LogLevel:         "info",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
@@ -190,6 +196,7 @@ nats_context: custom-context
 				intervalDuration: 5 * time.Minute,
 				CacheDir:         "",
 				LogLevel:         "info",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
@@ -203,6 +210,7 @@ nats_context: custom-context
 					intervalDuration: 5 * time.Minute,
 					CacheDir:         "/some/path",
 					LogLevel:         level,
+					NatsContext:      "CCM",
 				}
 
 				err := cfg.Validate()
@@ -215,6 +223,7 @@ nats_context: custom-context
 				intervalDuration: 5 * time.Minute,
 				CacheDir:         "/some/path",
 				LogLevel:         "invalid",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
@@ -227,11 +236,34 @@ nats_context: custom-context
 				intervalDuration: 5 * time.Minute,
 				CacheDir:         "/some/path",
 				LogLevel:         "",
+				NatsContext:      "CCM",
 			}
 
 			err := cfg.Validate()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("log_level must be one of"))
+		})
+
+		It("Should require nats_servers when using choria token auth", func() {
+			tokenFile, err := os.CreateTemp("", "ccm-token-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer os.Remove(tokenFile.Name())
+
+			seedFile, err := os.CreateTemp("", "ccm-seed-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer os.Remove(seedFile.Name())
+
+			cfg := &Config{
+				intervalDuration: 5 * time.Minute,
+				CacheDir:         "/some/path",
+				LogLevel:         "info",
+				ChoriaTokenFile:  tokenFile.Name(),
+				ChoriaSeedFile:   seedFile.Name(),
+			}
+
+			err = cfg.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("nats_servers must be set"))
 		})
 	})
 

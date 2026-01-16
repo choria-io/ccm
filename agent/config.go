@@ -54,6 +54,26 @@ type Config struct {
 
 	// NatsContext is the NATS context to use for remote KV and Object store access
 	NatsContext string `yaml:"nats_context"`
+
+	// NatsServers is a comma-separated list of NATS servers to connect to when
+	// using Choria JWT authentication (for broker object/KV access).
+	NatsServers string `yaml:"nats_servers"`
+
+	// ChoriaTokenFile is a Choria client JWT used for broker authentication.
+	ChoriaTokenFile string `yaml:"choria_token_file"`
+
+	// ChoriaSeedFile is the Ed25519 seed used to sign broker connection nonces.
+	ChoriaSeedFile string `yaml:"choria_seed_file"`
+
+	// ChoriaCollective is the collective used to build the inbox prefix when
+	// authenticating with Choria JWTs.
+	ChoriaCollective string `yaml:"choria_collective"`
+
+	// NatsTLSCA is an optional CA file to trust for broker TLS connections.
+	NatsTLSCA string `yaml:"nats_tls_ca"`
+
+	// NatsTLSInsecure disables TLS verification when set (use with care).
+	NatsTLSInsecure bool `yaml:"nats_tls_insecure"`
 }
 
 func ParseConfig(c []byte) (*Config, error) {
@@ -63,6 +83,7 @@ func ParseConfig(c []byte) (*Config, error) {
 		CacheDir:         DefaultCacheDir,
 		LogLevel:         "info",
 		NatsContext:      "CCM",
+		ChoriaCollective: "choria",
 	}
 
 	err := yaml.Unmarshal(c, cfg)
@@ -103,6 +124,26 @@ func (c *Config) Validate() error {
 
 	if c.CacheDir == "" {
 		return fmt.Errorf("cache_dir must be set")
+	}
+
+	if c.ChoriaTokenFile != "" || c.ChoriaSeedFile != "" {
+		if c.NatsServers == "" {
+			return fmt.Errorf("nats_servers must be set when using choria_token_file/choria_seed_file")
+		}
+		if c.ChoriaTokenFile == "" || c.ChoriaSeedFile == "" {
+			return fmt.Errorf("choria_token_file and choria_seed_file must both be set")
+		}
+		if !iu.FileExists(c.ChoriaTokenFile) {
+			return fmt.Errorf("choria_token_file does not exist: %s", c.ChoriaTokenFile)
+		}
+		if !iu.FileExists(c.ChoriaSeedFile) {
+			return fmt.Errorf("choria_seed_file does not exist: %s", c.ChoriaSeedFile)
+		}
+		if c.NatsTLSCA != "" && !iu.FileExists(c.NatsTLSCA) {
+			return fmt.Errorf("nats_tls_ca does not exist: %s", c.NatsTLSCA)
+		}
+	} else if c.NatsContext == "" {
+		return fmt.Errorf("nats_context must be set")
 	}
 
 	switch c.LogLevel {

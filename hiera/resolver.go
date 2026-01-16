@@ -166,7 +166,7 @@ func ResolveJson(data []byte, facts map[string]any, opts Options, log model.Logg
 	return Resolve(root, facts, opts, log)
 }
 
-// ResolveUrl parse a url that's either a file or kv://Bucket/Key and resolves the data using the correct helper
+// ResolveUrl parse a url that's either a file, kv://Bucket/Key, or obj://Bucket/Key and resolves the data using the correct helper
 func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
 	if source == "" {
 		return nil, fmt.Errorf("source is required")
@@ -182,6 +182,9 @@ func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map
 	switch uri.Scheme {
 	case "kv":
 		res, err = ResolveKeyValue(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), facts, opts, log)
+
+	case "obj":
+		res, err = ResolveObjectStore(ctx, mgr, uri.Host, strings.TrimPrefix(uri.Path, "/"), facts, opts, log)
 
 	case "":
 		res, err = ResolveFile(ctx, source, facts, opts, log)
@@ -268,6 +271,52 @@ func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key 
 		err = yaml.Unmarshal(val, &root)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse JSON from kv %s#%s: %w", bucket, key, err)
+		}
+	}
+
+	return Resolve(root, facts, opts, log)
+}
+
+// ResolveObjectStore consumes raw JSON or YAML bytes from an Object Store value and resolves the data using Hiera rules.
+func ResolveObjectStore(ctx context.Context, mgr model.Manager, bucket string, key string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+	if bucket == "" {
+		return nil, fmt.Errorf("bucket name is required for object store hiera data source")
+	}
+	if key == "" {
+		return nil, fmt.Errorf("key is required for object store hiera data source")
+	}
+
+	js, err := mgr.JetStream()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("Getting hiera data from JetStream Object Store", "key", key, "bucket", bucket)
+
+	obj, err := js.ObjectStore(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	val, err := obj.GetBytes(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(val) == 0 {
+		return nil, fmt.Errorf("object store %s#%s is empty", bucket, key)
+	}
+
+	root := map[string]any{}
+	if iu.IsJsonObject(val) {
+		err = json.Unmarshal(val, &root)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse JSON from object store %s#%s: %w", bucket, key, err)
+		}
+	} else {
+		err = yaml.Unmarshal(val, &root)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse YAML from object store %s#%s: %w", bucket, key, err)
 		}
 	}
 
