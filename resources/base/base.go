@@ -11,11 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/expr-lang/expr"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/choria-io/ccm/healthcheck"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/templates"
 )
 
 // EmbeddedResource is an interface that must be implemented by all resources that are based on this base
@@ -78,6 +80,15 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 	}()
 
 	var state model.ResourceState
+
+	should, err := b.checkControl(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !should {
+		event.Skipped = true
+		return event, nil
+	}
 
 	var unmet []string
 	for _, r := range b.CommonProperties.Require {
@@ -143,6 +154,41 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 	}
 
 	return event, nil
+}
+
+func (b *Base) checkControl(ctx context.Context) (bool, error) {
+	cp := b.ResourceProperties.CommonProperties()
+	if cp.Control == nil {
+		return true, nil
+	}
+
+	env, err := b.Manager.TemplateEnvironment(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	ifRes := true
+	unlessRes := false
+
+	if cp.Control.ManageIf != "" {
+		res, err := templates.ExprParse(cp.Control.ManageIf, env, expr.AsBool())
+		if err != nil {
+			return false, err
+		}
+
+		ifRes = res.(bool)
+	}
+
+	if cp.Control.ManageUnless != "" {
+		res, err := templates.ExprParse(cp.Control.ManageUnless, env, expr.AsBool())
+		if err != nil {
+			return false, err
+		}
+
+		unlessRes = res.(bool)
+	}
+
+	return ifRes && !unlessRes, nil
 }
 
 func (b *Base) Type() string {

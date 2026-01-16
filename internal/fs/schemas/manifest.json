@@ -188,6 +188,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         }
       },
       "required": ["name"],
@@ -229,6 +232,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         },
         "enable": {
           "type": "boolean",
@@ -282,6 +288,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         },
         "content": {
           "type": "string",
@@ -349,6 +358,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         },
         "cwd": {
           "type": "string",
@@ -437,6 +449,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         }
       },
       "additionalProperties": false
@@ -473,6 +488,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         },
         "enable": {
           "type": "boolean",
@@ -521,6 +539,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         },
         "content": {
           "type": "string",
@@ -583,6 +604,9 @@
             "type": "string",
             "pattern": "^[a-z]+#.+$"
           }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
         },
         "cwd": {
           "type": "string",
@@ -674,6 +698,23 @@
         }
       },
       "required": ["command"],
+      "additionalProperties": false
+    },
+    "resourceControl": {
+      "type": "object",
+      "description": "Control conditions that determine whether a resource should be managed",
+      "properties": {
+        "if": {
+          "type": "string",
+          "description": "Expression that must evaluate to true for the resource to be managed. Has access to Facts, Data, and Environ variables.",
+          "examples": ["Facts.os == \"linux\"", "lookup(\"facts.kernel\", \"\") == \"Linux\""]
+        },
+        "unless": {
+          "type": "string",
+          "description": "Expression that must evaluate to false for the resource to be managed. Has access to Facts, Data, and Environ variables.",
+          "examples": ["Facts.os == \"windows\"", "lookup(\"facts.virtual\", \"\") == \"docker\""]
+        }
+      },
       "additionalProperties": false
     }
   }

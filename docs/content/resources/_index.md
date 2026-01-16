@@ -17,6 +17,35 @@ All resources can have an `alias` set which will be used in logging and to find 
 
 All resources can have a `require` property that is a list of `type#name` or `type#alias` that must have succeeded before this resource can be applied.
 
+## Conditional Resource Execution
+
+Resources can be conditionally executed using a `control` section and expressions that should resolve to boolean values.
+
+```
+package:
+  name: zsh
+  ensure: 5.9
+  control:
+    if: lookup("facts.host.info.os") == "linux"
+    unless: lookup("facts.host.info.virtualizationSystem") == "docker"
+```
+
+Here we install `zsh` on all `linux` machines unless they are running inside a `docker` container.
+
+Here's a table that shows how the 2 booleans inercept:
+
+| `if`      | `unless`  | Resource Managed? |
+|-----------|-----------|-------------------|
+| (not set) | (not set) | Yes               |
+| `true`    | (not set) | Yes               |
+| `false`   | (not set) | No                |
+| (not set) | `true`    | No                |
+| (not set) | `false`   | Yes               |
+| `true`    | `true`    | No                |
+| `true`    | `false`   | Yes               |
+| `false`   | `true`    | No                |
+| `false`   | `false`   | No                |
+
 ## About Names
 
 Resources can be specified like:

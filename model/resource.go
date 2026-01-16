@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -47,14 +47,20 @@ type ResourceProperties interface {
 
 // CommonResourceProperties contains properties shared by all resource types
 type CommonResourceProperties struct {
-	Type         string              `json:"-" yaml:"-"`
-	Name         string              `json:"name" yaml:"name"`
-	Alias        string              `json:"alias,omitempty" yaml:"alias,omitempty"`
-	Ensure       string              `json:"ensure,omitempty" yaml:"ensure,omitempty"`
-	Provider     string              `json:"provider,omitempty" yaml:"provider,omitempty"`
-	HealthChecks []CommonHealthCheck `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
-	Require      []string            `json:"require,omitempty" yaml:"require,omitempty"`
-	SkipValidate bool                `json:"-" yaml:"-"`
+	Type         string                 `json:"-" yaml:"-"`
+	Name         string                 `json:"name" yaml:"name"`
+	Alias        string                 `json:"alias,omitempty" yaml:"alias,omitempty"`
+	Ensure       string                 `json:"ensure,omitempty" yaml:"ensure,omitempty"`
+	Provider     string                 `json:"provider,omitempty" yaml:"provider,omitempty"`
+	HealthChecks []CommonHealthCheck    `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
+	Require      []string               `json:"require,omitempty" yaml:"require,omitempty"`
+	Control      *CommonResourceControl `json:"control,omitempty" yaml:"control,omitempty"`
+	SkipValidate bool                   `json:"-" yaml:"-"`
+}
+
+type CommonResourceControl struct {
+	ManageIf     string `json:"if,omitempty" yaml:"if,omitempty"`
+	ManageUnless string `json:"unless,omitempty" yaml:"unless,omitempty"`
 }
 
 // ResolveTemplates resolves template expressions in common resource properties
