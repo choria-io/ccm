@@ -22,6 +22,9 @@ type ensureCommand struct {
 	healthCheckTries   int
 	healthCheckSleep   time.Duration
 
+	conditionIf     string
+	conditionUnless string
+
 	alias    string
 	noop     bool
 	provider string
@@ -52,6 +55,8 @@ func (cmd *ensureCommand) addCommonFlags(app *fisk.CmdClause) {
 	app.Flag("check", "Command to execute for additional health checks").PlaceHolder("COMMAND").StringVar(&cmd.healthCheckCommand)
 	app.Flag("check-tries", "Number of times to execute the health check command").Default("5").IntVar(&cmd.healthCheckTries)
 	app.Flag("check-sleep", "Time to sleep between health check tries").Default("1s").DurationVar(&cmd.healthCheckSleep)
+	app.Flag("if", "Manage resource if it matches this condition").PlaceHolder("CONDITION").StringVar(&cmd.conditionIf)
+	app.Flag("unless", "Manage resource unless it matches this condition").PlaceHolder("CONDITION").StringVar(&cmd.conditionUnless)
 	app.Flag("provider", "Resource provider").PlaceHolder("NAME").StringVar(&cmd.provider)
 	app.Flag("require", "Require success on an earlier resource").PlaceHolder("type#name").StringsVar(&cmd.requires)
 }
@@ -90,4 +95,15 @@ func (cmd *ensureCommand) healthCheckProperties() []model.CommonHealthCheck {
 		ParseTrySleep: cmd.healthCheckSleep,
 		TrySleep:      cmd.healthCheckSleep.String(),
 	}}
+}
+
+func (cmd *ensureCommand) control() *model.CommonResourceControl {
+	if cmd.conditionIf == "" && cmd.conditionUnless == "" {
+		return nil
+	}
+
+	return &model.CommonResourceControl{
+		ManageIf:     cmd.conditionIf,
+		ManageUnless: cmd.conditionUnless,
+	}
 }

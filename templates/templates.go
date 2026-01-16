@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -261,7 +261,7 @@ func ResolveTemplateTyped(template string, env *Env) (any, error) {
 	case matches == nil:
 		return template, nil
 	case len(matches) == 1 && strings.HasPrefix(trimmed, "{{") && strings.HasSuffix(trimmed, "}}"):
-		return exprParse(matches[0][1], env)
+		return ExprParse(matches[0][1], env)
 	default:
 		res, _, err := applyFactsString(template, env)
 		return res, err
@@ -293,7 +293,7 @@ func applyFactsString(template string, env *Env) (string, bool, error) {
 
 		innerExpr := template[innerStart:innerEnd]
 
-		value, err := exprParse(innerExpr, env)
+		value, err := ExprParse(innerExpr, env)
 		if err != nil {
 			return "", false, err
 		}
@@ -325,15 +325,18 @@ func applyFactsString(template string, env *Env) (string, bool, error) {
 	return result.String(), slices.Contains(matched, true), nil
 }
 
-func exprParse(query string, env *Env) (any, error) {
-	program, err := expr.Compile(query,
+func ExprParse(query string, env *Env, opts ...expr.Option) (any, error) {
+	o := []expr.Option{
 		expr.Env(env),
 		expr.Function("lookup", env.lookup),
 		expr.Function("readFile", env.readFile),
 		expr.Function("file", env.readFile),
 		expr.Function("template", env.template),
 		expr.Function("jet", env.jet),
-	)
+	}
+	o = append(o, opts...)
+
+	program, err := expr.Compile(query, o...)
 	if err != nil {
 		return "", fmt.Errorf("expr compile error for '%s': %w", query, err)
 	}

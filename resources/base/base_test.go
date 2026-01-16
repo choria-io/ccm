@@ -532,6 +532,262 @@ var _ = Describe("Base", func() {
 		})
 	})
 
+	Describe("Control", func() {
+		BeforeEach(func() {
+			mockRes.EXPECT().SelectProvider().Return("mock", nil).AnyTimes()
+			mockRes.EXPECT().NewTransactionEvent().DoAndReturn(func() *model.TransactionEvent {
+				return model.NewTransactionEvent(model.FileTypeName, "/tmp/testfile", "")
+			}).AnyTimes()
+		})
+
+		It("Should manage when no control is set", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = nil
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure:  model.EnsurePresent,
+					Changed: true,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			mockRes.EXPECT().ApplyResource(gomock.Any()).Return(state, nil)
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeFalse())
+			Expect(result.Changed).To(BeTrue())
+		})
+
+		It("Should manage when ManageIf is true", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "true",
+			}
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure:  model.EnsurePresent,
+					Changed: true,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			mockRes.EXPECT().ApplyResource(gomock.Any()).Return(state, nil)
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeFalse())
+			Expect(result.Changed).To(BeTrue())
+		})
+
+		It("Should skip when ManageIf is false", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "false",
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.Changed).To(BeFalse())
+		})
+
+		It("Should skip when ManageUnless is true", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageUnless: "true",
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.Changed).To(BeFalse())
+		})
+
+		It("Should manage when ManageUnless is false", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageUnless: "false",
+			}
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure:  model.EnsurePresent,
+					Changed: true,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			mockRes.EXPECT().ApplyResource(gomock.Any()).Return(state, nil)
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeFalse())
+			Expect(result.Changed).To(BeTrue())
+		})
+
+		It("Should manage when ManageIf is true and ManageUnless is false", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf:     "true",
+				ManageUnless: "false",
+			}
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure:  model.EnsurePresent,
+					Changed: true,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			mockRes.EXPECT().ApplyResource(gomock.Any()).Return(state, nil)
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeFalse())
+			Expect(result.Changed).To(BeTrue())
+		})
+
+		It("Should skip when ManageIf is true and ManageUnless is true", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf:     "true",
+				ManageUnless: "true",
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.Changed).To(BeFalse())
+		})
+
+		It("Should skip when ManageIf is false and ManageUnless is false", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf:     "false",
+				ManageUnless: "false",
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.Changed).To(BeFalse())
+		})
+
+		It("Should skip when ManageIf is false and ManageUnless is true", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf:     "false",
+				ManageUnless: "true",
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.Changed).To(BeFalse())
+		})
+
+		It("Should evaluate expressions using facts", func(ctx context.Context) {
+			facts["os"] = "linux"
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf: `Facts.os == "linux"`,
+			}
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure:  model.EnsurePresent,
+					Changed: true,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			mockRes.EXPECT().ApplyResource(gomock.Any()).Return(state, nil)
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeFalse())
+			Expect(result.Changed).To(BeTrue())
+		})
+
+		It("Should skip when fact condition is not met", func(ctx context.Context) {
+			facts["os"] = "darwin"
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf: `Facts.os == "linux"`,
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.Changed).To(BeFalse())
+		})
+
+		It("Should skip when ManageUnless fact condition is met", func(ctx context.Context) {
+			facts["os"] = "darwin"
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageUnless: `Facts.os == "darwin"`,
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.Changed).To(BeFalse())
+		})
+
+		It("Should return error for invalid ManageIf expression", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "invalid expression !!!",
+			}
+
+			_, err := b.Apply(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("expr compile error"))
+		})
+
+		It("Should return error for invalid ManageUnless expression", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Control = &model.CommonResourceControl{
+				ManageUnless: "invalid expression !!!",
+			}
+
+			_, err := b.Apply(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("expr compile error"))
+		})
+
+		It("Should skip healthcheck when control skips the resource", func(ctx context.Context) {
+			props.HealthChecks = []model.CommonHealthCheck{{
+				Command: "/usr/bin/test -f /tmp/testfile",
+			}}
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "false",
+			}
+
+			result, err := b.Healthcheck(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(result.HealthChecks).To(BeEmpty())
+		})
+
+		It("Should run healthcheck when control allows the resource", func(ctx context.Context) {
+			props.HealthChecks = []model.CommonHealthCheck{{
+				Command: "/usr/bin/test -f /tmp/testfile",
+			}}
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "true",
+			}
+
+			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/test", "-f", "/tmp/testfile").
+				Return([]byte("OK"), []byte{}, 0, nil)
+
+			result, err := b.Healthcheck(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeFalse())
+			Expect(result.HealthChecks).To(HaveLen(1))
+		})
+	})
+
 	Describe("ShouldRefresh", func() {
 		It("Should return false for empty subscribe list", func() {
 			should, resource, err := b.ShouldRefresh([]string{})

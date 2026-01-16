@@ -39,6 +39,7 @@ func (c *ensureExecCommand) execAction(_ *fisk.ParseContext) error {
 			Name:     c.command,
 			Ensure:   model.EnsurePresent,
 			Provider: c.parent.provider,
+			Control:  c.parent.control(),
 		},
 		Returns:     c.returns,
 		Timeout:     c.timeout,
