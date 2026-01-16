@@ -107,6 +107,22 @@ resources:
          ensure: latest
 ```
 
+### Pre and Post Messaging
+
+The `ccm apply` command supports pre and post messaging, configured in the manifest:
+
+```yaml
+ccm:
+  pre_message: |
+    This is a pre message
+  post_message: |
+    This is a post message
+  resources:
+    - ...
+```
+
+These will be shown before and after the manifest is applied.  Both are optional.
+
 ### Overriding Data
 
 It might be useful to override/augmenting the data in a manifest with another Hiera file, or KV bucket.
@@ -141,7 +157,6 @@ resources:
 ```
 
 Here we create two files with the same owner and group but different contents and a different mode on one of the files. The `motd` file is unaffected by the defaults earlier as it's a new scope.
-
 
 ### Templating
 

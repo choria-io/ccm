@@ -108,9 +108,17 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		return nil
 	}
 
+	if manifest.PreMessage() != "" {
+		fmt.Println(manifest.PreMessage())
+	}
+
 	_, err = manifest.Execute(ctx, mgr, c.monitorOnly, userLogger)
 	if err != nil {
 		return err
+	}
+
+	if manifest.PostMessage() != "" {
+		fmt.Println(manifest.PostMessage())
 	}
 
 	if c.report {

@@ -42,6 +42,8 @@ type Apply struct {
 	overridingHieraData    string
 	overridingResolvedData map[string]any
 	manifestBytes          []byte
+	preMessage             string
+	postMessage            string
 
 	mu sync.Mutex
 }
@@ -51,6 +53,9 @@ func (a *Apply) String() string {
 }
 
 func (a *Apply) Source() string { return a.source }
+
+func (a *Apply) PreMessage() string  { return a.preMessage }
+func (a *Apply) PostMessage() string { return a.postMessage }
 
 func (a *Apply) MarshalYAML() ([]byte, error) {
 	return yaml.Marshal(a.toMap())
@@ -354,6 +359,8 @@ type manifestParser struct {
 }
 
 type manifestResourcesParser struct {
+	PreMessage       string          `json:"pre_message,omitempty" yaml:"pre_message,omitempty"`
+	PostMessage      string          `json:"post_message,omitempty" yaml:"post_message,omitempty"`
 	ResourcesJetFile string          `json:"resources_jet_file,omitempty" yaml:"resources_jet_file,omitempty"`
 	FailOnError      bool            `json:"fail_on_error,omitempty" yaml:"fail_on_error,omitempty"`
 	Resources        yaml.RawMessage `json:"resources" yaml:"resources"`
@@ -402,6 +409,9 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 	if parser.CCM.ResourcesJetFile != "" && dir == "" {
 		return nil, nil, fmt.Errorf("jet_file requires a directory to be set")
 	}
+
+	apply.preMessage = parser.CCM.PreMessage
+	apply.postMessage = parser.CCM.PostMessage
 
 	resolved, err := hiera.ResolveYaml(apply.manifestBytes, facts, hiera.DefaultOptions, hieraLogger)
 	if err != nil {

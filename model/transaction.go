@@ -26,6 +26,8 @@ type Apply interface {
 	Execute(ctx context.Context, mgr Manager, healthCheckOnly bool, userLog Logger) (SessionStore, error)
 	Source() string
 	String() string
+	PreMessage() string
+	PostMessage() string
 }
 
 type SessionStore interface {

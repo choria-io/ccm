@@ -14,6 +14,14 @@
       "type": "object",
       "description": "CCM configuration section containing resource definitions",
       "properties": {
+        "pre_message": {
+          "type": "string",
+          "description": "Message to display before applying resources"
+        },
+        "post_message": {
+          "type": "string",
+          "description": "Message to display after applying resources"
+        },
         "fail_on_error": {
           "type": "boolean",
           "description": "If true, stop processing resources when any resource fails. If false, continue processing remaining resources.",
