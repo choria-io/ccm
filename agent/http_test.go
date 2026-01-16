@@ -439,6 +439,7 @@ var _ = Describe("cacheManifest with HTTP", func() {
 		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
 		mockLog.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
+		mockLog.EXPECT().With(gomock.Any()).Return(mockLog).AnyTimes()
 	})
 
 	AfterEach(func() {

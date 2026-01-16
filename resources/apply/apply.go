@@ -172,6 +172,7 @@ func ResolveManifestUrl(ctx context.Context, mgr model.Manager, source string, l
 
 	case "http", "https":
 		res, apply, wd, err = ResolveManifestHttpUrl(ctx, mgr, source, log, opts...)
+		source = iu.RedactUrlCredentials(uri)
 
 	case "":
 		res, apply, err = ResolveManifestFilePath(ctx, mgr, source, opts...)
