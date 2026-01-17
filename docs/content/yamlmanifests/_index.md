@@ -5,42 +5,52 @@ weight = 50
 pre = "<b>5. </b>"
 +++
 
-A manifest is a YAML file that combines data, platform-specific configuration and resources all in one file.
+A manifest is a YAML file that combines data, hierarchy configuration, and resources in a single file.
 
-There is no logic - other than what expressions can do, consider it to be no more complex than basic example multi-resource shell scripts.
+Manifests support template expressions but not procedural logic. Think of them as declarative configuration similar to multi-resource shell scripts.
 
 > [!info] Note
->
-> We publish a JSON Schema for the manifest at [https://choria.io/schemas/ccm/v1/manifest.json](https://choria.io/schemas/ccm/v1/manifest.json), you can configure in your editor to provide completion and validation while editing.
+> A JSON Schema for manifests is available at [https://choria.io/schemas/ccm/v1/manifest.json](https://choria.io/schemas/ccm/v1/manifest.json). Configure your editor to use this schema for completion and validation.
 
-The YAML file resolves the manifest using [Choria Hierarchical Data Resolver](https://github.com/choria-io/tinyhiera), our single-file implementation of Hiera.
+## Manifest Structure
 
-### Full Example
+A manifest contains these top-level sections:
 
-##### Input Data
+| Section     | Description                                              |
+|-------------|----------------------------------------------------------|
+| `data`      | Input data (like module parameters)                      |
+| `hierarchy` | Lookup order and merge strategy for overrides            |
+| `overrides` | Data overrides keyed by hierarchy entries                |
+| `ccm`       | Resource definitions and execution options               |
 
-First, we define input data, think of this like the properties a module accepts:
+The manifest is resolved using the [Choria Hierarchical Data Resolver](../hiera/).
+
+## Full Example
+
+### Input Data
+
+Define input data like parameters for a module:
 
 ```yaml
 data:
   package_name: "httpd"
 ```
 
-##### Resources
+### Resources
 
-We will manage the Apache Server package here:
+Define resources to manage in the `ccm` section:
 
 ```yaml
 ccm:
   resources:
     - package:
-       - "{{ lookup('data.package_name') }}":
-           ensure: latest
+        - "{{ lookup('data.package_name') }}":
+            ensure: latest
 ```
 
-##### Configure Hierarchy
+### Configure Hierarchy
 
-We need to be able to configure the package name on a number of dimensions - like OS Platform - so we'll create a Hierarchy here:
+Configure a hierarchy to vary data by dimensions like OS platform:
 
 ```yaml
 hierarchy:
@@ -48,11 +58,11 @@ hierarchy:
     - os:{{ lookup('facts.host.info.platformFamily') }}
 ```
 
-Here we will look for overrides in `os:rhel`, `os:debian` etc
+This looks for overrides in `os:rhel`, `os:debian`, etc.
 
-##### Overrides
+### Overrides
 
-Finally, we configure a package name for Debian:
+Provide platform-specific data overrides:
 
 ```yaml
 overrides:
@@ -60,9 +70,9 @@ overrides:
     package_name: apache2
 ```
 
-### Applying the manifest
+## Applying Manifests
 
-Let’s apply the manifest, this is how it should look now:
+The complete manifest:
 
 ```
 data:
@@ -83,9 +93,9 @@ overrides:
     package_name: apache2
 ```
 
-We can apply this manifest like so, we can see first run makes a change 2nd run is stable:
+Apply the manifest with `ccm apply`. The first run makes changes; subsequent runs are stable:
 
-```
+```bash
 $ ccm apply manifest.yaml
 INFO  Creating new session record resources=1
 WARN  package#httpd changed ensure=latest runtime=3.560699287s provider=dnf
@@ -95,74 +105,93 @@ INFO  Creating new session record resources=1
 INFO  package#httpd stable ensure=latest runtime=293.448824ms provider=dnf
 ```
 
-One can also see the fully resolved manifest and data without applying it:
+To preview the fully resolved manifest without applying it:
 
-```
+```bash
 $ ccm apply manifest.yaml --render
 data:
   package_name: apache2
 resources:
 - package:
     - apache2:
-         ensure: latest
+        ensure: latest
 ```
 
-### Pre and Post Messaging
+## Pre and Post Messages
 
-The `ccm apply` command supports pre and post messaging, configured in the manifest:
+Display messages before and after manifest execution:
 
 ```yaml
 ccm:
   pre_message: |
-    This is a pre message
+    Starting configuration update...
   post_message: |
-    This is a post message
+    Configuration complete.
   resources:
     - ...
 ```
 
-These will be shown before and after the manifest is applied.  Both are optional.
+Both are optional.
 
-### Overriding Data
+## Overriding Data
 
-It might be useful to override/augmenting the data in a manifest with another Hiera file, or KV bucket.
+Override or augment manifest data with an external Hiera source:
 
-To do this pass `--hiera kv://CCM/common` to the `ccm apply` command.
-
-### Setting Defaults
-
-Writing manifests with many similar resources can become tedious, we support setting defaults in the manifest itself:
-
-```yaml
-resources:
-  - file:
-      - defaults:
-          owner: app
-          group: app
-          mode: "0644"
-          ensure: present
-      - /app/config/file.conf:
-          source: file.conf
-      - /app/bin/app:
-          source: app.bin
-          mode: "0700"
-
-  - file:
-      - /etc/motd:
-           ensure: present
-           source: motd.txt
-           owner: root
-           group: root
-           mode: "0644"           
+```bash
+$ ccm apply manifest.yaml --hiera kv://CCM/common
 ```
 
-Here we create two files with the same owner and group but different contents and a different mode on one of the files. The `motd` file is unaffected by the defaults earlier as it's a new scope.
+Supported sources include local files, KV stores (`kv://`), and HTTP(S) URLs.
 
-### Templating
+## Setting Defaults
 
-Manifests and resources support templates like `{{ lookup("key") }}`, but these cannot be use to generate new resources, they are purely to adjust specific values in valid YAML files.
+Reduce repetition by setting defaults for resources of the same type:
 
-Many times though one needs to create resources from data, for example you might have Hiera data that sets packages:
+```yaml
+ccm:
+  resources:
+    - file:
+        - defaults:
+            owner: app
+            group: app
+            mode: "0644"
+            ensure: present
+        - /app/config/file.conf:
+            source: file.conf
+        - /app/bin/app:
+            source: app.bin
+            mode: "0700"
+
+    - file:
+        - /etc/motd:
+            ensure: present
+            source: motd.txt
+            owner: root
+            group: root
+            mode: "0644"
+```
+
+The first two files inherit the `defaults` values. The `/app/bin/app` file overrides just the mode. The `/etc/motd` file is a separate resource block, so defaults do not apply.
+
+## Templating
+
+Manifests support template expressions like `{{ lookup("key") }}` for adjusting values. These expressions cannot generate new resources; they only modify values in valid YAML.
+
+### Available Variables
+
+Templates have access to:
+
+| Variable  | Description                          |
+|-----------|--------------------------------------|
+| `Facts`   | System facts                         |
+| `Data`    | Resolved Hiera data                  |
+| `Environ` | Environment variables                |
+
+### Generating Resources with Jet Templates
+
+To dynamically generate resources from data, use [Jet Templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md).
+
+Given this data:
 
 ```yaml
 data:
@@ -172,37 +201,38 @@ data:
     - nagios-plugins-all
     - tar
     - nmap-ncat
-
 ```
 
-And want to set different packages for different nodes based on the Hierarchy, for this we can use [Jet Templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md)
-
-First, we set the path to the template holding resources instead ot the resources themselves:
+Reference a Jet template file instead of inline resources:
 
 ```yaml
 ccm:
   resources_jet_file: resources.jet
 ```
 
-```
+Create the template file:
+
+```jet
 {* resources.jet *}
 [[ range Data.common_packages ]]
 - package:
     - [[ . ]]:
-         ensure: present
+        ensure: present
 [[ end ]]
 ```
 
 > [!info] Note
-> The template should be in the same directory as the manifest
+> The template file must be in the same directory as the manifest.
 
-The data available in this template will be post Hierarchy evaluation so you will have access to the full Hierarchy resolved data, additionally you can also access `Facts` and `Environ`.
+The template receives the fully resolved Hiera data, plus `Facts` and `Environ`.
 
-### Controlling failure handling
+## Failure Handling
 
-By default, if any resource fails, the apply will continue to the next resource, and at the moment we do not have any concept that let one resource require another.
+By default, if a resource fails, the apply continues to the next resource.
 
-This behavior can be controlled by using the `fail_on_error` flag which will terminate the manifest apply as soon as a resource fails.
+### Fail on Error
+
+To stop execution on the first failure, set `fail_on_error`:
 
 ```yaml
 ccm:
@@ -213,85 +243,134 @@ ccm:
         - /usr/bin/true: {}
 ```
 
-When running we can see the second is never invoked:
+The second resource is never executed:
 
-```
+```bash
 $ ccm apply manifest.yaml
 INFO  Executing manifest manifest=manifest.yaml resources=2
 ERROR exec#/usr/bin/false failed ensure=present runtime=3ms provider=posix errors=failed to reach desired state exit code 1
 WARN  Terminating manifest execution due to failed resource
 ```
 
-### Checking what would be done (Noop mode)
+### Resource Dependencies
 
-One can ask the system to operate in Noop mode, meaning it will attempt to detect what would happen without actually doing it.
+Use the `require` property to ensure a resource only runs after its dependencies succeed:
 
-This is achieved by using the `--noop` flag.
+```yaml
+ccm:
+  resources:
+    - package:
+        - httpd:
+            ensure: present
+    - file:
+        - /etc/httpd/conf.d/custom.conf:
+            ensure: present
+            content: "Listen 8080"
+            owner: root
+            group: root
+            mode: "0644"
+            require:
+              - package#httpd
+```
+
+If the required resource fails, the dependent resource is skipped.
+
+## Dry Run (Noop Mode)
+
+Preview changes without applying them:
+
+```bash
+$ ccm apply manifest.yaml --noop
+```
 
 > [!info] Note
-> Noop mode is not perfect, if a change in a resource affects a future resource, it cannot always be detected.
+> Noop mode cannot always detect cascading effects. If one resource change would affect a later resource, that dependency may not be reflected in the dry run.
 
-### Manifests in NATS Object Store
+## Health Check Only Mode
 
-Like [Hierarchical Data](../hiera) data can be accessed via NATS Server to avoid needing all the manifests and hiera files locally.
+Run only health checks without applying resources:
 
-[NATS](https://nats.io) is a lightweight messaging system that is straightforward to run and host; it supports being used as a Key-Value store.
-
-We can't cover NATS here in detail here, but manifest and dependant files can be stored in NATS Object Stores and used in the `ccm apply` command.
-
-Let's add a context called `ccm` for our needs:
-
-```
-$ nats context add ccm --user nats.example.org --user ccm --password s£cret --description "Choria CM Configuration Store" 
+```bash
+$ ccm apply manifest.yaml --monitor-only
 ```
 
-We create a Object Store stored replicated in a cluster and store the hierarchy from `hiera.yaml` in a Key called `data`:
+This is useful for verifying system state without making changes.
 
+## Manifests in NATS Object Store
+
+Manifests can be stored in [NATS](https://nats.io) Object Stores, avoiding the need to distribute files locally.
+
+Configure a NATS context for authentication:
+
+```bash
+$ nats context add ccm --server nats.example.org --user ccm --password s3cret --description "CCM Configuration Store"
 ```
+
+Create an Object Store:
+
+```bash
 $ nats obj add CCM --replicas 3 --context ccm
 ```
 
-Let's create a manifest that copies a file onto the node:
+Create a manifest with supporting files:
 
-```
+```bash
 $ mkdir /tmp/manifest
-$ echo 'CCM Managed' > /tmp/manifest/mode
-$ vi /tmp/manifest/manifest.yaml
-...
+$ echo 'CCM Managed' > /tmp/manifest/motd
+$ cat > /tmp/manifest/manifest.yaml << 'EOF'
 ccm:
   resources:
     - file:
-       - /etc/motd:
+        - /etc/motd:
             ensure: present
             source: motd
             owner: root
             group: root
             mode: "0644"
+EOF
 ```
 
-You can see here we read the file `motd` and copy it to `/etc/motd` on the node.
+Package and upload to the Object Store:
 
-Let's create a tar file and place it in the Object Store: 
-
-```
+```bash
 $ tar -C /tmp/manifest/ -cvzf /tmp/manifest.tgz .
-$ cd /tmp
-$ nats --server localhost:4222 obj put CCM manifest.tgz
-```
-We can now apply the manifest:
-
-```
-$ ccm apply obj://CCM/manifest.tgz --context local
- INFO  Using manifest from Object Store in temporary directory bucket=CCM file=manifest.tgz
- INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix 
+$ nats obj put CCM manifest.tgz --context ccm
 ```
 
-### Manifests on Web Servers
+Apply the manifest:
 
-As for Object Store data, you can store gzipped tar files on a web server and apply those from the CLI:
-
+```bash
+$ ccm apply obj://CCM/manifest.tgz --context ccm
+INFO  Using manifest from Object Store in temporary directory bucket=CCM file=manifest.tgz
+INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix
 ```
+
+## Manifests on Web Servers
+
+Store gzipped tar archives on a web server and apply them directly:
+
+```bash
 $ ccm apply https://example.net/manifest.tar.gz
- INFO  Executing manifest manifest=https://example.net/manifest.tar.gz resources=1
- INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix 
+INFO  Executing manifest manifest=https://example.net/manifest.tar.gz resources=1
+INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix
 ```
+
+HTTP Basic Auth is supported via URL credentials:
+
+```bash
+$ ccm apply https://user:pass@example.net/manifest.tar.gz
+```
+
+## Additional Facts
+
+Provide additional facts from the command line or a file:
+
+```bash
+# Individual facts
+$ ccm apply manifest.yaml --fact env=production --fact region=us-east
+
+# Facts from a file
+$ ccm apply manifest.yaml --facts custom-facts.yaml
+```
+
+Facts from these sources are merged with system facts, with command-line facts taking precedence.

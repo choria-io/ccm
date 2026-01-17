@@ -5,17 +5,23 @@ weight = 10
 pre = "<b>1. </b>"
 +++
 
-A resource is how you describe the desired state of your infrastructure. They represent a thing you want to manage and they are backed by providers which implement the actual management for your Operating System.
+Resources describe the desired state of your infrastructure. Each resource represents something to manage and is backed by a provider that implements platform-specific management logic.
 
-Each resource has a type and a unique name followed by some resource-specific properties.
+Every resource has a type, a unique name, and resource-specific properties.
 
 ## Common Properties
 
-Resources can all have additional monitoring / health checks associated with them. See the [Monitoring page](../monitoring/) for more information.
+All resources support the following common properties:
 
-All resources can have an `alias` set which will be used in logging and to find resources for `subscribe`, `require` etc
-
-All resources can have a `require` property that is a list of `type#name` or `type#alias` that must have succeeded before this resource can be applied.
+| Property        | Description                                                                 |
+|-----------------|-----------------------------------------------------------------------------|
+| `name`          | Unique identifier for the resource                                          |
+| `ensure`        | Desired state (values vary by resource type)                                |
+| `alias`         | Alternative name for use in `subscribe`, `require`, and logging             |
+| `provider`      | Force a specific provider                                                   |
+| `require`       | List of resources (`type#name` or `type#alias`) that must succeed first     |
+| `health_checks` | Health checks to run after applying (see [Monitoring](../monitoring/))      |
+| `control`       | Conditional execution rules (see below)                                     |
 
 ## Conditional Resource Execution
 
@@ -32,7 +38,7 @@ package:
 
 Here we install `zsh` on all `linux` machines unless they are running inside a `docker` container.
 
-Here's a table that shows how the 2 booleans inercept:
+The following table shows how the two conditions interact:
 
 | `if`      | `unless`  | Resource Managed? |
 |-----------|-----------|-------------------|
@@ -59,21 +65,19 @@ This sets `name` to `/etc/motd`, in the following paragraphs we will refer to th
 
 ## Exec
 
-When you manage an exec resource, you describe a command that should be executed to bring the system into the desired state. The exec resource is idempotent when used with the `creates` property or `refreshonly` mode.
+The exec resource executes commands to bring the system into the desired state. It is idempotent when used with the `creates` property or `refreshonly` mode.
 
 > [!info] Warning
-> Commands should be specified with their full path, or use the `path` property to specify the search path
+> Specify commands with their full path, or use the `path` property to set the search path.
 
 In a manifest:
 
 ```yaml
-/usr/bin/touch /tmp/hello:
-  ensure: present
-  creates: /tmp/hello
-  timeout: 30s
-  cwd: /tmp
-  require:
-    - file#/usr/bin/touch
+- exec:
+    - /usr/bin/touch /tmp/hello:
+        creates: /tmp/hello
+        timeout: 30s
+        cwd: /tmp
 ```
 
 On the CLI:
@@ -82,53 +86,43 @@ On the CLI:
 $ ccm ensure exec "/usr/bin/touch /tmp/hello" --creates /tmp/hello --timeout 30s
 ```
 
-This will run the command only if `/tmp/hello` does not exist.
-
-### Ensure Values
-
-The `ensure` property does not have meaning for the exec resource.
+The command runs only if `/tmp/hello` does not exist.
 
 ### Properties
 
-| Property                |                                                                                               |
+| Property                | Description                                                                                   |
 |-------------------------|-----------------------------------------------------------------------------------------------|
-| `name`                  | The command to execute                                                                        |
-| `command`               | When set will use this is the command to run instead of `name`                                |
-| `ensure`                | The desired state                                                                             |
-| `cwd`                   | The working directory from which to run the command                                           |
-| `environment` (array)   | Additional environment variables in KEY=VALUE format                                          |
-| `path`                  | The search path for executables, as a colon-separated list (e.g., `/usr/bin:/bin`)            |
-| `returns` (array)       | Expected exit codes indicating success; defaults to 0                                         |
-| `timeout`               | Maximum time the command is allowed to run (e.g., `30s`, `5m`); command is killed if exceeded |
-| `creates`               | A file that the command creates; if this file exists the command will not run                 |
-| `refreshonly` (boolean) | Only run the command when notified by a subscribed resource                                   |
-| `subscribe` (array)     | Resources to subscribe to for refresh notifications in the format `type#name` or `type#alias` |
-| `logoutput` (boolean)   | Whether to log the command's output                                                           |
-| `provider`              | Force a specific provider to be used, only `posix` supported                                  |
+| `name`                  | The command to execute (used as the resource identifier)                                      |
+| `command`               | Alternative command to run instead of `name`                                                  |
+| `cwd`                   | Working directory for command execution                                                       |
+| `environment` (array)   | Environment variables in `KEY=VALUE` format                                                   |
+| `path`                  | Search path for executables as a colon-separated list (e.g., `/usr/bin:/bin`)                 |
+| `returns` (array)       | Exit codes indicating success (default: `[0]`)                                                |
+| `timeout`               | Maximum execution time (e.g., `30s`, `5m`); command is killed if exceeded                     |
+| `creates`               | File path; if this file exists, the command does not run                                      |
+| `refreshonly` (boolean) | Only run when notified by a subscribed resource                                               |
+| `subscribe` (array)     | Resources to subscribe to for refresh notifications (`type#name` or `type#alias`)             |
+| `logoutput` (boolean)   | Log the command output                                                                        |
+| `provider`              | Force a specific provider (`posix` only)                                                      |
 
 ## File
 
-When managing a file you have to state the content, owner, group and mode the file should be. 
+The file resource manages files and directories, including their content, ownership, and permissions.
 
 > [!info] Warning
-> You should use absolute file names and primary group names
-
-The `file` type is very minimal at the moment, most important TODO items:
-
- * Source file contents from elsewhere
- * Support creating symlinks
- * More complete templating for contents
+> Use absolute file paths and primary group names.
 
 In a manifest:
 
 ```yaml
-/etc/motd:
-  ensure: present
-  content: |
-    Managed by CCM {{ now() }}
-  owner: root
-  group: root
-  mode: "0644"
+- file:
+    - /etc/motd:
+        ensure: present
+        content: |
+          Managed by CCM {{ now() }}
+        owner: root
+        group: root
+        mode: "0644"
 ```
 
 On the CLI:
@@ -137,44 +131,44 @@ On the CLI:
 $ ccm ensure file /etc/motd --source /tmp/ccm/motd --owner root --group root --mode 0644
 ```
 
-This will copy the contents of `/tmp/ccm/motd` to `/etc/motd` verbatim and set the ownership.
+This copies the contents of `/tmp/ccm/motd` to `/etc/motd` verbatim and sets ownership.
 
-If you specify `--contents` or `--contents-file` instead then the result will be parsed by a template and rendered as the contents.
+Use `--content` or `--content-file` to parse content through the template engine before writing.
 
 ### Ensure Values
 
-| Ensure Values |                              |
-|---------------|------------------------------|
-| `present`     | The file must be nonexisting |
-| `absent`      | The file must exist          |
-| `directory`   | The file must be a directory |
+| Value       | Description                    |
+|-------------|--------------------------------|
+| `present`   | The file must exist            |
+| `absent`    | The file must not exist        |
+| `directory` | The path must be a directory   |
 
 ### Properties
 
-| Ensure Values |                                                               |
-|---------------|---------------------------------------------------------------|
-| `name`        | The resource name match the file name exactly                 |
-| `ensure`      | The desired state                                             |
-| `content`     | The contents of the file, parsed through `expr`               |
-| `source`      | Copy another file, in future will support remote sources      |
-| `owner`       | The file owner                                                |
-| `group`       | The file group                                                |
-| `mode`        | The file mode, a string like `0700`                           |
-| `provider`    | Force a specific provider to be used, only `postix` supported |
+| Property   | Description                                                    |
+|------------|----------------------------------------------------------------|
+| `name`     | Absolute path to the file                                      |
+| `ensure`   | Desired state (`present`, `absent`, `directory`)               |
+| `content`  | File contents, parsed through the template engine              |
+| `source`   | Copy contents from another local file                          |
+| `owner`    | File owner (username)                                          |
+| `group`    | File group (group name)                                        |
+| `mode`     | File permissions in octal notation (e.g., `"0644"`)            |
+| `provider` | Force a specific provider (`posix` only)                       |
 
 ## Package
 
-When you manage a package, you describe the stable state you desire. Should the package merely be present, or the latest version, or a specific version?
+The package resource manages system packages. Specify whether the package should be present, absent, at the latest version, or at a specific version.
 
 > [!info] Warning
-> You should use real package names, not virtual names, aliases or group names
+> Use real package names, not virtual names, aliases, or group names.
 
 In a manifest:
 
 ```yaml
-package:
-  name: zsh
-  ensure: 5.9
+- package:
+    - zsh:
+        ensure: "5.9"
 ```
 
 On the CLI:
@@ -185,37 +179,39 @@ $ ccm ensure package zsh 5.9
 
 ### Ensure Values
 
-| Ensure Values |                                                       |
-|---------------|-------------------------------------------------------|
-| `present`     | The package must be installed.                        |
-| `latest`      | The package must be installed and the latest version. |
-| `absent`      | The package must be not be installed.                 |
-| `5.9`         | The package must be installed and version 5.9.        |    
+| Value     | Description                                      |
+|-----------|--------------------------------------------------|
+| `present` | The package must be installed                    |
+| `latest`  | The package must be installed at latest version  |
+| `absent`  | The package must not be installed                |
+| `<version>` | The package must be installed at this version  |
 
 ### Properties
 
-| Ensure Values |                                                            |
-|---------------|------------------------------------------------------------|
-| `name`        | The resource name match the package name exactly           |
-| `ensure`      | The desired state                                          |
-| `provider`    | Force a specific provider to be used, only `dnf` supported |
+| Property   | Description                                |
+|------------|--------------------------------------------|
+| `name`     | Package name                               |
+| `ensure`   | Desired state or version                   |
+| `provider` | Force a specific provider (`dnf` only)     |
 
 ## Service
 
-When you manage a service, you describe the stable state you desire. Unlike packages services have 2 properties that can very - are they enabled to start at boot or should they be running.
+The service resource manages system services. Services have two independent properties: whether they are running and whether they are enabled to start at boot.
 
 > [!info] Warning
-> You should use real service names, not virtual names, aliases etc
+> Use real service names, not virtual names or aliases.
 
-Additionally, a service can listen to the state changes of another resource, and, should that resource change it can force a restart of the service.
+Services can subscribe to other resources and restart when those resources change.
 
 In a manifest:
 
 ```yaml
-httpd:
-  ensure: running
-  enable: true
-  subscribe: package#httpd
+- service:
+    - httpd:
+        ensure: running
+        enable: true
+        subscribe:
+          - package#httpd
 ```
 
 On the CLI:
@@ -226,17 +222,19 @@ $ ccm ensure service httpd running --enable --subscribe package#httpd
 
 ### Ensure Values
 
-| Ensure Values |                                                |
-|---------------|------------------------------------------------|
-| `running`     | The service must be running.                   |
-| `stopped`     | The service must be stopped.                   |
+| Value     | Description                  |
+|-----------|------------------------------|
+| `running` | The service must be running  |
+| `stopped` | The service must be stopped  |
+
+If `ensure` is not specified, it defaults to `running`.
 
 ### Properties
 
-| Ensure Values       |                                                                                                                                                             |
-|---------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`              | The resource name match the service name exactly                                                                                                            |
-| `ensure`            | The desired state                                                                                                                                           |
-| `enable` (boolean)  | Enables the service to start at boot time                                                                                                                   |
-| `subscribe` (array) | When the service is set to be running, and it's already running, restart it when the referenced resource changes. In the format `type#name` or `type#alias` |
-| `provider`          | Force a specific provider to be used, only `systemd` supported                                                                                              |
+| Property            | Description                                                                           |
+|---------------------|---------------------------------------------------------------------------------------|
+| `name`              | Service name                                                                          |
+| `ensure`            | Desired state (`running` or `stopped`; default: `running`)                            |
+| `enable` (boolean)  | Enable the service to start at boot                                                   |
+| `subscribe` (array) | Resources to watch; restart the service when they change (`type#name` or `type#alias`)|
+| `provider`          | Force a specific provider (`systemd` only)                                            |

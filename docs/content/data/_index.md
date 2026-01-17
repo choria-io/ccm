@@ -7,73 +7,107 @@ pre = "<b>3. </b>"
 
 Just like applications need data to vary their behavior and configure their environments, so do Configuration Management tools.
 
-For this reason I wrote `extlookup` and `hiera` years ago for the Puppet community. Despite the minimal focus of this tool we still need data to vary the behaviour.
+For this reason, I wrote `extlookup` and `hiera` years ago for the Puppet community. Despite CCM's minimal focus, we still need data to vary behavior.
 
 Data can be used for:
 
- * Configuring resource names that differ between Operating Systems like `httpd` vs `apache2` package names
- * Set different configuration values depending on environment, role or other dimensions
- * Decide if some environments shold have something installed and others not - like development vs production environments
+ * Configuring resource names that differ between operating systems (e.g., `httpd` vs `apache2`)
+ * Setting different configuration values depending on environment, role, or other dimensions
+ * Deciding whether environments should have something installed (e.g., development vs production)
 
-Choria CM supports various data sources:
+CCM supports various data sources:
 
- * **Facts** about the instance - the Operating System, Networking and Disk configuration
- * **Facts** from `/etc/choria/ccm/facts.{yaml,json}` and `~/.config/choria/ccm/facts.{yaml,json}`
- * **Environment** data like variables read from the shell environment and files like `./.env`
- * **Hiera Data** data resolved using Hiera that supports hierarchical overrides based on facts
+ * **System Facts** - Operating system, networking, and disk configuration
+ * **Custom Facts** - From `/etc/choria/ccm/facts.{yaml,json}` and `~/.config/choria/ccm/facts.{yaml,json}`
+ * **Environment** - Variables from the shell environment and `./.env` files
+ * **Hiera Data** - Hierarchical data with overrides based on facts
 
 ## Accessing Data
 
-In these examples you'll see expressions like `{{ lookup('facts.host.info.platformFamily') }}`, these are written using Expr Language:
+Expressions like `{{ lookup('facts.host.info.platformFamily') }}` use the [Expr Language](https://expr-lang.org/docs/language-definition).
 
-* [Expr Language](https://expr-lang.org/#documentation)
-* [Expr Language Documentation](https://expr-lang.org/docs/language-definition)
+### Available Variables
 
-We've added the following functions to Expr:
+In templates, you have direct access to:
 
-| Function                                          | Description                                                                                                                                                                                                              |
-|---------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `lookup(key, default)`                            | Lookup data from the runtime environment using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md)                                                                                               |
-| `readFile("the.file")`, `file("the.file")`        | Read a file into a string, can only read files in the working directory                                                                                                                                                  |
-| `template(f)`, `template("file.templ")`           | Parses `f` using templates, if `f` is a string ending in `.templ` reads the file using `readFile()` and then parse it                                                                                                    |
-| `jet(f)`, `jet("file.jet")`, `jet(f, "[[", "]]")` | Parses `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md), optionally specifying delimiters, if `f` is a string ending in `.jet` reads the file using `readFile()` and then parse it |
+| Variable  | Description                                           |
+|-----------|-------------------------------------------------------|
+| `Facts`   | System facts (e.g., `Facts.host.info.platformFamily`) |
+| `Data`    | Resolved Hiera data (e.g., `Data.package_name`)       |
+| `Environ` | Environment variables (e.g., `Environ.HOME`)          |
 
+### Available Functions
 
-These expressions can be used in Hiera Data and even on the CLI.
+| Function                       | Description                                                                                                                                                               |
+|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `lookup(key, default)`         | Lookup data using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md). Example: `lookup("facts.host.info.os", "linux")`                           |
+| `readFile(path)`, `file(path)` | Read a file into a string (files must be in the working directory)                                                                                                        |
+| `template(f)`                  | Parse `f` using templates. If `f` ends in `.templ`, reads the file first                                                                                                  |
+| `jet(f)`, `jet(f, "[[", "]]")` | Parse `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md) with optional custom delimiters. If `f` ends in `.jet`, reads the file first |
+
+### GJSON Path Examples
+
+The `lookup()` function uses GJSON path syntax for nested access:
+
+```
+lookup("facts.host.info.platformFamily")     # Simple nested path
+lookup("facts.network.interfaces.0.name")    # Array index
+lookup("data.packages.#")                    # Array length
+```
+
+### CLI Usage
+
+These expressions work on the CLI:
 
 ```bash
 $ ccm ensure package '{{ lookup("data.package_name", "httpd") }}'
 ```
 
-Above will fetch data from the runtime environment and default to `httpd` if not found.
+This fetches `package_name` from the data and defaults to `httpd` if not found.
 
 ## Facts
 
-We have a built-in fact resolver that gathers system information, we intend to expand this a bit, but today just the basic system facts are available.
+CCM includes a built-in fact resolver that gathers system information. To see available facts:
 
-To see the available facts, run:
-
-```nohighlight
-$ ccm facts
-$ ccm facts host
-$ ccm facts --yaml
+```bash
+$ ccm facts                              # All facts as JSON
+$ ccm facts host                         # Query specific path
+$ ccm facts --yaml                       # Output as YAML
 ```
 
-Accessing facts is via the expressions like `{{ lookup('facts.host.info.platformFamily') }}`.
+Access facts in expressions using `{{ Facts.host.info.platformFamily }}` or `{{ lookup('facts.host.info.platformFamily') }}`.
 
 ## Hiera Data for CLI
 
-Hiera Data is resolved using Choria Hierarchical Data Resolver and are ready by default from `./.hiera` or a file you choose.
+Hiera data is resolved using the Choria Hierarchical Data Resolver. By default, data is read from `./.hiera`, or you can specify a file with `--hiera`.
 
 > [!info] Note
-> This only works for `ccm ensure`, since apply is a Hiera manifest on it's own it does not need this behavior
+> This applies to `ccm ensure` commands. The `ccm apply` command uses manifests that contain their own Hiera data.
 
-Given this example file stored in `./.hiera`:
+### Hiera Data Sources
+
+Hiera data can be loaded from:
+
+ * **Local file**: `./.hiera` or path specified with `--hiera`
+ * **Key-Value store**: `--hiera kv://BUCKET/key` (requires `--context` for NATS)
+ * **HTTP(S)**: `--hiera https://example.com/data.yaml` (supports Basic Auth via URL credentials)
+
+### Merge Strategies
+
+The `hierarchy.merge` setting controls how overrides are applied:
+
+ * **`first`** (default): Stops at the first matching override
+ * **`deep`**: Deep merges all matching overrides in order
+
+### Example
+
+Given this file stored in `./.hiera`:
 
 ```yaml
 hierarchy:
   order:
-    - os:{{ lookup('facts.host.info.PlatformFamily') }}
+    - os:{{ lookup('facts.host.info.platformFamily') }}
+  merge: first
 
 data:
   package_name: ""
@@ -86,13 +120,21 @@ overrides:
     package_name: httpd
 ```
 
-Running `ccm ensure package '{{ lookup("data.package_name") }}'` will install `httpd` on RHEL based systems and `apache2` on Debian based systems. 
+Running `ccm ensure package '{{ lookup("data.package_name") }}'` installs `httpd` on RHEL-based systems and `apache2` on Debian-based systems.
 
 > [!info] Note
-> See the [Hiera](../hiera) section for details on how to configure Hiera Data in NATS
-
-The data can also be stored in a NATS Key-Value store and read from there instead of from `./hiera` by passing `--context` and `--hiera kv://BUCKET/key` options.
+> See the [Hiera](../hiera) section for details on configuring Hiera data in NATS.
 
 ## Environment
 
-The shell environment and any environment data defined in `./.env` can be accessed via expressions like `{{ lookup("env.MY_VAR") }}`
+The shell environment and variables defined in `./.env` can be accessed in two ways:
+
+```yaml
+# Direct access
+home_dir: "{{ Environ.HOME }}"
+
+# Via lookup (with default value)
+my_var: "{{ lookup('environ.MY_VAR', 'default') }}"
+```
+
+The `.env` file uses standard `KEY=value` format, one variable per line.
