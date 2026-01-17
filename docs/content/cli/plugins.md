@@ -106,9 +106,11 @@ resources:
   - type: package
     name: myapp
     ensure: present
-    version: "{{ lookup(\"facts.app_version\") }}"
+    version: "{{ lookup('facts.app_version') }}"
 ```
 
 ## Further Reading
 
 For complete App Builder documentation including all command types, templating features, and advanced options, see the [App Builder documentation](https://choria-io.github.io/appbuilder/index.html).
+
+Since version `0.12.0` of App Builder it has a transform that can invoke CCM Manifests, this combines well with flags, arguments and form wizards to create custom UI's that manage your infrastructure. 
