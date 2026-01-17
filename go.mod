@@ -6,7 +6,7 @@ require (
 	github.com/CloudyKit/jet/v6 v6.3.1
 	github.com/MatusOllah/slogcolor v1.7.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.11.1-0.20251222140838-cc945dfe0c1d
+	github.com/choria-io/appbuilder v0.12.0
 	github.com/choria-io/fisk v0.7.2
 	github.com/expr-lang/expr v1.17.7
 	github.com/goccy/go-yaml v1.19.2
@@ -36,6 +36,8 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/choria-io/goform v0.0.3 // indirect
 	github.com/choria-io/scaffold v0.0.5 // indirect
+	github.com/clipperhouse/stringish v0.1.1 // indirect
+	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -49,10 +51,12 @@ require (
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/itchyny/timefmt-go v0.1.7 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.7.8 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
