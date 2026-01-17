@@ -6,7 +6,7 @@ require (
 	github.com/CloudyKit/jet/v6 v6.3.1
 	github.com/MatusOllah/slogcolor v1.7.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.11.1-0.20251222140838-cc945dfe0c1d
+	github.com/choria-io/appbuilder v0.12.0
 	github.com/choria-io/fisk v0.7.2
 	github.com/expr-lang/expr v1.17.7
 	github.com/goccy/go-yaml v1.19.2
@@ -51,7 +51,7 @@ require (
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/itchyny/timefmt-go v0.1.7 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.7.7 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.7.8 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
