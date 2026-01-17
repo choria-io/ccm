@@ -7,16 +7,21 @@ package main
 import (
 	"context"
 	"log"
+	"maps"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
+	"slices"
 
 	"github.com/adrg/xdg"
+	"github.com/goccy/go-yaml"
 
 	"github.com/choria-io/appbuilder/builder"
 	"github.com/choria-io/appbuilder/commands/exec"
+	"github.com/choria-io/appbuilder/commands/form"
 	"github.com/choria-io/appbuilder/commands/parent"
-	iu "github.com/choria-io/ccm/internal/util"
+	"github.com/choria-io/appbuilder/commands/scaffold"
 	"github.com/choria-io/fisk"
 )
 
@@ -44,6 +49,7 @@ func main() {
 	registerStatusCommand(app)
 
 	ctx, _ = signal.NotifyContext(context.Background(), os.Interrupt)
+
 	err := extendCli(app)
 	if err != nil {
 		log.Fatalf("Could not load CLI extensions: %s", err)
@@ -53,35 +59,62 @@ func main() {
 }
 
 func extendCli(app *fisk.Application) error {
-	var path string
-	var userFile = filepath.Join(xdg.ConfigHome, "choria", "ccm", "cli-extension.yaml")
-	var systemFile = "/etc/choria/ccm/cli-extension.yaml"
+	plugins := map[string]string{}
 
-	if xdg.ConfigHome != "" {
-		os.MkdirAll(filepath.Dir(userFile), 0755)
-	}
-
-	os.MkdirAll(filepath.Dir(systemFile), 0755)
-
-	if iu.FileExists(userFile) {
-		path = userFile
-	} else if iu.FileExists(systemFile) {
-		path = systemFile
-	}
-
-	if path == "" {
-		return nil
-	}
-
-	def, err := os.ReadFile(path)
+	err := findPluginsInDir(filepath.Join("/etc", "choria", "ccm", "plugins"), plugins)
 	if err != nil {
 		return err
 	}
 
+	if xdg.ConfigHome != "" {
+		err := findPluginsInDir(filepath.Join(xdg.ConfigHome, "choria", "ccm", "plugins"), plugins)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(plugins) == 0 {
+		return nil
+	}
+
 	parent.MustRegister()
 	exec.MustRegister()
+	form.MustRegister()
+	scaffold.MustRegister()
 
-	ext := app.Command("plugin", "External CLI plugin commands").Alias("ext")
+	for _, p := range slices.Sorted(maps.Keys(plugins)) {
+		def, err := os.ReadFile(plugins[p])
+		if err == nil {
+			var plugin builder.Definition
+			err = yaml.Unmarshal(def, &plugin)
+			if err == nil {
+				parentCmd := app.Command(p, plugin.Description)
+				return builder.MountAsCommand(ctx, parentCmd, def, nil)
+			}
+		}
+	}
 
-	return builder.MountAsCommand(ctx, ext, def, nil)
+	return nil
+}
+
+func findPluginsInDir(dir string, plugins map[string]string) error {
+	os.MkdirAll(dir, 0755) // this is just best efforts, ok to fail
+
+	pluginFileRe := regexp.MustCompile("^(.+)-plugin.yaml")
+
+	return filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		if pluginFileRe.MatchString(d.Name()) {
+			plugins[pluginFileRe.FindStringSubmatch(d.Name())[1]] = path
+		}
+
+		return nil
+	})
 }

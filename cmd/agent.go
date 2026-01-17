@@ -20,7 +20,7 @@ type agentCommand struct {
 func registerAgentCommand(ccm *fisk.Application) {
 	cmd := &agentCommand{}
 
-	ag := ccm.Command("agent", "Continues manifest runner").Action(cmd.runAction)
+	ag := ccm.Command("agent", "Continuous manifest runner").Action(cmd.runAction)
 	ag.Flag("config", "Configuration file to use").Required().ExistingFileVar(&cmd.cfg)
 	ag.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 }
