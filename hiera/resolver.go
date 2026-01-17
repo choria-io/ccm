@@ -325,6 +325,7 @@ func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key 
 	return Resolve(root, facts, opts, log)
 }
 
+// ResolveObjectStore consumes raw JSON or YAML bytes from an Object Store value and resolves the data using Hiera rules.
 // parseHierarchy extracts the hierarchy definition from the raw YAML map.
 func parseHierarchy(root map[string]any) (Hierarchy, error) {
 	raw, ok := root["hierarchy"].(map[string]any)

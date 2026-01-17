@@ -22,11 +22,7 @@ func jetParseManifestResources(path string, env *templates.Env) (yaml.RawMessage
 		return nil, err
 	}
 
-	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims("[[", "]]"))
-	tpl, err := set.Parse(path, string(jb))
-	if err != nil {
-		return nil, err
-	}
+	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims("[[", "]]"), jet.WithSafeWriter(nil))
 
 	variables := jet.VarMap{
 		"facts":   reflect.ValueOf(env.Facts),
@@ -35,6 +31,11 @@ func jetParseManifestResources(path string, env *templates.Env) (yaml.RawMessage
 		"Data":    reflect.ValueOf(env.Data),
 		"environ": reflect.ValueOf(env.Environ),
 		"Environ": reflect.ValueOf(env.Environ),
+	}
+
+	tpl, err := set.Parse(path, string(jb))
+	if err != nil {
+		return nil, err
 	}
 
 	buff := bytes.NewBuffer([]byte{})

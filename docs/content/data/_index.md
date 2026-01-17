@@ -36,7 +36,7 @@ We've added the following functions to Expr:
 | `lookup(key, default)`                            | Lookup data from the runtime environment using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md)                                                                                               |
 | `readFile("the.file")`, `file("the.file")`        | Read a file into a string, can only read files in the working directory                                                                                                                                                  |
 | `template(f)`, `template("file.templ")`           | Parses `f` using templates, if `f` is a string ending in `.templ` reads the file using `readFile()` and then parse it                                                                                                    |
-| `jet(f)`, `jet("file.jet")`, `jet(f, "[[", "]]")` | Parses `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md), optionally specifying delimiters, if `f` is a string ending in `.jet` reads the file using `readFile()` and then parse it |
+| `jet(f)`, `jet("file.jet")`, `jet(f, ctx)`, `jet(f, "[[", "]]")`, `jet(f, ctx, "[[", "]]")` | Parses `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md), optionally specifying context (map or lookup path) and delimiters, if `f` is a string ending in `.jet` reads the file using `readFile()` and then parse it |
 
 
 These expressions can be used in Hiera Data and even on the CLI.
@@ -92,6 +92,7 @@ Running `ccm ensure package '{{ lookup("data.package_name") }}'` will install `h
 > See the [Hiera](../hiera) section for details on how to configure Hiera Data in NATS
 
 The data can also be stored in a NATS Key-Value store and read from there instead of from `./hiera` by passing `--context` and `--hiera kv://BUCKET/key` options.
+HTTP sources are also supported via `https://example.net/data.yaml` when a NATS context is available.
 
 ## Environment
 

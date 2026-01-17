@@ -175,6 +175,7 @@ We can now parse the hierarchy using system facts, this is identical to using th
 $ ccm hiera parse kv://CCM/data --context ccm -S
 ```
 
+
 ### Data on Web Servers
 
 As above NATS example, you can also just store your Key-Value data on a web server and use the `http` protocol to fetch it.
