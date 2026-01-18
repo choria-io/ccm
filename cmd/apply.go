@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/goccy/go-yaml"
 
@@ -35,25 +34,26 @@ func registerApplyCommand(ccm *fisk.Application) {
 		facts: make(map[string]string),
 	}
 
-	apply := ccm.Command("apply", "Apply a manifest").Action(cmd.applyAction)
-	apply.HelpLong(`Paths to manifests can be given in a few ways
+	applyCmd := ccm.Command("apply", "Apply a manifest").Action(cmd.applyAction)
+	applyCmd.HelpLong(`Paths to manifests can be given in a few ways
 
    * manifest.json: A path to a local file on disk
    * obj://BUCKET/file.tgz: Downloads a gzipped tarball from a NATS Object Store
+   * https://example.com/file.tgz: Downloads a gzipped tarball from a HTTP Server
 
 When accessing manifests via NATS use the --context flag to provide 
 server urls and authentication parameters.
 `)
-	apply.Arg("manifest", "Path to manifest to apply").PlaceHolder("URL").Required().StringVar(&cmd.manifest)
-	apply.Flag("fact", "Set additional facts to merge with the system facts").StringMapVar(&cmd.facts)
-	apply.Flag("facts", "File holding additional facts to merge with the system facts").PlaceHolder("FILE").ExistingFileVar(&cmd.factsFile)
-	apply.Flag("hiera", "Hiera data file to use as overriding data source").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
-	apply.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
-	apply.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
-	apply.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
-	apply.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
-	apply.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
-	apply.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
+	applyCmd.Arg("manifest", "Path to manifest to apply").PlaceHolder("URL").Required().StringVar(&cmd.manifest)
+	applyCmd.Flag("fact", "Set additional facts to merge with the system facts").StringMapVar(&cmd.facts)
+	applyCmd.Flag("facts", "File holding additional facts to merge with the system facts").PlaceHolder("FILE").ExistingFileVar(&cmd.factsFile)
+	applyCmd.Flag("hiera", "Hiera data file to use as overriding data source").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
+	applyCmd.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
+	applyCmd.Flag("noop", "Do not make changes, only show what would be done").UnNegatableBoolVar(&cmd.noop)
+	applyCmd.Flag("monitor-only", "Only perform monitoring").UnNegatableBoolVar(&cmd.monitorOnly)
+	applyCmd.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
+	applyCmd.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
+	applyCmd.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
@@ -128,22 +128,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		}
 
 		fmt.Println()
-		fmt.Println("Manifest Run Summary")
-		fmt.Println()
-		fmt.Printf("             Run Time: %v\n", summary.TotalDuration.Round(time.Millisecond))
-		fmt.Printf("      Total Resources: %d\n", summary.TotalResources)
-		fmt.Printf("     Stable Resources: %d\n", summary.StableResources)
-		fmt.Printf("    Changed Resources: %d\n", summary.ChangedResources)
-		fmt.Printf("     Failed Resources: %d\n", summary.FailedResources)
-		fmt.Printf("    Skipped Resources: %d\n", summary.SkippedResources)
-		fmt.Printf("  Refreshed Resources: %d\n", summary.RefreshedCount)
-		fmt.Printf("   Unmet Requirements: %d\n", summary.RequirementsUnMetCount)
-		if summary.HealthCheckOKCount > 0 || summary.HealthCheckWarningCount > 0 || summary.HealthCheckCriticalCount > 0 || summary.HealthCheckUnknownCount > 0 {
-			fmt.Printf("    Checked Resources: %d (ok: %d, critical: %d, warning: %d unknown: %d)\n", summary.HealthCheckedCount, summary.HealthCheckOKCount, summary.HealthCheckCriticalCount, summary.HealthCheckWarningCount, summary.HealthCheckUnknownCount)
-		} else {
-			fmt.Printf("    Checked Resources: %d\n", summary.HealthCheckedCount)
-		}
-		fmt.Printf("         Total Errors: %d\n", summary.TotalErrors)
+		summary.RenderText(os.Stdout)
 	}
 
 	return nil
