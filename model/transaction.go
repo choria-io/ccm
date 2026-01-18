@@ -7,6 +7,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -292,4 +293,23 @@ func (s *SessionSummary) String() string {
 	parts = append(parts, "duration="+s.TotalDuration.Round(time.Millisecond).String())
 
 	return fmt.Sprintf("Session: %s", strings.Join(parts, ", "))
+}
+
+func (s *SessionSummary) RenderText(w io.Writer) {
+	fmt.Fprintln(w, "Manifest Run Summary")
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "             Run Time: %v\n", s.TotalDuration.Round(time.Millisecond))
+	fmt.Fprintf(w, "      Total Resources: %d\n", s.TotalResources)
+	fmt.Fprintf(w, "     Stable Resources: %d\n", s.StableResources)
+	fmt.Fprintf(w, "    Changed Resources: %d\n", s.ChangedResources)
+	fmt.Fprintf(w, "     Failed Resources: %d\n", s.FailedResources)
+	fmt.Fprintf(w, "    Skipped Resources: %d\n", s.SkippedResources)
+	fmt.Fprintf(w, "  Refreshed Resources: %d\n", s.RefreshedCount)
+	fmt.Fprintf(w, "   Unmet Requirements: %d\n", s.RequirementsUnMetCount)
+	if s.HealthCheckOKCount > 0 || s.HealthCheckWarningCount > 0 || s.HealthCheckCriticalCount > 0 || s.HealthCheckUnknownCount > 0 {
+		fmt.Fprintf(w, "    Checked Resources: %d (ok: %d, critical: %d, warning: %d unknown: %d)\n", s.HealthCheckedCount, s.HealthCheckOKCount, s.HealthCheckCriticalCount, s.HealthCheckWarningCount, s.HealthCheckUnknownCount)
+	} else {
+		fmt.Fprintf(w, "    Checked Resources: %d\n", s.HealthCheckedCount)
+	}
+	fmt.Fprintf(w, "         Total Errors: %d\n", s.TotalErrors)
 }
