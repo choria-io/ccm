@@ -1,8 +1,7 @@
-baseURL = "https://choria-io.github.io/ccm/"
+baseURL = "https://choria-cm.dev/"
 languageCode = "en-us"
 title = "Choria Configuration Manager"
 theme = "hugo-theme-relearn"
-canonifyURLs = true
 
 [outputs]
 home = [ "HTML", "RSS", "JSON"]

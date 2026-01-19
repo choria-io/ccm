@@ -80,6 +80,17 @@ In a manifest:
         cwd: /tmp
 ```
 
+Alternatively for long commands or to improve UX for referencing execs in `require` or `subscribe`:
+
+```yaml
+- exec:
+    - touch_hello:
+        command: /usr/bin/touch /tmp/hello
+        creates: /tmp/hello
+        timeout: 30s
+        cwd: /tmp
+```
+
 On the CLI:
 
 ```nohighlight
@@ -179,12 +190,12 @@ $ ccm ensure package zsh 5.9
 
 ### Ensure Values
 
-| Value     | Description                                      |
-|-----------|--------------------------------------------------|
-| `present` | The package must be installed                    |
-| `latest`  | The package must be installed at latest version  |
-| `absent`  | The package must not be installed                |
-| `<version>` | The package must be installed at this version  |
+| Value       | Description                                     |
+|-------------|-------------------------------------------------|
+| `present`   | The package must be installed                   |
+| `latest`    | The package must be installed at latest version |
+| `absent`    | The package must not be installed               |
+| `<version>` | The package must be installed at this version   |
 
 ### Properties
 
@@ -231,10 +242,10 @@ If `ensure` is not specified, it defaults to `running`.
 
 ### Properties
 
-| Property            | Description                                                                           |
-|---------------------|---------------------------------------------------------------------------------------|
-| `name`              | Service name                                                                          |
-| `ensure`            | Desired state (`running` or `stopped`; default: `running`)                            |
-| `enable` (boolean)  | Enable the service to start at boot                                                   |
-| `subscribe` (array) | Resources to watch; restart the service when they change (`type#name` or `type#alias`)|
-| `provider`          | Force a specific provider (`systemd` only)                                            |
+| Property            | Description                                                                            |
+|---------------------|----------------------------------------------------------------------------------------|
+| `name`              | Service name                                                                           |
+| `ensure`            | Desired state (`running` or `stopped`; default: `running`)                             |
+| `enable` (boolean)  | Enable the service to start at boot                                                    |
+| `subscribe` (array) | Resources to watch; restart the service when they change (`type#name` or `type#alias`) |
+| `provider`          | Force a specific provider (`systemd` only)                                             |

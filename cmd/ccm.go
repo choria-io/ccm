@@ -82,8 +82,7 @@ func extendCli(app *fisk.Application) error {
 			var plugin builder.Definition
 			err = yaml.Unmarshal(def, &plugin)
 			if err == nil {
-				parentCmd := app.Command(p, plugin.Description)
-				return builder.MountAsCommand(ctx, parentCmd, def, nil)
+				return builder.MountAsCommand(ctx, app, def, nil)
 			}
 		}
 	}
