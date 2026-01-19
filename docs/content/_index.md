@@ -21,6 +21,8 @@ CCM is a small-scale Configuration Management system designed to meet users wher
    * Choria RPC
    * Embedded in Go applications
  
+On the shell the focus is to create a system that excel at ad-hoc use cases and managing snowflakes, ideal for developer personal virtual machines and laptops.
+
 ## Status
 
 This is experimental and a work in progress. Currently, only `exec`, `file`, `service`, and `package` resources are implemented, with support limited to `dnf` and `systemd`.
