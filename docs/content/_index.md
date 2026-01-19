@@ -11,6 +11,7 @@ Traditional Configuration Management tools are not well suited for application m
 CCM is a small-scale Configuration Management system designed to meet users where they are:
 
  * Focused on the needs of a single application (think of it as a single module)
+ * Excel at bringing Configuration Management to ad-hoc and snowflake use cases like personal virtual machines and laptops
  * Supports hierarchical data similar to Hiera, with a focus on single-file manifests and simple data structures
  * No dependencies for the binaries to operate other than your OS
  * Designed to work at a first-class level in many environments:
@@ -20,8 +21,6 @@ CCM is a small-scale Configuration Management system designed to meet users wher
    * Choria Autonomous Agents
    * Choria RPC
    * Embedded in Go applications
- 
-On the shell the focus is to create a system that excel at ad-hoc use cases and managing snowflakes, ideal for developer personal virtual machines and laptops.
 
 ## Status
 

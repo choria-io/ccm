@@ -113,4 +113,4 @@ resources:
 
 For complete App Builder documentation including all command types, templating features, and advanced options, see the [App Builder documentation](https://choria-io.github.io/appbuilder/index.html).
 
-Since version `0.12.0` of App Builder it has a transform that can invoke CCM Manifests, this combines well with flags, arguments and form wizards to create custom UI's that manage your infrastructure. 
+Since version `0.13.0` of App Builder it has a transform and a command that can invoke CCM Manifests, this combines well with flags, arguments and form wizards to create custom UI's that manage your infrastructure. 
