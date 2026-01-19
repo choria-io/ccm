@@ -15,13 +15,10 @@ import (
 	"slices"
 
 	"github.com/adrg/xdg"
+	"github.com/choria-io/appbuilder/commands"
 	"github.com/goccy/go-yaml"
 
 	"github.com/choria-io/appbuilder/builder"
-	"github.com/choria-io/appbuilder/commands/exec"
-	"github.com/choria-io/appbuilder/commands/form"
-	"github.com/choria-io/appbuilder/commands/parent"
-	"github.com/choria-io/appbuilder/commands/scaffold"
 	"github.com/choria-io/fisk"
 )
 
@@ -77,10 +74,7 @@ func extendCli(app *fisk.Application) error {
 		return nil
 	}
 
-	parent.MustRegister()
-	exec.MustRegister()
-	form.MustRegister()
-	scaffold.MustRegister()
+	commands.MustRegisterStandardCommands()
 
 	for _, p := range slices.Sorted(maps.Keys(plugins)) {
 		def, err := os.ReadFile(plugins[p])
