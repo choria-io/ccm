@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -335,7 +335,7 @@ var _ = Describe("ExecutableInPath", func() {
 	It("returns false for non-existent executables", func() {
 		_, found, err := ExecutableInPath("nonexistent-command-12345")
 		Expect(found).To(BeFalse())
-		Expect(err).To(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 	})
 })
 

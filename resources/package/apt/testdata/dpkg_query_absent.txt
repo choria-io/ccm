@@ -1,0 +1,1 @@
+[1mdpkg-query:[0m no packages found matching nonexistent-pkg

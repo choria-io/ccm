@@ -304,6 +304,7 @@ var _ = Describe("Package Type", func() {
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+					provider.EXPECT().VersionCmp("1.0.0", "2.0.0", false).Return(-1, nil)
 					provider.EXPECT().Upgrade(gomock.Any(), "zsh", "2.0.0").Return(nil)
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(finalState, nil)
 
@@ -322,6 +323,7 @@ var _ = Describe("Package Type", func() {
 					finalState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+					provider.EXPECT().VersionCmp("2.0.0", "1.0.0", false).Return(1, nil)
 					provider.EXPECT().Downgrade(gomock.Any(), "zsh", "1.0.0").Return(nil)
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(finalState, nil)
 
@@ -337,6 +339,7 @@ var _ = Describe("Package Type", func() {
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+					provider.EXPECT().VersionCmp("1.0.0", "2.0.0", false).Return(-1, nil)
 					provider.EXPECT().Upgrade(gomock.Any(), "zsh", "2.0.0").Return(fmt.Errorf("upgrade failed"))
 
 					event, err := pkg.Apply(ctx)
@@ -349,6 +352,7 @@ var _ = Describe("Package Type", func() {
 					initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 
 					provider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+					provider.EXPECT().VersionCmp("2.0.0", "1.0.0", false).Return(1, nil)
 					provider.EXPECT().Downgrade(gomock.Any(), "zsh", "1.0.0").Return(fmt.Errorf("downgrade failed"))
 
 					event, err := pkg.Apply(ctx)
@@ -564,6 +568,7 @@ var _ = Describe("Package Type", func() {
 				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "1.0.0"}}
 
 				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				noopProvider.EXPECT().VersionCmp("1.0.0", "2.0.0", false).Return(-1, nil)
 				// No Upgrade call expected
 
 				result, err := noopPkg.Apply(ctx)
@@ -578,6 +583,7 @@ var _ = Describe("Package Type", func() {
 				initialState := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh", Ensure: "2.0.0"}}
 
 				noopProvider.EXPECT().Status(gomock.Any(), "zsh").Return(initialState, nil)
+				noopProvider.EXPECT().VersionCmp("2.0.0", "1.0.0", false).Return(1, nil)
 				// No Downgrade call expected
 
 				result, err := noopPkg.Apply(ctx)

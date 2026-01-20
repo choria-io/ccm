@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -167,7 +167,15 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		refreshState = true
 
 	default:
-		switch iu.VersionCmp(initialStatus.Ensure, properties.Ensure, false) {
+		t.log.Debug("Comparing versions", "initial", initialStatus, "provider", p.Name(), "ensure", properties.Ensure)
+		vc, err := p.VersionCmp(initialStatus.Ensure, properties.Ensure, false)
+		if err != nil {
+			return nil, err
+		}
+
+		t.log.Debug("Package version comparison", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure, "comparison", vc)
+
+		switch vc {
 		case 0:
 			t.log.Debug("Package already present", "version", initialStatus.Ensure, "provider", p.Name(), "ensure", properties.Ensure)
 			refreshState = false

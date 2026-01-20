@@ -27,6 +27,9 @@ import (
 // ExecutableInPath finds the command name in path
 func ExecutableInPath(file string) (string, bool, error) {
 	f, err := exec.LookPath(file)
+	if errors.Is(err, exec.ErrNotFound) {
+		return "", false, nil
+	}
 
 	return f, err == nil, err
 }

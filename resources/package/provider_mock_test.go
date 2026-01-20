@@ -127,3 +127,18 @@ func (mr *MockPackageProviderMockRecorder) Upgrade(ctx, pkg, version any) *gomoc
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upgrade", reflect.TypeOf((*MockPackageProvider)(nil).Upgrade), ctx, pkg, version)
 }
+
+// VersionCmp mocks base method.
+func (m *MockPackageProvider) VersionCmp(versionA, versionB string, ignoreTrailingZeroes bool) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VersionCmp", versionA, versionB, ignoreTrailingZeroes)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VersionCmp indicates an expected call of VersionCmp.
+func (mr *MockPackageProviderMockRecorder) VersionCmp(versionA, versionB, ignoreTrailingZeroes any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VersionCmp", reflect.TypeOf((*MockPackageProvider)(nil).VersionCmp), versionA, versionB, ignoreTrailingZeroes)
+}
