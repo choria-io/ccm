@@ -31,6 +31,7 @@ import (
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	serviceresource "github.com/choria-io/ccm/resources/service"
+	"github.com/choria-io/ccm/templates"
 )
 
 // Apply represents a parsed and resolved manifest ready for execution
@@ -466,6 +467,21 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 			return nil, nil, err
 		}
 		parser.CCM.Resources = parsed
+	}
+
+	if apply.postMessage != "" {
+		parsed, err := templates.ResolveTemplateString(apply.postMessage, env)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid post_message template: %w", err)
+		}
+		apply.postMessage = parsed
+	}
+	if apply.preMessage != "" {
+		parsed, err := templates.ResolveTemplateString(apply.preMessage, env)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid pre_message template: %w", err)
+		}
+		apply.preMessage = parsed
 	}
 
 	err = apply.validateManifestAny(parser)

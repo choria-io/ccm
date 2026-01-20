@@ -109,6 +109,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 	}
 
 	if manifest.PreMessage() != "" {
+		fmt.Println()
 		fmt.Println(manifest.PreMessage())
 	}
 

@@ -3,7 +3,7 @@ module github.com/choria-io/ccm
 go 1.24.9
 
 require (
-	github.com/CloudyKit/jet/v6 v6.3.1
+	github.com/CloudyKit/jet/v6 v6.3.2-0.20260120165216-7cc3d1922b08
 	github.com/MatusOllah/slogcolor v1.7.0
 	github.com/adrg/xdg v0.5.3
 	github.com/choria-io/appbuilder v0.13.0

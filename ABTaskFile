@@ -176,6 +176,7 @@ commands:
     - name: docs
       type: parent
       description: Documentation management
+      aliases: [doc]
       commands:
         - name: serve
           description: Serve docs locally

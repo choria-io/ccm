@@ -7,8 +7,8 @@ github.com/AlecAivazis/survey/v2 v2.3.7/go.mod h1:xUTIdE4KCOIjsBAE1JYsUPoCqYdZ1r
 github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53/go.mod h1:+3IMCy2vIlbG1XG/0ggNQv0SvxCAIpPM5b1nCz56Xno=
 github.com/CloudyKit/fastprinter v0.0.0-20251202014920-1725d2651bd4 h1:DQ1+lDdBve+u+aovjh4wV6sYnvZKH0Hx8GaQOi4vYl8=
 github.com/CloudyKit/fastprinter v0.0.0-20251202014920-1725d2651bd4/go.mod h1:eauGmjfZG874MOAEPVeqg21mZCbTOLW+tFe8F7NpfnY=
-github.com/CloudyKit/jet/v6 v6.3.1 h1:6IAo5Cx21xrHVaR8zzXN5gJatKV/wO7Nf6bfCnCSbUw=
-github.com/CloudyKit/jet/v6 v6.3.1/go.mod h1:lf8ksdNsxZt7/yH/3n4vJQWA9RUq4wpaHtArHhGVMOw=
+github.com/CloudyKit/jet/v6 v6.3.2-0.20260120165216-7cc3d1922b08 h1:9zDDQa41sHghY/mo5y/5rVIW9okUgwLzqwixjU3P7h4=
+github.com/CloudyKit/jet/v6 v6.3.2-0.20260120165216-7cc3d1922b08/go.mod h1:lf8ksdNsxZt7/yH/3n4vJQWA9RUq4wpaHtArHhGVMOw=
 github.com/Masterminds/goutils v1.1.1 h1:5nUrii3FMTL5diU80unEVvNevw1nH4+ZV4DSLVJLSYI=
 github.com/Masterminds/goutils v1.1.1/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=

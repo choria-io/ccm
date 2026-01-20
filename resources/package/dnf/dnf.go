@@ -1,4 +1,4 @@
-// Copyright (c) 2025-2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
 )
 
@@ -145,4 +146,8 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 	}
 
 	return state, nil
+}
+
+func (p *Provider) VersionCmp(versionA, versionB string, ignoreTrailingZeroes bool) (int, error) {
+	return iu.VersionCmp(versionA, versionB, ignoreTrailingZeroes), nil
 }
