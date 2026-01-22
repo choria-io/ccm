@@ -74,12 +74,16 @@ func (e *Env) template(params ...any) (any, error) {
 		return "", fmt.Errorf("template requires a string argument")
 	}
 
-	if strings.HasSuffix(contents, ".templ") {
+	suff := filepath.Ext(contents)
+	switch suff {
+	case ".templ":
 		f, err := e.readFile(contents)
 		if err != nil {
 			return nil, err
 		}
 		contents = f.(string)
+	case ".jet":
+		return e.jet(contents)
 	}
 
 	return ResolveTemplateTyped(contents, e)

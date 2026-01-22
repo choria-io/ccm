@@ -42,7 +42,7 @@ In templates, you have direct access to:
 |--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `lookup(key, default)`         | Lookup data using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md). Example: `lookup("facts.host.info.os", "linux")`                           |
 | `readFile(path)`, `file(path)` | Read a file into a string (files must be in the working directory)                                                                                                        |
-| `template(f)`                  | Parse `f` using templates. If `f` ends in `.templ`, reads the file first                                                                                                  |
+| `template(f)`                  | Parse `f` using templates. If `f` ends in `.templ`, reads the file first, if it ends in `.jet` calls the `jet()` function                                                 |
 | `jet(f)`, `jet(f, "[[", "]]")` | Parse `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md) with optional custom delimiters. If `f` ends in `.jet`, reads the file first |
 
 ### GJSON Path Examples

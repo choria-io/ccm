@@ -369,6 +369,60 @@ var _ = Describe("Templates", func() {
 		})
 	})
 
+	Describe("template function", func() {
+		BeforeEach(func() {
+			env.WorkingDir = "testdata"
+		})
+
+		It("Should detect .jet extension and delegate to jet()", func() {
+			result, err := ResolveTemplateString("{{ template('test.jet') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("myapp v1.2.3"))
+		})
+
+		It("Should detect .templ extension and process as expr template", func() {
+			result, err := ResolveTemplateString("{{ template('test.templ') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("myapp v1.2.3"))
+		})
+
+		It("Should process inline content without file extension", func() {
+			result, err := ExprParse("template('plain text')", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("plain text"))
+		})
+
+		It("Should process inline expr template without file extension", func() {
+			result, err := ExprParse(`template("prefix-" + Data.app_name)`, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("prefix-myapp"))
+		})
+
+		It("Should error when .jet file does not exist", func() {
+			_, err := ResolveTemplateString("{{ template('nonexistent.jet') }}", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read file"))
+		})
+
+		It("Should error when .templ file does not exist", func() {
+			_, err := ResolveTemplateString("{{ template('nonexistent.templ') }}", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read file"))
+		})
+
+		It("Should error when called without arguments", func() {
+			_, err := ResolveTemplateString("{{ template() }}", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("template requires a string argument"))
+		})
+
+		It("Should error when called with non-string argument", func() {
+			_, err := ResolveTemplateString("{{ template(123) }}", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("template requires a string argument"))
+		})
+	})
+
 	Describe("Edge cases", func() {
 		It("Should handle nil values", func() {
 			env.Data["null_value"] = nil
