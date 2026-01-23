@@ -27,7 +27,6 @@ type hieraCommand struct {
 	input       string
 	factsInput  map[string]string
 	factsFile   string
-	sysFacts    bool
 	envFacts    bool
 	yamlOutput  bool
 	envOutput   bool
@@ -48,7 +47,6 @@ func registerHieraCommand(ccm *fisk.Application) {
 	parse.Arg("input", "Input JSON or YAML file to resolve").Envar("HIERA_INPUT").Required().StringVar(&cmd.input)
 	parse.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)
 	parse.Flag("facts", "JSON or YAML file containing facts").ExistingFileVar(&cmd.factsFile)
-	parse.Flag("system-facts", "Provide facts from the internal facts provider").Short('S').UnNegatableBoolVar(&cmd.sysFacts)
 	parse.Flag("env-facts", "Provide facts from the process environment").Short('E').UnNegatableBoolVar(&cmd.envFacts)
 	parse.Flag("yaml", "Output YAML instead of JSON").UnNegatableBoolVar(&cmd.yamlOutput)
 	parse.Flag("env", "Output environment variables").UnNegatableBoolVar(&cmd.envOutput)
@@ -60,7 +58,6 @@ func registerHieraCommand(ccm *fisk.Application) {
 	facts := hiera.Command("facts", "Shows resolved facts").Action(cmd.showFactsAction)
 	facts.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)
 	facts.Flag("facts", "JSON or YAML file containing facts").ExistingFileVar(&cmd.factsFile)
-	facts.Flag("system-facts", "Provide facts from the internal facts provider").Short('S').UnNegatableBoolVar(&cmd.sysFacts)
 	facts.Flag("env-facts", "Provide facts from the process environment").Short('E').UnNegatableBoolVar(&cmd.envFacts)
 	facts.Flag("query", "Performs a gjson query on the facts").StringVar(&cmd.query)
 }
@@ -175,19 +172,17 @@ func (cmd *hieraCommand) renderEnvOutput(w io.Writer, res any) error {
 func (cmd *hieraCommand) resolveFacts() (map[string]any, error) {
 	facts := make(map[string]any)
 
-	if cmd.sysFacts {
-		mgr, _, err := newManager("", "", "", false, true, nil)
-		if err != nil {
-			return nil, err
-		}
+	mgr, _, err := newManager("", "", "", false, true, nil)
+	if err != nil {
+		return nil, err
+	}
 
-		sf, err := mgr.Facts(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range sf {
-			facts[k] = v
-		}
+	sf, err := mgr.Facts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range sf {
+		facts[k] = v
 	}
 
 	if cmd.envFacts {
