@@ -177,30 +177,33 @@ a:focus {
   inset-inline-start: 0;
   line-height: 1.574;
   min-height: 100%;
+  overflow: hidden;
   position: fixed;
-  min-width: var(--INTERNAL-MENU-WIDTH-L);
-  max-width: var(--INTERNAL-MENU-WIDTH-L);
-  width: var(--INTERNAL-MENU-WIDTH-L);
+  min-width: var(--INTERNAL-MENU-L-width);
+  max-width: var(--INTERNAL-MENU-L-width);
+  width: var(--INTERNAL-MENU-L-width);
 }
 
 #R-sidebar a {
   text-decoration: none;
 }
 
-#R-header-wrapper {
-  background-color: var(--INTERNAL-MENU-HEADER-BG-color);
+#R-header-wrapper > * {
+  padding-inline: 1rem;
+}
+#R-header-wrapper > search {
   color: var(--INTERNAL-MENU-SEARCH-color);
-  text-align: center;
-  padding: 1rem;
-  position: relative;
+  display: block;
+  margin-block: 0.5rem;
 }
-#R-header {
-  border-block-end: 1px solid transparent;
-  position: relative;
-  z-index: 1;
+
+#R-logo.R-default:has(> .logo-title) + search,
+#R-header-wrapper > search:not(:only-child) {
+  margin-bottom: 1rem;
 }
-#R-header a {
-  display: inline-block;
+
+#R-header-wrapper > search > form {
+  overflow: hidden;
 }
 
 .searchbox {
@@ -210,11 +213,10 @@ a:focus {
   border-style: solid;
   border-width: 1px;
   position: relative;
-  margin-top: 1rem;
 }
 
 .searchbox > :first-child {
-  inset-inline-start: 0.5rem;
+  inset-inline-start: 0.333rem;
   position: absolute;
 }
 
@@ -233,17 +235,17 @@ a:focus {
 }
 
 .searchbox > :last-child {
-  inset-inline-end: 0.5rem;
+  inset-inline-end: 0.333rem;
   position: absolute;
 }
 
-#R-sidebar .searchbox > :first-child,
-#R-sidebar .searchbox > :last-child {
+#R-sidebar .searchbox > button {
   color: var(--INTERNAL-MENU-SEARCH-color);
-  opacity: 0.65;
+  opacity: 0.75;
 }
 
 #R-sidebar .searchbox button:hover {
+  color: var(--INTERNAL-MENU-SEARCH-HOVER-color);
   opacity: 1;
 }
 
@@ -488,13 +490,13 @@ article .R-taxonomy.tags a.term-link:hover:after {
   flex-grow: 1;
   flex-shrink: 0;
   height: 100%;
-  margin-inline-start: var(--INTERNAL-MENU-WIDTH-L);
+  margin-inline-start: var(--INTERNAL-MENU-L-width);
   min-height: 100%;
   overflow-wrap: break-word; /* avoid x-scrolling of body if it is to large to fit */
   position: relative; /* PS */
-  min-width: calc(100% - var(--INTERNAL-MENU-WIDTH-L));
-  max-width: calc(100% - var(--INTERNAL-MENU-WIDTH-L));
-  width: calc(100% - var(--INTERNAL-MENU-WIDTH-L));
+  min-width: calc(100% - var(--INTERNAL-MENU-L-width));
+  max-width: calc(100% - var(--INTERNAL-MENU-L-width));
+  width: calc(100% - var(--INTERNAL-MENU-L-width));
   z-index: 70;
 }
 
@@ -643,17 +645,17 @@ article a:focus > img:only-child:empty {
 #R-body .flex-block-wrapper {
   margin-left: auto;
   margin-right: auto;
-  max-width: calc(var(--INTERNAL-MAIN-WIDTH-MAX) - var(--INTERNAL-MENU-WIDTH-L) - 2 * 3.25rem);
+  max-width: calc(var(--INTERNAL-MAIN-MAX-width) - var(--INTERNAL-MENU-L-width) - 2 * 3.25rem);
   width: 100%;
 }
 #R-body .flex-block-wrapper:has(article.narrow) {
-  max-width: calc(var(--INTERNAL-MAIN-WIDTH-MAX) - var(--INTERNAL-MENU-WIDTH-L) - 2 * 9.75rem);
+  max-width: calc(var(--INTERNAL-MAIN-MAX-width) - var(--INTERNAL-MENU-L-width) - 2 * 9.75rem);
 }
-.main-width-max #R-body .flex-block-wrapper {
-  width: calc(var(--INTERNAL-MAIN-WIDTH-MAX) - var(--INTERNAL-MENU-WIDTH-L) - 2 * 3.25rem);
+.main-max-width #R-body .flex-block-wrapper {
+  width: calc(var(--INTERNAL-MAIN-MAX-width) - var(--INTERNAL-MENU-L-width) - 2 * 3.25rem);
 }
-.main-width-max #R-body .flex-block-wrapper:has(article.narrow) {
-  width: calc(var(--INTERNAL-MAIN-WIDTH-MAX) - var(--INTERNAL-MENU-WIDTH-L) - 2 * 9.75rem);
+.main-max-width #R-body .flex-block-wrapper:has(article.narrow) {
+  width: calc(var(--INTERNAL-MAIN-MAX-width) - var(--INTERNAL-MENU-L-width) - 2 * 9.75rem);
 }
 
 #R-body-inner:has(> .flex-block-wrapper article.narrow) {
@@ -764,8 +766,7 @@ h1 {
 }
 
 h2,
-.card-title,
-.children-type-list .children-title-1 {
+.card-title {
   color: var(--INTERNAL-MAIN-TITLES-H2-TEXT-color);
   font-size: 2.2rem;
   font-variation-settings: var(--INTERNAL-MAIN-TITLES-H2-font-variation-settings);
@@ -774,8 +775,7 @@ h2,
   letter-spacing: var(--INTERNAL-MAIN-TITLES-H2-letter-spacing);
 }
 
-h3,
-.children-type-list .children-title-2 {
+h3 {
   color: var(--INTERNAL-MAIN-TITLES-H3-TEXT-color);
   font-size: 1.8rem;
   font-variation-settings: var(--INTERNAL-MAIN-TITLES-H3-font-variation-settings);
@@ -784,8 +784,7 @@ h3,
   letter-spacing: var(--INTERNAL-MAIN-TITLES-H3-letter-spacing);
 }
 
-h4,
-.children-type-list .children-title-3 {
+h4 {
   color: var(--INTERNAL-MAIN-TITLES-H4-TEXT-color);
   font-size: 1.85rem;
   font-variation-settings: var(--INTERNAL-MAIN-TITLES-H4-font-variation-settings);
@@ -794,8 +793,7 @@ h4,
   letter-spacing: var(--INTERNAL-MAIN-TITLES-H4-letter-spacing);
 }
 
-h5,
-.children-type-list .children-title-4 {
+h5 {
   color: var(--INTERNAL-MAIN-TITLES-H5-TEXT-color);
   font-size: 1.6rem;
   font-variation-settings: var(--INTERNAL-MAIN-TITLES-H5-font-variation-settings);
@@ -804,8 +802,7 @@ h5,
   letter-spacing: var(--INTERNAL-MAIN-TITLES-H5-letter-spacing);
 }
 
-h6,
-.children-type-list .children-title-5 {
+h6 {
   color: var(--INTERNAL-MAIN-TITLES-H6-TEXT-color);
   font-size: 1.3rem;
   font-variation-settings: var(--INTERNAL-MAIN-TITLES-H6-font-variation-settings);
@@ -820,8 +817,7 @@ h3,
 .article-subheading,
 h4,
 h5,
-h6,
-.children-type-list .children-title {
+h6 {
   hyphens: auto;
   margin: 1.5rem 0 1rem 0;
   /* big titles cause a horizontal scrollbar - fixing this by wrapping text */
@@ -939,22 +935,40 @@ p:empty {
 }
 
 /* Children shortcode */
-
-.children-type-tree p,
-.children-type-flat p {
+.children-type-group li > p + p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-wrap-mode: nowrap;
+}
+.children-type-group li > p + p,
+.children-type-tree li > p + p,
+.children-type-flat li > p {
+  font-size: 0.859625rem;
   font-style: italic;
 }
 
+.children-type-group p,
 .children-type-tree p,
-.children-type-list p,
-.children-type-flat p {
+.children-type-flat p,
+.children-type-list p {
   margin-bottom: 0;
   margin-top: 0;
   padding-bottom: 0;
   padding-top: 0;
 }
 
-#R-body-inner .children-type-list .children-title {
+.children-type-flat,
+.children-type-list {
+  list-style: none;
+  padding-inline-start: 0;
+}
+
+.children-type-flat li,
+.children-type-list li {
+  margin-inline-start: 0;
+}
+
+.children-type-list :is(h1, h2, h3, h4, h5, h6) {
   margin-bottom: 0;
   margin-top: 1rem;
 }
@@ -1184,10 +1198,13 @@ tbody > tr:nth-child(even) > td {
 #R-topbar > .topbar-wrapper {
   align-items: center;
   background: var(--INTERNAL-TOPBAR-BG-color);
+  color: var(--INTERNAL-TOPBAR-TEXT-color);
   display: flex;
   flex-basis: 100%;
   flex-direction: row;
   height: 100%;
+  --VARIABLE-LINK-color: var(--INTERNAL-TOPBAR-LINK-color);
+  --VARIABLE-LINK-HOVER-color: var(--INTERNAL-TOPBAR-LINK-HOVER-color);
 }
 
 .topbar-button {
@@ -1229,8 +1246,9 @@ tbody > tr:nth-child(even) > td {
   border-inline-start-color: var(--INTERNAL-MENU-TOPBAR-SEPARATOR-color);
   border-inline-start-style: solid;
   border-inline-start-width: 1px;
-  margin-inline-end: calc(var(--bpx1) * -0.75px);
-  inset-inline-start: calc(var(--bpx1) * -0.75px);
+  height: 2rem;
+  margin-inline-end: calc(var(--bpx1) * -1px);
+  inset-inline-start: calc(var(--bpx1) * -1px);
   position: relative;
   width: 1px;
 }
@@ -1324,35 +1342,33 @@ html[dir='rtl'] .topbar-button-next i {
 
 @media screen and (max-width: 59.999rem) {
   #R-sidebar {
-    min-width: var(--INTERNAL-MENU-WIDTH-M);
-    max-width: var(--INTERNAL-MENU-WIDTH-M);
-    width: var(--INTERNAL-MENU-WIDTH-M);
+    min-width: var(--INTERNAL-MENU-M-width);
+    max-width: var(--INTERNAL-MENU-M-width);
+    width: var(--INTERNAL-MENU-M-width);
   }
   #R-body {
-    margin-inline-start: var(--INTERNAL-MENU-WIDTH-M);
-    min-width: calc(100% - var(--INTERNAL-MENU-WIDTH-M));
-    max-width: calc(100% - var(--INTERNAL-MENU-WIDTH-M));
-    width: calc(100% - var(--INTERNAL-MENU-WIDTH-M));
+    margin-inline-start: var(--INTERNAL-MENU-M-width);
+    min-width: calc(100% - var(--INTERNAL-MENU-M-width));
+    max-width: calc(100% - var(--INTERNAL-MENU-M-width));
+    width: calc(100% - var(--INTERNAL-MENU-M-width));
   }
 }
 @media screen and (max-width: 47.999rem) {
   /* we don't support sidebar flyout in mobile */
   .mobile-support #R-sidebar {
-    inset-inline-start: calc(-1 * var(--INTERNAL-MENU-WIDTH-S));
-    min-width: var(--INTERNAL-MENU-WIDTH-S);
-    max-width: var(--INTERNAL-MENU-WIDTH-S);
-    width: var(--INTERNAL-MENU-WIDTH-S);
+    inset-inline-start: calc(-1 * var(--INTERNAL-MENU-S-width));
+    min-width: var(--INTERNAL-MENU-S-width);
+    max-width: var(--INTERNAL-MENU-S-width);
+    width: var(--INTERNAL-MENU-S-width);
   }
   .mobile-support #navshow {
     display: inline;
   }
   .mobile-support #R-body {
+    margin-inline-start: 0;
     min-width: 100%;
     max-width: 100%;
     width: 100%;
-  }
-  .mobile-support #R-body {
-    margin-inline-start: 0;
   }
   .mobile-support.sidebar-flyout {
     overflow: hidden;
@@ -1362,7 +1378,7 @@ html[dir='rtl'] .topbar-button-next i {
     z-index: 90;
   }
   .mobile-support.sidebar-flyout #R-body {
-    margin-inline-start: var(--INTERNAL-MENU-WIDTH-S);
+    margin-inline-start: var(--INTERNAL-MENU-S-width);
     overflow: hidden;
   }
   .mobile-support.sidebar-flyout #R-body-overlay {
@@ -1754,7 +1770,8 @@ i.cstyle {
 
 .btn > * > i.fa-fw {
   /* fa-fw makes rectangles instead of squares, so we adjust back, hopefully no icon exceeds that area */
-  width: 1.1em;
+  line-height: 1.15em;
+  width: 1.15em;
 }
 
 .btn > * > i.fa-fw.fa-lg {
@@ -1778,8 +1795,8 @@ i.cstyle {
   /* avoid breakage if no content is given */
   content: '\200b';
   display: block;
-  min-height: 1.1em;
-  min-width: 1.1em;
+  min-height: 1.15em;
+  min-width: 1.15em;
 }
 
 #R-body #R-body-inner .btn > *.highlight:after {
@@ -1847,8 +1864,7 @@ h2 a,
 h3 a,
 h4 a,
 h5 a,
-h6 a,
-.children-type-list .children-title a {
+h6 a {
   font-weight: inherit;
 }
 
@@ -2011,8 +2027,8 @@ span.math:has(> mjx-container[display]) {
     left: 50%;
     text-align: center;
     width: 200px;
-    background: rgba( 255, 255, 255, 1 );
-    color: rgba( 54, 133, 18, 1 );
+    background: rgba(255, 255, 255, 1);
+    color: rgba(54, 133, 18, 1);
     padding: .8em 0 .7em;
     font-size: 16px;
     z-index: 5000;
@@ -2065,17 +2081,16 @@ span.math:has(> mjx-container[display]) {
   height: 1.5rem;
 }
 
-#R-sidebar .autocomplete-suggestion {
-  /* restore autocomplete default value for sidebar, because it is affectd
-  by coarse element styling */
-  color: rgba(40, 40, 40, 1);
-  display: block;
+#R-sidebar .autocomplete-suggestions {
+  background-color: var(--INTERNAL-MAIN-BG-color);
+  border: 0 solid rgba(134, 134, 134, 0.166);
+  box-shadow: 1px 2px 5px 1px rgba(134, 134, 134, 0.333);
 }
 
-#R-sidebar .autocomplete-suggestion.selected {
-  /* restore autocomplete default value for sidebar, because it is affectd
+#R-sidebar .autocomplete-suggestion {
+  /* restore autocomplete default value for sidebar, because it is affected
   by coarse element styling */
-  color: rgba(255, 255, 255, 1);
+  display: block;
 }
 
 #R-sidebar .autocomplete-suggestions > .autocomplete-suggestion > .breadcrumbs {
@@ -2084,7 +2099,6 @@ span.math:has(> mjx-container[display]) {
 }
 
 #R-searchresults .autocomplete-suggestion {
-  color: var(--VARIABLE-LINK-color);
   display: block;
   font-size: 1.3rem;
   font-weight: 500;
@@ -2092,13 +2106,11 @@ span.math:has(> mjx-container[display]) {
   padding: 1rem;
   text-decoration: none;
 }
-
 #R-searchresults .autocomplete-suggestion:after {
   height: 0;
 }
 
 #R-searchresults .autocomplete-suggestion > .breadcrumbs {
-  color: var(--INTERNAL-PRIMARY-color);
   font-size: 0.9rem;
   font-weight: 400;
   margin-top: 0.167em;
@@ -2107,12 +2119,41 @@ span.math:has(> mjx-container[display]) {
 }
 
 #R-searchresults .autocomplete-suggestion > .context {
-  color: var(--INTERNAL-MAIN-TEXT-color);
   font-size: 1rem;
   font-weight: 300;
   margin-top: 0.66em;
   padding-left: 0.1em;
   padding-right: 0.1em;
+}
+
+#R-html .autocomplete-suggestion {
+  color: var(--VARIABLE-LINK-color);
+}
+#R-html .autocomplete-suggestion.selected,
+#R-html .autocomplete-suggestion:focus {
+  color: var(--VARIABLE-LINK-HOVER-color);
+  background-color: rgba(134, 134, 134, 0.133);
+}
+#R-html .autocomplete-suggestion:hover {
+  color: var(--VARIABLE-LINK-HOVER-color);
+  background-color: rgba(134, 134, 134, 0.2);
+}
+#R-html .autocomplete-suggestion .link {
+  color: inherit;
+}
+#R-html .autocomplete-suggestion.selected .link,
+#R-html .autocomplete-suggestion:focus .link,
+#R-html .autocomplete-suggestion:hover .link {
+  color: inherit;
+  text-decoration: underline;
+}
+#R-html .autocomplete-suggestion > .breadcrumbs {
+  background-color: transparent;
+  color: var(--INTERNAL-PRIMARY-color);
+}
+#R-html .autocomplete-suggestion > .context {
+  background-color: transparent;
+  color: var(--INTERNAL-MAIN-TEXT-color);
 }
 
 .badge {
@@ -2412,48 +2453,97 @@ html[dir='rtl'] #R-sidebar ul.collapsible-menu > li > input:checked + label > i.
   transform: rotate(90deg);
 }
 
-/* basic logo stuff
+/* common logo */
 
-a#R-logo {
-  color: var(--INTERNAL-MENU-HEADER-color);
-  font-variation-settings: var(--INTERNAL-MAIN-TITLES-H4-font-variation-settings);
-  font-weight: var(--INTERNAL-MAIN-TITLES-H4-font-weight);
-  font-family: var(--INTERNAL-MAIN-TITLES-H4-font);
-  letter-spacing: var(--INTERNAL-MAIN-TITLES-H4-letter-spacing);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-a#R-logo:hover {
-  color: var(--INTERNAL-MENU-HEADER-color);
+body #R-logo svg,
+body #R-logo svg :not([color]),
+body #R-logo svg [color='black'],
+body #R-logo svg [color='#000000'] {
+  color: var(--INTERNAL-LOGO-IMAGE-color);
 }
 
-/* those sizes are for the default logo */
-a#R-logo.R-default {
-  font-size: 1.875rem;
+body #R-logo:hover svg,
+body #R-logo:hover svg :not([color]),
+body #R-logo:hover svg [color='black'],
+body #R-logo:hover svg [color='#000000'] {
+  color: var(--INTERNAL-LOGO-IMAGE-HOVER-color);
+}
+
+body #R-logo svg :not([fill]),
+body #R-logo svg [fill='black'],
+body #R-logo svg [fill='#000000'] {
+  fill: var(--INTERNAL-LOGO-IMAGE-color);
+}
+
+body #R-logo:hover svg :not([fill]),
+body #R-logo:hover svg [fill='black'],
+body #R-logo:hover svg [fill='#000000'] {
+  fill: var(--INTERNAL-LOGO-IMAGE-HOVER-color);
+}
+
+body a#R-logo,
+body a#R-logo * {
+  color: var(--INTERNAL-LOGO-LINK-color);
+}
+
+body a#R-logo:hover,
+body a#R-logo:hover * {
+  color: var(--INTERNAL-LOGO-LINK-HOVER-color);
+}
+
+/* default logo */
+
+#R-logo.R-default {
+  align-items: center;
+  column-gap: 0.4em;
+  display: flex;
+  flex-direction: row;
+  font-family: var(--INTERNAL-LOGO-font);
+  font-size: var(--INTERNAL-LOGO-font-size);
+  justify-content: center;
+  line-height: 1;
+  overflow: hidden;
+  margin-block: 0.5rem;
+  row-gap: 0.1em;
+  width: 100%;
+}
+#R-logo.R-default.direction-column {
+  flex-direction: column;
 }
 @media only all and (max-width: 59.999rem) {
-  a#R-logo.R-default {
-    font-size: 1.5625rem;
+  #R-logo.R-default {
+    font-size: calc(var(--INTERNAL-LOGO-font-size) * 0.8);
+    margin-block: 0.9rem;
   }
 }
 
-body a#R-logo,
-body a#R-logo:hover,
-body #R-logo svg,
-body #R-logo svg :not([color]),
-body #R-logo svg :not([color='black']),
-body #R-logo svg :not([color='#000000']) {
-  color: var(--INTERNAL-MENU-HEADER-color) !important;
+#R-logo.R-default .logo-image {
+  display: none;
+  flex-shrink: 0;
+  height: auto;
+  width: var(--INTERNAL-LOGO-IMAGE-width);
 }
 
-body a#R-logo,
-body a#R-logo:hover,
-body #R-logo svg,
-body #R-logo svg :not([fill]),
-body #R-logo svg :not([fill='black']),
-body #R-logo svg :not([fill='#000000']) {
-  fill: var(--INTERNAL-MENU-HEADER-color) !important;
+#R-logo.R-default .logo-image > * {
+  max-width: var(--INTERNAL-LOGO-IMAGE-width);
 }
+
+#R-logo.R-default .logo-title {
+  font-size: 2em;
+  flex-shrink: 1;
+  min-width: 0;
+  text-align: start;
+  text-wrap: auto;
+  word-break: break-word;
+}
+#R-logo.R-default.direction-column .logo-title {
+  text-align: center;
+}
+#R-logo.R-default.manual-wrap .logo-title {
+  white-space: pre;
+}
+
+/* columnize content */
 
 .columnize {
   column-count: 2;
@@ -2466,10 +2556,6 @@ body #R-logo svg :not([fill='#000000']) {
 
 .columnize > * {
   break-inside: avoid-column;
-}
-
-.columnize .breadcrumbs {
-  font-size: 0.859625rem;
 }
 
 #R-body .tab-panel {
@@ -2614,12 +2700,27 @@ body #R-logo svg :not([fill='#000000']) {
   border-bottom-color: var(--INTERNAL-MAIN-TOPBAR-BORDER-color);
   border-bottom-style: solid;
   border-bottom-width: 1px;
-  color: var(--INTERNAL-TOPBAR-TEXT-color);
-  --VARIABLE-LINK-color: var(--INTERNAL-TOPBAR-LINK-color);
-  --VARIABLE-LINK-HOVER-color: var(--INTERNAL-TOPBAR-LINK-HOVER-color);
+}
+
+#R-header-wrapper {
+  background-color: var(--INTERNAL-MENU-HEADER-BG-color);
+  color: var(--INTERNAL-MENU-HEADER-color);
+  text-align: center;
+}
+
+#R-header-wrapper :is(a, span) {
+  color: var(--INTERNAL-MENU-HEADER-color);
+}
+
+:has(~ #R-content-wrapper),
+#R-content-wrapper > * {
+  border-inline-end-color: var(--INTERNAL-MENU-BORDER-color);
+  border-inline-end-style: solid;
+  border-inline-end-width: 1px;
 }
 
 #R-header-topbar {
+  background-color: transparent;
   border-bottom-color: transparent;
   border-bottom-style: solid;
   border-bottom-width: 1px;
@@ -2627,6 +2728,7 @@ body #R-logo svg :not([fill='#000000']) {
   border-inline-end-style: solid;
   border-inline-end-width: 1px;
   height: 3rem;
+  pointer-events: none;
   position: absolute;
   top: 0;
   width: 100%;
@@ -2636,14 +2738,6 @@ body #R-logo svg :not([fill='#000000']) {
   .mobile-support #R-header-topbar {
     border-inline-end-color: var(--INTERNAL-MENU-BORDER-color);
   }
-}
-
-#R-header-wrapper,
-#R-homelinks,
-#R-content-wrapper > * {
-  border-inline-end-color: var(--INTERNAL-MENU-BORDER-color);
-  border-inline-end-style: solid;
-  border-inline-end-width: 1px;
 }
 
 #topics > ul {
@@ -2674,6 +2768,8 @@ body #R-logo svg :not([fill='#000000']) {
 
 #R-homelinks {
   background-color: var(--INTERNAL-MENU-HEADER-BORDER-color);
+  color: var(--INTERNAL-MENU-HOME-LINK-color);
+  overflow: hidden;
   padding: 0;
 }
 
@@ -2736,44 +2832,44 @@ article .R-taxonomy ul > li ~ li:before {
   content: ' | ';
 }
 
-body.notfound p {
-  text-align: center;
-}
-body.notfound #R-body {
+#R-body:has(article:first-of-type.notfound) {
   margin-inline-start: 0;
   max-width: 100%;
   min-width: 100%;
   width: 100%;
 }
-body.notfound h1 {
+article.notfound p {
+  text-align: center;
+}
+article.notfound h1 {
   color: var(--MAIN-TEXT-color);
   line-height: 1;
   font-size: 5rem;
   overflow: hidden;
 }
-body.notfound h1 span {
+article.notfound h1 span {
   font-size: 6.5rem;
   font-weight: 500;
 }
-body.notfound h1 i {
+article.notfound h1 i {
   font-size: 5rem;
   vertical-align: text-top;
 }
-body.notfound h2 {
+article.notfound h2 {
   color: var(--MAIN-TEXT-color);
   font-size: 2.5rem;
   font-weight: 500;
   padding: 0;
   text-align: center;
 }
-body.notfound #shrug svg,
-body.notfound #shrug svg * {
+article.notfound #shrug svg,
+article.notfound #shrug svg * {
   color: #000000;
   color: var(--MAIN-TEXT-color);
   fill: #000000 !important;
   fill: var(--MAIN-TEXT-color) !important;
 }
-body.notfound #shrug svg {
+article.notfound #shrug svg {
   transform: scaleX(-1);
   width: 15rem;
 }

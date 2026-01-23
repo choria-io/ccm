@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -10,7 +10,7 @@ type Provider interface {
 }
 
 type ProviderFactory interface {
-	IsManageable(map[string]any) (bool, error)
+	IsManageable(map[string]any) (usable bool, priority int, err error)
 	TypeName() string
 	Name() string
 	New(Logger, CommandRunner) (Provider, error)

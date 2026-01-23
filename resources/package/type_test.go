@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -139,7 +139,7 @@ var _ = Describe("Package Type", func() {
 
 		Describe("Apply", func() {
 			BeforeEach(func() {
-				factory.EXPECT().IsManageable(facts).Return(true, nil).AnyTimes()
+				factory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
 			})
 
 			It("Should fail with empty ensure", func(ctx context.Context) {
@@ -147,7 +147,7 @@ var _ = Describe("Package Type", func() {
 				pkg.prop.Ensure = ""
 				event, err := pkg.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Errors).To(ContainElement(ContainSubstring("invalid value for ensure")))
+				Expect(event.Errors).To(ContainElement(ContainSubstring(model.ErrInvalidEnsureValue.Error())))
 			})
 
 			It("Should fail if initial status check fails", func(ctx context.Context) {
@@ -385,7 +385,7 @@ var _ = Describe("Package Type", func() {
 
 				event, err := pkg.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Errors).To(ContainElement("failed to reach desired state absent"))
+				Expect(event.Errors).To(ContainElement("failed to reach desired state: absent"))
 			})
 
 			Context("with health check", func() {
@@ -490,7 +490,7 @@ var _ = Describe("Package Type", func() {
 				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 					return noopProvider, nil
 				})
-				noopFactory.EXPECT().IsManageable(facts).Return(true, nil).AnyTimes()
+				noopFactory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
 
 				registry.Clear()
 				registry.MustRegister(noopFactory)
@@ -623,7 +623,7 @@ var _ = Describe("Package Type", func() {
 
 		Describe("Info", func() {
 			It("Should fail if no suitable factory", func() {
-				factory.EXPECT().IsManageable(facts).Return(false, nil)
+				factory.EXPECT().IsManageable(facts).Return(false, 1, nil)
 
 				_, err := pkg.Info(context.Background())
 				Expect(err).To(MatchError(model.ErrProviderNotManageable))
@@ -636,7 +636,7 @@ var _ = Describe("Package Type", func() {
 			})
 
 			It("Should handle info failures", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, nil)
+				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
 				provider.EXPECT().Status(gomock.Any(), "zsh").Return(nil, fmt.Errorf("cant execute status command"))
 
 				nfo, err := pkg.Info(context.Background())
@@ -645,7 +645,7 @@ var _ = Describe("Package Type", func() {
 			})
 
 			It("Should call status on the provider", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, nil)
+				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
 
 				res := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh"}}
 				provider.EXPECT().Status(gomock.Any(), "zsh").Return(res, nil)

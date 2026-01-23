@@ -161,7 +161,8 @@ commands:
             go mod tidy
 
             ab_say Checking spelling
-            find . -type f -name "*.go" | xargs misspell -error -locale US -i flavour
+            find . -type f -name "*.go" | xargs misspell -error -locale US
+            find docs/content -type f  | xargs misspell -error -locale US
 
             {{ if .Flags.vet }}
             ab_say Performing go vet

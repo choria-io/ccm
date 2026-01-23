@@ -78,7 +78,7 @@ func (p *Provider) Execute(ctx context.Context, properties *model.ExecResourcePr
 
 func (p *Provider) Status(ctx context.Context, properties *model.ExecResourceProperties) (*model.ExecState, error) {
 	res := &model.ExecState{
-		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusServiceProtocol, model.ServiceTypeName, properties.Name, model.EnsurePresent),
+		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusExecProtocol, model.ExecTypeName, properties.Name, model.EnsurePresent),
 		CreatesSatisfied:    properties.Creates != "" && iu.FileExists(properties.Creates),
 	}
 

@@ -22,16 +22,16 @@ func (p *factory) Name() string     { return ProviderName }
 func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 	return NewAptProvider(log, runner)
 }
-func (p *factory) IsManageable(_ map[string]any) (bool, error) {
+func (p *factory) IsManageable(_ map[string]any) (bool, int, error) {
 	for _, path := range []string{"apt-get", "apt-cache", "apt-mark", "dpkg-query"} {
 		_, found, err := iu.ExecutableInPath(path)
 		if err != nil {
-			return false, err
+			return false, 0, err
 		}
 		if !found {
-			return false, nil
+			return false, 0, nil
 		}
 	}
 
-	return true, nil
+	return true, 1, nil
 }

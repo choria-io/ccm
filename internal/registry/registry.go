@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -73,16 +73,28 @@ func SelectProviders(typeName string, facts map[string]any, log model.Logger) ([
 		return result, nil
 	}
 
+	type matched struct {
+		prio int
+		prov model.ProviderFactory
+	}
+
+	var found []*matched
+
 	for _, v := range typeEntries {
-		ok, err := v.factory.IsManageable(facts)
+		ok, priority, err := v.factory.IsManageable(facts)
 		if err != nil {
 			log.Warn("Could not check if provider is manageable", "provider", v.factory.Name(), "err", err)
 			continue
 		}
 
 		if ok {
-			result = append(result, v.factory)
+			found = append(found, &matched{priority, v.factory})
 		}
+	}
+
+	sort.Slice(found, func(i, j int) bool { return found[i].prio < found[j].prio })
+	for _, v := range found {
+		result = append(result, v.prov)
 	}
 
 	return result, nil
@@ -103,7 +115,7 @@ func SelectProvider(typeName string, providerName string, facts map[string]any) 
 		return nil, model.ErrProviderNotFound
 	}
 
-	ok, err := p.factory.IsManageable(facts)
+	ok, _, err := p.factory.IsManageable(facts)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", model.ErrProviderNotManageable, err)
 	}
@@ -144,11 +156,8 @@ func FindSuitableProvider(typeName string, provider string, facts map[string]any
 			return nil, model.ErrNoSuitableProvider
 		}
 
-		if len(provs) != 1 {
-			return nil, model.ErrMultipleProviders
-		}
-
 		selected = provs[0]
+
 	} else {
 		prov, err := SelectProvider(typeName, provider, facts)
 		if err != nil && prov == nil {

@@ -1,15 +1,16 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
 package posix
 
 import (
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 var _ = Describe("Factory", func() {
@@ -65,18 +66,20 @@ var _ = Describe("Factory", func() {
 
 	Describe("IsManageable", func() {
 		It("Should always return true", func() {
-			manageable, err := f.IsManageable(nil)
+			manageable, prio, err := f.IsManageable(nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
+			Expect(prio).To(Equal(1))
 		})
 
 		It("Should return true with facts", func() {
 			facts := map[string]any{
 				"os": "linux",
 			}
-			manageable, err := f.IsManageable(facts)
+			manageable, prio, err := f.IsManageable(facts)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
+			Expect(prio).To(Equal(1))
 		})
 	})
 })

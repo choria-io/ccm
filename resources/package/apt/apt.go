@@ -109,7 +109,12 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 	}
 
 	parts := strings.Split(strings.TrimSpace(string(stdout)), " ")
-	installed := len(parts) == 4 && parts[3] == "installed"
+	installed := false
+	status := "unknown"
+	if len(parts) == 4 {
+		status = parts[3]
+		installed = status == "installed"
+	}
 
 	if exitcode != 0 || !installed {
 		return &model.PackageState{
@@ -118,7 +123,9 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 				Name:     pkg,
 				Provider: ProviderName,
 				Version:  "absent",
-				Extended: map[string]any{},
+				Extended: map[string]any{
+					"status": status,
+				},
 			},
 		}, nil
 	}
@@ -128,13 +135,15 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 	}
 
 	state := &model.PackageState{
-		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, parts[1]),
+		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, model.PackageTypeName, pkg, parts[1]),
 		Metadata: &model.PackageMetadata{
 			Name:     parts[0],
 			Version:  parts[1],
 			Arch:     parts[2],
 			Provider: ProviderName,
-			Extended: map[string]any{},
+			Extended: map[string]any{
+				"status": status,
+			},
 		},
 	}
 

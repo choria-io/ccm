@@ -132,7 +132,7 @@ func (p *Provider) Status(ctx context.Context, pkg string) (*model.PackageState,
 	}
 
 	state := &model.PackageState{
-		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, "package", pkg, matches[3]),
+		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusPackageProtocol, model.PackageTypeName, pkg, matches[3]),
 		Metadata: &model.PackageMetadata{
 			Name:     matches[1],
 			Version:  fmt.Sprintf("%s-%s", matches[3], matches[4]),

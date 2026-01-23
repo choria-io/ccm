@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -169,7 +169,7 @@ var _ = Describe("Service Type", func() {
 
 		Describe("Apply", func() {
 			BeforeEach(func() {
-				factory.EXPECT().IsManageable(facts).Return(true, nil).AnyTimes()
+				factory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
 			})
 
 			It("Should fail if initial status check fails", func(ctx context.Context) {
@@ -552,7 +552,7 @@ var _ = Describe("Service Type", func() {
 
 				event, err := svc.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Errors).To(ContainElement("failed to reach desired state running"))
+				Expect(event.Errors).To(ContainElement("failed to reach desired state: running"))
 			})
 
 			Context("with health check", func() {
@@ -673,7 +673,7 @@ var _ = Describe("Service Type", func() {
 				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 					return noopProvider, nil
 				})
-				noopFactory.EXPECT().IsManageable(facts).Return(true, nil).AnyTimes()
+				noopFactory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
 
 				registry.Clear()
 				registry.MustRegister(noopFactory)
@@ -800,7 +800,7 @@ var _ = Describe("Service Type", func() {
 
 		Describe("Info", func() {
 			It("Should fail if no suitable factory", func() {
-				factory.EXPECT().IsManageable(facts).Return(false, nil)
+				factory.EXPECT().IsManageable(facts).Return(false, 1, nil)
 
 				_, err := svc.Info(context.Background())
 				Expect(err).To(MatchError(model.ErrProviderNotManageable))
@@ -813,7 +813,7 @@ var _ = Describe("Service Type", func() {
 			})
 
 			It("Should handle info failures", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, nil)
+				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
 				provider.EXPECT().Status(gomock.Any(), "nginx").Return(nil, fmt.Errorf("cant execute status command"))
 
 				nfo, err := svc.Info(context.Background())
@@ -822,7 +822,7 @@ var _ = Describe("Service Type", func() {
 			})
 
 			It("Should call status on the provider", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, nil)
+				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
 
 				res := &model.ServiceState{
 					CommonResourceState: model.CommonResourceState{Name: "nginx"},

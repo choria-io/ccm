@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -49,8 +49,8 @@ var _ = Describe("FileResourceProperties", func() {
 
 			// Ensure validation
 			Entry("empty ensure", "/tmp/test.txt", "", "root", "root", "0644", "ensure"),
-			Entry("invalid ensure value", "/tmp/test.txt", "latest", "root", "root", "0644", "ensure must be one of"),
-			Entry("invalid ensure running", "/tmp/test.txt", "running", "root", "root", "0644", "ensure must be one of"),
+			Entry("invalid ensure value", "/tmp/test.txt", "latest", "root", "root", "0644", "invalid ensure value"),
+			Entry("invalid ensure running", "/tmp/test.txt", "running", "root", "root", "0644", "invalid ensure value"),
 
 			// Owner validation
 			Entry("empty owner", "/tmp/test.txt", "present", "", "root", "0644", "owner cannot be empty"),

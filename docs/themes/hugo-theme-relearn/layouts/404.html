@@ -1,29 +1,29 @@
 <!DOCTYPE html>
 {{- .Store.Set "relearnOutputFormat" "html" }}
-<html lang="{{ .Page.Language.LanguageCode }}" dir="{{ .Page.Language.LanguageDirection | default (T "Reading-direction") | default "ltr" }}" itemscope itemtype="http://schema.org/Article" data-r-output-format="{{ with .Store.Get "relearnOutputFormat" }}{{ . }}{{ else }}html{{ end }}">
+<html id="R-html" lang="{{ .Page.Language.LanguageCode }}" dir="{{ .Page.Language.LanguageDirection | default (T "Reading-direction") | default "ltr" }}" itemscope itemtype="http://schema.org/Article" data-r-output-format="{{ with .Store.Get "relearnOutputFormat" }}{{ . }}{{ else }}html{{ end }}">
   <head>
     {{- partial "meta.html" . }}
     {{- $title := partial "title.gotmpl" (dict "page" . "fullyQualified" true "reverse" true) }}
     <title>{{ $title }}</title>
 
     {{- /* because this file can be called from literally any URL inside your project, we need to base all relative URLs to make them work */}}
-    <base href="{{ .Site.BaseURL }}">
+    <base href="{{ site.BaseURL }}">
 
-    {{- partialCached "favicon.html" . }}
+    {{- partialCached "favicon.html" site.Home }}
     {{- partial "dependencies.html" (dict "page" . "location" "header") }}
     {{- partial "custom-header.html" . }}
   </head>
-  <body class="mobile-support {{ with .Store.Get "relearnOutputFormat" }}{{ . }}{{ else }}html{{ end }} notfound" data-url="{{ partial "permalink.gotmpl" (dict "to" .) }}">
+  <body class="mobile-support {{ with .Store.Get "relearnOutputFormat" }}{{ . }}{{ else }}html{{ end }}" data-origin="{{ partial "permalink.gotmpl" (dict "to" .) }}">
     <div id="R-body" class="default-animation">
       <main id="R-body-inner" class="highlightable chapter" tabindex="-1">
         <div class="flex-block-wrapper">
-          <article>
+          <article class="notfound">
             <h1 id="404"><span>4</span>{{ partial "shortcodes/icon.html" (dict "page" . "icon" "far fa-frown" )}}<span>4</span></h1>
             <h2 id="{{ T "title-404" | plainify | anchorize }}">{{ T "title-404" }}</h2>
             <p></p>
             <p>{{ T "message-404" }}</p>
             <p></p>
-            <p><a href="{{ partial "permalink.gotmpl" (dict "to" .Site.Home) }}">{{ T "Go-to-homepage" }}</a></p>
+            <p><a href="{{ partial "permalink.gotmpl" (dict "to" site.Home) }}">{{ T "Go-to-homepage" }}</a></p>
             <p id="shrug">
               <svg xmlns="http://www.w3.org/2000/svg"
  viewBox="0 0 512.000000 512.000000"

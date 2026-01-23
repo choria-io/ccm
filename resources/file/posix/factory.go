@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -21,6 +21,6 @@ func (p *factory) Name() string     { return ProviderName }
 func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 	return NewPosixProvider(log)
 }
-func (p *factory) IsManageable(_ map[string]any) (bool, error) {
-	return true, nil
+func (p *factory) IsManageable(_ map[string]any) (bool, int, error) {
+	return true, 1, nil
 }

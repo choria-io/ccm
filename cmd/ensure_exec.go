@@ -17,6 +17,7 @@ type ensureExecCommand struct {
 	timeout     string
 	subscribe   []string
 	refreshOnly bool
+	logoutput   bool
 	parent      *ensureCommand
 }
 
@@ -30,6 +31,7 @@ func registerEnsureExecCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	exec.Flag("timeout", "Command timeout").Default("1m").StringVar(&cmd.timeout)
 	exec.Flag("refresh-only", "Only run on subscribed resources").UnNegatableBoolVar(&cmd.refreshOnly)
 	exec.Flag("subscribe", "Subscribe to changes in other resources").PlaceHolder("type#name").Short('S').StringsVar(&cmd.subscribe)
+	exec.Flag("logoutput", "Log output of the command").UnNegatableBoolVar(&cmd.logoutput)
 	parent.addCommonFlags(exec)
 }
 
@@ -46,6 +48,7 @@ func (c *ensureExecCommand) execAction(_ *fisk.ParseContext) error {
 		Creates:     c.creates,
 		RefreshOnly: c.refreshOnly,
 		Subscribe:   c.subscribe,
+		LogOutput:   c.logoutput,
 	}
 
 	err := c.parent.setCommonProperties(&properties.CommonResourceProperties)
