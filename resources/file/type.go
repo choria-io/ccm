@@ -162,7 +162,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	if !noop {
 		isStable, _, _ = t.isDesiredState(properties, finalStatus)
 		if !isStable {
-			return nil, fmt.Errorf("failed to reach desired state %s", properties.Ensure)
+			return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
 		}
 	}
 

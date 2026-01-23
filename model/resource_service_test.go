@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -41,9 +41,9 @@ var _ = Describe("ServiceResourceProperties", func() {
 			Entry("valid ensure stopped", "nginx", "stopped", ""),
 			Entry("empty ensure defaults to running", "nginx", "", ""),
 			Entry("empty service name", "", "running", "name"),
-			Entry("invalid ensure value", "nginx", "present", "invalid service ensure"),
-			Entry("invalid ensure value absent", "nginx", "absent", "invalid service ensure"),
-			Entry("invalid ensure value latest", "nginx", "latest", "invalid service ensure"),
+			Entry("invalid ensure value", "nginx", "present", "invalid ensure value"),
+			Entry("invalid ensure value absent", "nginx", "absent", "invalid ensure value"),
+			Entry("invalid ensure value latest", "nginx", "latest", "invalid ensure value"),
 			Entry("service name with semicolon (command separator)", "nginx; rm -rf /", "running", "dangerous characters"),
 			Entry("service name with pipe (command pipe)", "nginx | cat", "running", "dangerous characters"),
 			Entry("service name with ampersand (background)", "nginx & whoami", "running", "dangerous characters"),
@@ -63,8 +63,8 @@ var _ = Describe("ServiceResourceProperties", func() {
 			Entry("service name with leading space", " nginx", "running", "invalid characters"),
 			Entry("service name with trailing space", "nginx ", "running", "invalid characters"),
 			Entry("service name with invalid characters", "nginx@test", "running", "invalid characters"),
-			Entry("ensure with semicolon", "nginx", "running; rm -rf /", "invalid service ensure"),
-			Entry("ensure with command substitution", "nginx", "running$(whoami)", "invalid service ensure"),
+			Entry("ensure with semicolon", "nginx", "running; rm -rf /", "invalid ensure value"),
+			Entry("ensure with command substitution", "nginx", "running$(whoami)", "invalid ensure value"),
 		)
 
 		DescribeTable("legitimate services",

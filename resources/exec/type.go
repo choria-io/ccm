@@ -154,7 +154,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 
 	if !noop {
 		if !t.isDesiredState(properties, finalStatus) {
-			return nil, fmt.Errorf("failed to reach desired state exit code %d", exitCode)
+			return nil, fmt.Errorf("%w: exit code %d", model.ErrDesiredStateFailed, exitCode)
 		}
 	}
 

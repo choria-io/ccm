@@ -81,12 +81,13 @@ func (m *MockProviderFactory) EXPECT() *MockProviderFactoryMockRecorder {
 }
 
 // IsManageable mocks base method.
-func (m *MockProviderFactory) IsManageable(arg0 map[string]any) (bool, error) {
+func (m *MockProviderFactory) IsManageable(arg0 map[string]any) (bool, int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsManageable", arg0)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // IsManageable indicates an expected call of IsManageable.

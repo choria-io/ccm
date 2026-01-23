@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -76,7 +76,7 @@ func (p *FileResourceProperties) Validate() error {
 
 	// Validate ensure value if it's a version string
 	if p.Ensure != EnsurePresent && p.Ensure != EnsureAbsent && p.Ensure != FileEnsureDirectory {
-		return fmt.Errorf("ensure must be one of %q, %q or %q", EnsurePresent, EnsureAbsent, FileEnsureDirectory)
+		return fmt.Errorf("%w: must be one of %q, %q or %q", ErrInvalidEnsureValue, EnsurePresent, EnsureAbsent, FileEnsureDirectory)
 	}
 
 	if filepath.Clean(p.Name) != p.Name {

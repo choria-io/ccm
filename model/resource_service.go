@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -68,7 +68,7 @@ func (p *ServiceResourceProperties) Validate() error {
 	}
 
 	if !slices.Contains([]string{ServiceEnsureRunning, ServiceEnsureStopped}, p.Ensure) {
-		return fmt.Errorf("invalid service ensure property %q expects %q or %q", p.Ensure, ServiceEnsureRunning, ServiceEnsureStopped)
+		return fmt.Errorf("%w: invalid ensure property %q expects %q or %q", ErrInvalidEnsureValue, p.Ensure, ServiceEnsureRunning, ServiceEnsureStopped)
 	}
 
 	// Validate service name to prevent shell injection

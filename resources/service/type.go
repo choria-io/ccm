@@ -162,7 +162,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		refreshState = true
 
 	default:
-		return nil, fmt.Errorf("invalid state encountered")
+		return nil, model.ErrInvalidState
 	}
 
 	switch {
@@ -215,7 +215,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 
 	if !noop {
 		if !t.isDesiredState(properties, finalStatus) {
-			return nil, fmt.Errorf("failed to reach desired state %s", properties.Ensure)
+			return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
 		}
 	}
 

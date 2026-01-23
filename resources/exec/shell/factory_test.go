@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package posix
+package shell
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -12,6 +14,11 @@ import (
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
 )
+
+func TestShell(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Resources/Exec/Shell")
+}
 
 var _ = Describe("Factory", func() {
 	var (
@@ -65,21 +72,39 @@ var _ = Describe("Factory", func() {
 	})
 
 	Describe("IsManageable", func() {
-		It("Should always return true", func() {
+		var originalShellPath string
+
+		BeforeEach(func() {
+			originalShellPath = shellPath
+		})
+
+		AfterEach(func() {
+			shellPath = originalShellPath
+		})
+
+		It("Should return true when shell exists", func() {
+			shellPath = "/bin/sh"
 			manageable, prio, err := f.IsManageable(nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
-			Expect(prio).To(Equal(1))
+			Expect(prio).To(Equal(99))
 		})
 
-		It("Should return true with facts", func() {
+		It("Should return true with facts when shell exists", func() {
+			shellPath = "/bin/sh"
 			facts := map[string]any{
 				"os": "linux",
 			}
-			manageable, prio, err := f.IsManageable(facts)
+			manageable, _, err := f.IsManageable(facts)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
-			Expect(prio).To(Equal(1))
+		})
+
+		It("Should return false when shell does not exist", func() {
+			shellPath = "/nonexistent/shell/path"
+			manageable, _, err := f.IsManageable(nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(manageable).To(BeFalse())
 		})
 	})
 })
