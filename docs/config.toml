@@ -17,6 +17,7 @@ disableInlineCopyToClipBoard = true
 alwaysopen = true
 collapsibleMenu = true
 externalLinkTargetc= "_self"
+
 [[params.themeVariant]]
     auto = ['zen-light', 'ccm']
     identifier = 'zen-auto'
