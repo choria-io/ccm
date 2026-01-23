@@ -6,7 +6,7 @@ require (
 	github.com/CloudyKit/jet/v6 v6.3.2-0.20260120165216-7cc3d1922b08
 	github.com/MatusOllah/slogcolor v1.7.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.13.0
+	github.com/choria-io/appbuilder v0.14.0
 	github.com/choria-io/fisk v0.7.2
 	github.com/expr-lang/expr v1.17.7
 	github.com/goccy/go-yaml v1.19.2
