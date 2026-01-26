@@ -118,16 +118,16 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	if manifest.PostMessage() != "" {
+	summary, err := mgr.SessionSummary()
+	if err != nil {
+		return err
+	}
+
+	if manifest.PostMessage() != "" && summary.TotalErrors == 0 {
 		fmt.Println(manifest.PostMessage())
 	}
 
 	if c.report {
-		summary, err := mgr.SessionSummary()
-		if err != nil {
-			return err
-		}
-
 		fmt.Println()
 		summary.RenderText(os.Stdout)
 	}
