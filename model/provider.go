@@ -10,7 +10,7 @@ type Provider interface {
 }
 
 type ProviderFactory interface {
-	IsManageable(map[string]any) (usable bool, priority int, err error)
+	IsManageable(map[string]any, ResourceProperties) (usable bool, priority int, err error)
 	TypeName() string
 	Name() string
 	New(Logger, CommandRunner) (Provider, error)

@@ -15,8 +15,9 @@ import (
 	"slices"
 
 	"github.com/adrg/xdg"
-	"github.com/choria-io/appbuilder/commands"
 	"github.com/goccy/go-yaml"
+
+	"github.com/choria-io/appbuilder/commands"
 
 	"github.com/choria-io/appbuilder/builder"
 	"github.com/choria-io/fisk"
@@ -60,13 +61,13 @@ func extendCli(app *fisk.Application) error {
 
 	err := findPluginsInDir(filepath.Join("/etc", "choria", "ccm", "plugins"), plugins)
 	if err != nil {
-		return err
+		return nil
 	}
 
 	if xdg.ConfigHome != "" {
 		err := findPluginsInDir(filepath.Join(xdg.ConfigHome, "choria", "ccm", "plugins"), plugins)
 		if err != nil {
-			return err
+			return nil
 		}
 	}
 

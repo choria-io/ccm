@@ -51,7 +51,7 @@ type FileMetadata struct {
 type FileState struct {
 	CommonResourceState
 
-	Metadata any `json:"metadata,omitempty"`
+	Metadata *FileMetadata `json:"metadata,omitempty"`
 }
 
 func (f *FileState) CommonState() *CommonResourceState {

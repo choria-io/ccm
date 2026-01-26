@@ -243,7 +243,7 @@ var _ = Describe("Exec Type", func() {
 
 		Describe("Apply", func() {
 			BeforeEach(func() {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
 			})
 
 			It("Should fail if initial status check fails", func(ctx context.Context) {
@@ -427,7 +427,7 @@ var _ = Describe("Exec Type", func() {
 				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 					return noopProvider, nil
 				})
-				noopFactory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
+				noopFactory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
 
 				registry.Clear()
 				registry.MustRegister(noopFactory)
@@ -501,7 +501,7 @@ var _ = Describe("Exec Type", func() {
 			})
 
 			It("Should return provider name after selection", func(ctx context.Context) {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil)
 
 				name, err := exec.SelectProvider()
 				Expect(err).ToNot(HaveOccurred())

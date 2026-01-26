@@ -62,7 +62,7 @@ func Register(p model.ProviderFactory) error {
 }
 
 // SelectProviders returns a list of providers that can manage the node given facts
-func SelectProviders(typeName string, facts map[string]any, log model.Logger) ([]model.ProviderFactory, error) {
+func SelectProviders(typeName string, facts map[string]any, properties model.ResourceProperties, log model.Logger) ([]model.ProviderFactory, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -81,7 +81,7 @@ func SelectProviders(typeName string, facts map[string]any, log model.Logger) ([
 	var found []*matched
 
 	for _, v := range typeEntries {
-		ok, priority, err := v.factory.IsManageable(facts)
+		ok, priority, err := v.factory.IsManageable(facts, properties)
 		if err != nil {
 			log.Warn("Could not check if provider is manageable", "provider", v.factory.Name(), "err", err)
 			continue
@@ -101,26 +101,30 @@ func SelectProviders(typeName string, facts map[string]any, log model.Logger) ([
 }
 
 // SelectProvider finds a provider matching name and checks it's manageable before returning it
-func SelectProvider(typeName string, providerName string, facts map[string]any) (model.ProviderFactory, error) {
+func SelectProvider(typeName string, providerName string, facts map[string]any, properties model.ResourceProperties, log model.Logger) (model.ProviderFactory, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	typeEntries, ok := entries[typeName]
 	if !ok {
+		log.Debug("No providers registered", "type", typeName)
 		return nil, nil
 	}
 
 	p, ok := typeEntries[providerName]
 	if !ok {
+		log.Debug("No providers found", "type", typeName, "provider", providerName)
 		return nil, model.ErrProviderNotFound
 	}
 
-	ok, _, err := p.factory.IsManageable(facts)
+	ok, _, err := p.factory.IsManageable(facts, properties)
 	if err != nil {
+		log.Debug("Provider detection failed", "provider", p.factory.Name(), "err", err)
 		return nil, fmt.Errorf("%w: %w", model.ErrProviderNotManageable, err)
 	}
 
 	if !ok {
+		log.Debug("Provider cannot be used", "provider", p.factory.Name())
 		return nil, fmt.Errorf("%w: %s", model.ErrProviderNotManageable, "not applicable to instance")
 	}
 
@@ -143,11 +147,11 @@ func Types() []string {
 }
 
 // FindSuitableProvider searches all registered providers for a suitable provider capable of working on the node
-func FindSuitableProvider(typeName string, provider string, facts map[string]any, log model.Logger, runner model.CommandRunner) (model.Provider, error) {
+func FindSuitableProvider(typeName string, provider string, facts map[string]any, properties model.ResourceProperties, log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 	var selected model.ProviderFactory
 
 	if provider == "" {
-		provs, err := SelectProviders(typeName, facts, log)
+		provs, err := SelectProviders(typeName, facts, properties, log)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", model.ErrProviderNotFound, err)
 		}
@@ -157,9 +161,8 @@ func FindSuitableProvider(typeName string, provider string, facts map[string]any
 		}
 
 		selected = provs[0]
-
 	} else {
-		prov, err := SelectProvider(typeName, provider, facts)
+		prov, err := SelectProvider(typeName, provider, facts, properties, log)
 		if err != nil && prov == nil {
 			return nil, fmt.Errorf("%w: %w", model.ErrResourceInvalid, err)
 		}

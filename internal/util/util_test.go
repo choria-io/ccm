@@ -359,6 +359,39 @@ var _ = Describe("FileExists", func() {
 	})
 })
 
+var _ = Describe("FileHasSuffix", func() {
+	DescribeTable("suffix matching",
+		func(filename string, suffixes []string, expected bool) {
+			Expect(FileHasSuffix(filename, suffixes...)).To(Equal(expected))
+		},
+		// Basic extension matching
+		Entry("matches .zip", "archive.zip", []string{".zip", ".tar.gz", ".tgz"}, true),
+		Entry("matches .tar.gz", "archive.tar.gz", []string{".zip", ".tar.gz", ".tgz"}, true),
+		Entry("matches .tgz", "archive.tgz", []string{".zip", ".tar.gz", ".tgz"}, true),
+
+		// Case insensitive
+		Entry("matches .ZIP uppercase", "archive.ZIP", []string{".zip", ".tar.gz", ".tgz"}, true),
+		Entry("matches .TAR.GZ uppercase", "archive.TAR.GZ", []string{".zip", ".tar.gz", ".tgz"}, true),
+		Entry("matches .TGZ uppercase", "archive.TGZ", []string{".zip", ".tar.gz", ".tgz"}, true),
+		Entry("matches mixed case", "archive.Tar.Gz", []string{".zip", ".tar.gz", ".tgz"}, true),
+
+		// Non-matching extensions
+		Entry("does not match .tar", "archive.tar", []string{".zip", ".tar.gz", ".tgz"}, false),
+		Entry("does not match .gz alone", "archive.gz", []string{".zip", ".tar.gz", ".tgz"}, false),
+		Entry("does not match .exe", "archive.exe", []string{".zip", ".tar.gz", ".tgz"}, false),
+		Entry("does not match .tar.xz", "archive.tar.xz", []string{".zip", ".tar.gz", ".tgz"}, false),
+
+		// Path handling
+		Entry("matches with full path", "/path/to/archive.tar.gz", []string{".zip", ".tar.gz", ".tgz"}, true),
+		Entry("matches with complex path", "/var/cache/downloads/v1.0/app.zip", []string{".zip", ".tar.gz", ".tgz"}, true),
+
+		// Edge cases
+		Entry("empty filename", "", []string{".zip"}, false),
+		Entry("no suffixes provided", "archive.zip", []string{}, false),
+		Entry("filename is just extension", ".tar.gz", []string{".tar.gz"}, true),
+	)
+})
+
 var _ = Describe("IsDirectory", func() {
 	It("returns true for directories", func() {
 		tempDir := GinkgoT().TempDir()
@@ -376,6 +409,133 @@ var _ = Describe("IsDirectory", func() {
 
 	It("returns false for non-existent paths", func() {
 		Expect(IsDirectory("/nonexistent/path")).To(BeFalse())
+	})
+})
+
+var _ = Describe("LookupUserID", func() {
+	It("returns UID for root user", func() {
+		uid, err := LookupUserID("root")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(uid).To(Equal(0))
+	})
+
+	It("returns error for non-existent user", func() {
+		_, err := LookupUserID("nonexistent_user_12345")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup user"))
+	})
+
+	It("returns error for empty user name", func() {
+		_, err := LookupUserID("")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("user name cannot be empty"))
+	})
+})
+
+var _ = Describe("LookupGroupID", func() {
+	It("returns GID for wheel or root group", func() {
+		// Try wheel first (macOS), fall back to root (Linux)
+		gid, err := LookupGroupID("wheel")
+		if err != nil {
+			gid, err = LookupGroupID("root")
+		}
+		Expect(err).ToNot(HaveOccurred())
+		Expect(gid).To(Equal(0))
+	})
+
+	It("returns error for non-existent group", func() {
+		_, err := LookupGroupID("nonexistent_group_12345")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup group"))
+	})
+
+	It("returns error for empty group name", func() {
+		_, err := LookupGroupID("")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("group name cannot be empty"))
+	})
+})
+
+var _ = Describe("LookupOwnerGroup", func() {
+	It("returns UID and GID for valid owner and group", func() {
+		// Try wheel first (macOS), fall back to root (Linux)
+		group := "wheel"
+		_, err := LookupGroupID("wheel")
+		if err != nil {
+			group = "root"
+		}
+
+		uid, gid, err := LookupOwnerGroup("root", group)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(uid).To(Equal(0))
+		Expect(gid).To(Equal(0))
+	})
+
+	It("returns error for invalid owner", func() {
+		_, _, err := LookupOwnerGroup("nonexistent_user_12345", "root")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup user"))
+	})
+
+	It("returns error for invalid group", func() {
+		_, _, err := LookupOwnerGroup("root", "nonexistent_group_12345")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup group"))
+	})
+})
+
+var _ = Describe("ChownFile", func() {
+	It("returns error for invalid owner", func() {
+		tempDir := GinkgoT().TempDir()
+		testFile := filepath.Join(tempDir, "test.txt")
+		f, err := os.Create(testFile)
+		Expect(err).ToNot(HaveOccurred())
+		defer f.Close()
+
+		err = ChownFile(f, "nonexistent_user_12345", "root")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup user"))
+	})
+
+	It("returns error for invalid group", func() {
+		tempDir := GinkgoT().TempDir()
+		testFile := filepath.Join(tempDir, "test.txt")
+		f, err := os.Create(testFile)
+		Expect(err).ToNot(HaveOccurred())
+		defer f.Close()
+
+		err = ChownFile(f, "root", "nonexistent_group_12345")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup group"))
+	})
+})
+
+var _ = Describe("ChownPath", func() {
+	It("returns error for invalid owner", func() {
+		tempDir := GinkgoT().TempDir()
+		testFile := filepath.Join(tempDir, "test.txt")
+		err := os.WriteFile(testFile, []byte("content"), 0644)
+		Expect(err).ToNot(HaveOccurred())
+
+		err = ChownPath(testFile, "nonexistent_user_12345", "root")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup user"))
+	})
+
+	It("returns error for invalid group", func() {
+		tempDir := GinkgoT().TempDir()
+		testFile := filepath.Join(tempDir, "test.txt")
+		err := os.WriteFile(testFile, []byte("content"), 0644)
+		Expect(err).ToNot(HaveOccurred())
+
+		err = ChownPath(testFile, "root", "nonexistent_group_12345")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("could not lookup group"))
+	})
+
+	It("returns error for non-existent path", func() {
+		err := ChownPath("/nonexistent/path/to/file", "root", "root")
+		Expect(err).To(HaveOccurred())
 	})
 })
 
@@ -761,7 +921,7 @@ var _ = Describe("RedactUrlCredentials", func() {
 var _ = Describe("HttpGet", func() {
 	It("returns error for empty URL", func() {
 		_, err := HttpGet(context.Background(), "", 0)
-		Expect(err).To(MatchError("URL is required"))
+		Expect(err).To(MatchError("HTTP request failed: URL is required"))
 	})
 
 	It("returns error for invalid URL", func() {

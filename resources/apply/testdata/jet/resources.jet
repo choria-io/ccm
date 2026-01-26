@@ -1,3 +1,12 @@
+- archive:
+    - defaults:
+        extract_parent: /tmp
+        owner: root
+        group: root
+        ensure: present
+
+    - "/tmp/archive.tar.gz":
+        url: https://example.net/archive.tar.gz
 [[ range Data.packages ]]
 - package:
     - defaults:

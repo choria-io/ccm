@@ -22,7 +22,7 @@ func (p *factory) Name() string     { return ProviderName }
 func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 	return NewSystemdProvider(log, runner)
 }
-func (p *factory) IsManageable(_ map[string]any) (bool, int, error) {
+func (p *factory) IsManageable(_ map[string]any, _ model.ResourceProperties) (bool, int, error) {
 	_, found, err := iu.ExecutableInPath("systemctl")
 	if err != nil {
 		return false, 0, err

@@ -37,12 +37,13 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	cmd := &ensureCommand{}
 
 	ens := ccm.Command("ensure", "Manage individual resources")
-	ens.Flag("noop", "Do not make any changes to the system").BoolVar(&cmd.noop)
-	ens.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").PlaceHolder("DIRECTORY").StringVar(&cmd.session)
+	ens.Flag("noop", "Do not make any changes to the system").UnNegatableBoolVar(&cmd.noop)
+	ens.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").PlaceHolder("DIR").StringVar(&cmd.session)
 	ens.Flag("hiera", "Hiera data file to use as data source").Default(".hiera").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
 	ens.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	ens.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 
+	registerEnsureArchiveCommand(ens, cmd)
 	registerEnsureExecCommand(ens, cmd)
 	registerEnsureFileCommand(ens, cmd)
 	registerEnsurePackageCommand(ens, cmd)

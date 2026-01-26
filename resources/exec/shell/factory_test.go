@@ -84,7 +84,7 @@ var _ = Describe("Factory", func() {
 
 		It("Should return true when shell exists", func() {
 			shellPath = "/bin/sh"
-			manageable, prio, err := f.IsManageable(nil)
+			manageable, prio, err := f.IsManageable(nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
 			Expect(prio).To(Equal(99))
@@ -95,14 +95,14 @@ var _ = Describe("Factory", func() {
 			facts := map[string]any{
 				"os": "linux",
 			}
-			manageable, _, err := f.IsManageable(facts)
+			manageable, _, err := f.IsManageable(facts, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
 		})
 
 		It("Should return false when shell does not exist", func() {
 			shellPath = "/nonexistent/shell/path"
-			manageable, _, err := f.IsManageable(nil)
+			manageable, _, err := f.IsManageable(nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeFalse())
 		})

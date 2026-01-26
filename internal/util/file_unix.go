@@ -4,7 +4,7 @@
 
 //go:build unix
 
-package posix
+package util
 
 import (
 	"fmt"
@@ -14,7 +14,10 @@ import (
 	"syscall"
 )
 
-func getFileOwner(stat os.FileInfo) (owner string, group string, mode string, err error) {
+// GetFileOwner returns the owner, group, and mode of a file from its FileInfo.
+// Owner and group are returned as names if available, otherwise as numeric IDs.
+// Mode is returned as a 4-digit octal string (e.g., "0644").
+func GetFileOwner(stat os.FileInfo) (owner string, group string, mode string, err error) {
 	sys := stat.Sys()
 	ssys, ok := sys.(*syscall.Stat_t)
 	if !ok {

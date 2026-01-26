@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -13,11 +13,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestPosixProvider(t *testing.T) {
@@ -68,7 +69,7 @@ var _ = Describe("Posix Provider", func() {
 			Expect(res).ToNot(BeNil())
 
 			Expect(res.Ensure).To(Equal(model.EnsurePresent))
-			meta := res.Metadata.(*model.FileMetadata)
+			meta := res.Metadata
 			Expect(meta.Name).To(Equal(testFile))
 			Expect(meta.Provider).To(Equal(ProviderName))
 			Expect(meta.Checksum).To(Equal(expectedChecksum))
@@ -84,7 +85,7 @@ var _ = Describe("Posix Provider", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).ToNot(BeNil())
 
-			meta := res.Metadata.(*model.FileMetadata)
+			meta := res.Metadata
 			Expect(res.Ensure).To(Equal(model.EnsureAbsent))
 			Expect(meta.Name).To(Equal(nonExistentFile))
 			Expect(meta.Provider).To(Equal(ProviderName))
@@ -103,7 +104,7 @@ var _ = Describe("Posix Provider", func() {
 			Expect(res).ToNot(BeNil())
 
 			// Mode should contain the permission bits (last 3 octal digits should be 755)
-			Expect(res.Metadata.(*model.FileMetadata).Mode).To(ContainSubstring("755"))
+			Expect(res.Metadata.Mode).To(ContainSubstring("755"))
 		})
 	})
 
@@ -233,7 +234,7 @@ var _ = Describe("Posix Provider", func() {
 			status, err := provider.Status(context.Background(), testFile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(status.Ensure).To(Equal(model.EnsurePresent))
-			meta := status.Metadata.(*model.FileMetadata)
+			meta := status.Metadata
 			Expect(meta.Owner).To(Equal(currentUser.Username))
 			Expect(meta.Group).To(Equal(currentGroup.Name))
 			Expect(meta.Mode).To(Equal("0640"))
@@ -426,7 +427,7 @@ var _ = Describe("Posix Provider", func() {
 			res, err := provider.Status(context.Background(), testDir)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res).ToNot(BeNil())
-			Expect(res.Metadata.(*model.FileMetadata).Checksum).To(BeEmpty())
+			Expect(res.Metadata.Checksum).To(BeEmpty())
 		})
 
 		It("Should return absent for non-existent directory", func() {

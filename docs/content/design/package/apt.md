@@ -1,4 +1,8 @@
-# APT Provider Design
++++
+title = "APT Provider"
+toc = true
+weight = 10
++++
 
 This document describes the implementation details of the APT package provider for Debian-based systems.
 
