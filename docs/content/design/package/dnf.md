@@ -1,4 +1,8 @@
-# DNF Provider Design
++++
+title = "DNF Provider"
+toc = true
+weight = 20
++++
 
 This document describes the implementation details of the DNF package provider for RHEL/Fedora-based systems.
 

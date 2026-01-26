@@ -200,7 +200,7 @@ func (t *Type) selectProviderUnlocked() error {
 		return err
 	}
 
-	selected, err := registry.FindSuitableProvider(model.ExecTypeName, t.prop.Provider, t.facts, t.log, runner)
+	selected, err := registry.FindSuitableProvider(model.ExecTypeName, t.prop.Provider, t.facts, t.prop, t.log, runner)
 	if err != nil {
 		return err
 	}

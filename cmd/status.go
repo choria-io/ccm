@@ -36,6 +36,11 @@ func (c *statusCommand) statusAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
+	if c.typeName == "exec" || c.typeName == "archive" {
+		fmt.Println("Status for 'exec' and 'archive' resources is not supported yet due to them relying heavily on specific properties and may require additional context for accurate status determination.")
+		return nil
+	}
+
 	nfo, err := mgr.ResourceInfo(ctx, c.typeName, c.name)
 	if err != nil {
 		return fmt.Errorf("could not get status: %s", err)

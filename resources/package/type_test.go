@@ -139,7 +139,7 @@ var _ = Describe("Package Type", func() {
 
 		Describe("Apply", func() {
 			BeforeEach(func() {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
 			})
 
 			It("Should fail with empty ensure", func(ctx context.Context) {
@@ -490,7 +490,7 @@ var _ = Describe("Package Type", func() {
 				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 					return noopProvider, nil
 				})
-				noopFactory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
+				noopFactory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
 
 				registry.Clear()
 				registry.MustRegister(noopFactory)
@@ -623,7 +623,7 @@ var _ = Describe("Package Type", func() {
 
 		Describe("Info", func() {
 			It("Should fail if no suitable factory", func() {
-				factory.EXPECT().IsManageable(facts).Return(false, 1, nil)
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(false, 1, nil)
 
 				_, err := pkg.Info(context.Background())
 				Expect(err).To(MatchError(model.ErrProviderNotManageable))
@@ -636,7 +636,7 @@ var _ = Describe("Package Type", func() {
 			})
 
 			It("Should handle info failures", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil)
 				provider.EXPECT().Status(gomock.Any(), "zsh").Return(nil, fmt.Errorf("cant execute status command"))
 
 				nfo, err := pkg.Info(context.Background())
@@ -645,7 +645,7 @@ var _ = Describe("Package Type", func() {
 			})
 
 			It("Should call status on the provider", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil)
 
 				res := &model.PackageState{CommonResourceState: model.CommonResourceState{Name: "zsh"}}
 				provider.EXPECT().Status(gomock.Any(), "zsh").Return(res, nil)

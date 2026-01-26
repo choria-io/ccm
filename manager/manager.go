@@ -22,6 +22,7 @@ import (
 	"github.com/choria-io/ccm/internal/facts"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
+	archiveresource "github.com/choria-io/ccm/resources/archive"
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	serviceresource "github.com/choria-io/ccm/resources/service"
@@ -284,7 +285,7 @@ func (m *CCM) infoFileResource(ctx context.Context, prop *model.FileResourceProp
 		return nil, fmt.Errorf("could not get file info: %w", err)
 	}
 
-	return nfo.(*model.FileState).Metadata.(*model.FileMetadata), nil
+	return nfo.(*model.FileState).Metadata, nil
 }
 
 func (m *CCM) infoServiceResource(ctx context.Context, prop *model.ServiceResourceProperties) (*model.ServiceMetadata, error) {
@@ -319,6 +320,22 @@ func (m *CCM) infoPackageResource(ctx context.Context, prop *model.PackageResour
 	return nfo.(*model.PackageState).Metadata, nil
 }
 
+func (m *CCM) infoArchiveResource(ctx context.Context, prop *model.ArchiveResourceProperties) (*model.ArchiveMetadata, error) {
+	prop.SkipValidate = true
+
+	ft, err := archiveresource.New(ctx, m, *prop)
+	if err != nil {
+		return nil, err
+	}
+
+	nfo, err := ft.Info(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return nfo.(*model.ArchiveState).Metadata, nil
+}
+
 // ResourceInfo returns information about a resource of the given type and name
 func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, error) {
 	props, err := model.NewResourcePropertiesFromYaml(typeName, yaml.RawMessage(fmt.Sprintf("name: %q", name)), &templates.Env{})
@@ -338,6 +355,8 @@ func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, err
 		return m.infoServiceResource(ctx, prop.(*model.ServiceResourceProperties))
 	case model.PackageTypeName:
 		return m.infoPackageResource(ctx, prop.(*model.PackageResourceProperties))
+	case model.ArchiveTypeName:
+		return m.infoArchiveResource(ctx, prop.(*model.ArchiveResourceProperties))
 	case model.ExecTypeName:
 		return nil, fmt.Errorf("exec resources do not support retrieving status")
 	default:

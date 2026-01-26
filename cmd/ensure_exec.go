@@ -15,6 +15,9 @@ type ensureExecCommand struct {
 	creates     string
 	returns     []int
 	timeout     string
+	cwd         string
+	environment []string
+	path        string
 	subscribe   []string
 	refreshOnly bool
 	logoutput   bool
@@ -26,12 +29,16 @@ func registerEnsureExecCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 
 	exec := ccm.Command("exec", "Execution management").Action(cmd.execAction)
 	exec.Arg("command", "Command to execute").Required().StringVar(&cmd.command)
-	exec.Flag("creates", "File to check for existence").StringVar(&cmd.creates)
-	exec.Flag("returns", "Expected return codes").IntsVar(&cmd.returns)
+	exec.Flag("creates", "Skip execution if this file exists").PlaceHolder("FILE").StringVar(&cmd.creates)
+	exec.Flag("returns", "Expected return codes").Default("0").IntsVar(&cmd.returns)
 	exec.Flag("timeout", "Command timeout").Default("1m").StringVar(&cmd.timeout)
-	exec.Flag("refresh-only", "Only run on subscribed resources").UnNegatableBoolVar(&cmd.refreshOnly)
+	exec.Flag("cwd", "Working directory for command execution").PlaceHolder("DIR").StringVar(&cmd.cwd)
+	exec.Flag("environment", "Environment variables in KEY=VALUE format").Short('e').PlaceHolder("KEY=VALUE").StringsVar(&cmd.environment)
+	exec.Flag("path", "Search path for executables (colon-separated)").PlaceHolder("PATH").StringVar(&cmd.path)
+	exec.Flag("refresh-only", "Only run when notified by a subscribed resource").UnNegatableBoolVar(&cmd.refreshOnly)
 	exec.Flag("subscribe", "Subscribe to changes in other resources").PlaceHolder("type#name").Short('S').StringsVar(&cmd.subscribe)
 	exec.Flag("logoutput", "Log output of the command").UnNegatableBoolVar(&cmd.logoutput)
+
 	parent.addCommonFlags(exec)
 }
 
@@ -45,6 +52,9 @@ func (c *ensureExecCommand) execAction(_ *fisk.ParseContext) error {
 		},
 		Returns:     c.returns,
 		Timeout:     c.timeout,
+		Cwd:         c.cwd,
+		Environment: c.environment,
+		Path:        c.path,
 		Creates:     c.creates,
 		RefreshOnly: c.refreshOnly,
 		Subscribe:   c.subscribe,

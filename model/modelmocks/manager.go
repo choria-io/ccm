@@ -22,7 +22,7 @@ func NewManager(facts map[string]any, data map[string]any, noop bool, ctl *gomoc
 	mgr.EXPECT().Data().AnyTimes().Return(data)
 	mgr.EXPECT().NoopMode().AnyTimes().Return(noop)
 	mgr.EXPECT().SetWorkingDirectory(gomock.Any()).DoAndReturn(func(d string) string { wd = d; return d }).AnyTimes()
-	mgr.EXPECT().WorkingDirectory().AnyTimes().Return(wd)
+	mgr.EXPECT().WorkingDirectory().DoAndReturn(func() string { return wd }).AnyTimes()
 	mgr.EXPECT().TemplateEnvironment(gomock.Any()).AnyTimes().Return(&templates.Env{Facts: facts, Data: data}, nil)
 	logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()

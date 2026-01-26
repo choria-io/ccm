@@ -396,7 +396,7 @@ var _ = Describe("File Type", func() {
 
 		Describe("Apply", func() {
 			BeforeEach(func() {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
 			})
 
 			It("Should fail if initial status check fails", func(ctx context.Context) {
@@ -716,7 +716,7 @@ var _ = Describe("File Type", func() {
 				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 					return noopProvider, nil
 				})
-				noopFactory.EXPECT().IsManageable(facts).Return(true, 1, nil).AnyTimes()
+				noopFactory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
 
 				registry.Clear()
 				registry.MustRegister(noopFactory)
@@ -818,7 +818,7 @@ var _ = Describe("File Type", func() {
 
 		Describe("Info", func() {
 			It("Should fail if no suitable factory", func() {
-				factory.EXPECT().IsManageable(facts).Return(false, 0, nil)
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(false, 0, nil)
 
 				_, err := file.Info(context.Background())
 				Expect(err).To(MatchError(model.ErrProviderNotManageable))
@@ -831,7 +831,7 @@ var _ = Describe("File Type", func() {
 			})
 
 			It("Should handle info failures", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil)
 				provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(nil, fmt.Errorf("cant execute status command"))
 
 				nfo, err := file.Info(context.Background())
@@ -840,7 +840,7 @@ var _ = Describe("File Type", func() {
 			})
 
 			It("Should call status on the provider", func() {
-				factory.EXPECT().IsManageable(facts).Return(true, 1, nil)
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil)
 
 				res := &model.FileState{
 					CommonResourceState: model.CommonResourceState{Name: "/tmp/testfile"},
@@ -858,6 +858,34 @@ var _ = Describe("File Type", func() {
 		Describe("Accessor methods", func() {
 			It("Should return empty provider before selection", func() {
 				Expect(file.Provider()).To(BeEmpty())
+			})
+		})
+
+		Describe("adjustedSource", func() {
+			It("Should return empty string when source is empty", func() {
+				file.prop.Source = ""
+				result := file.adjustedSource(file.prop)
+				Expect(result).To(BeEmpty())
+			})
+
+			It("Should prepend working directory for relative paths", func() {
+				mgr.SetWorkingDirectory("/var/lib/ccm/manifests")
+				file.prop.Source = "templates/config.txt"
+				result := file.adjustedSource(file.prop)
+				Expect(result).To(Equal("/var/lib/ccm/manifests/templates/config.txt"))
+			})
+
+			It("Should not modify absolute paths", func() {
+				mgr.SetWorkingDirectory("/var/lib/ccm/manifests")
+				file.prop.Source = "/etc/source/config.txt"
+				result := file.adjustedSource(file.prop)
+				Expect(result).To(Equal("/etc/source/config.txt"))
+			})
+
+			It("Should return relative path as-is when working directory is empty", func() {
+				file.prop.Source = "templates/config.txt"
+				result := file.adjustedSource(file.prop)
+				Expect(result).To(Equal("templates/config.txt"))
 			})
 		})
 	})

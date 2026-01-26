@@ -936,7 +936,7 @@ ccm:
 		Expect(res).NotTo(BeNil())
 		Expect(apply).NotTo(BeNil())
 		resources := apply.Resources()
-		Expect(resources).To(HaveLen(2))
+		Expect(resources).To(HaveLen(3)) // 1 archive + 2 packages from loop
 	})
 
 	It("returns an error for invalid YAML", func() {

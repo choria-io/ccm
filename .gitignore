@@ -14,3 +14,4 @@ CLAUDE.md
 manifest.yaml
 *.patch
 .DS_Store
+appbuilder-*

@@ -25,6 +25,6 @@ func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provi
 
 	return NewPosixProvider(log, runner)
 }
-func (p *factory) IsManageable(_ map[string]any) (bool, int, error) {
+func (p *factory) IsManageable(_ map[string]any, _ model.ResourceProperties) (bool, int, error) {
 	return true, 1, nil
 }

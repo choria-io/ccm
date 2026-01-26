@@ -81,9 +81,9 @@ func (m *MockProviderFactory) EXPECT() *MockProviderFactoryMockRecorder {
 }
 
 // IsManageable mocks base method.
-func (m *MockProviderFactory) IsManageable(arg0 map[string]any) (bool, int, error) {
+func (m *MockProviderFactory) IsManageable(arg0 map[string]any, arg1 model.ResourceProperties) (bool, int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsManageable", arg0)
+	ret := m.ctrl.Call(m, "IsManageable", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(int)
 	ret2, _ := ret[2].(error)
@@ -91,9 +91,9 @@ func (m *MockProviderFactory) IsManageable(arg0 map[string]any) (bool, int, erro
 }
 
 // IsManageable indicates an expected call of IsManageable.
-func (mr *MockProviderFactoryMockRecorder) IsManageable(arg0 any) *gomock.Call {
+func (mr *MockProviderFactoryMockRecorder) IsManageable(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsManageable", reflect.TypeOf((*MockProviderFactory)(nil).IsManageable), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsManageable", reflect.TypeOf((*MockProviderFactory)(nil).IsManageable), arg0, arg1)
 }
 
 // Name mocks base method.

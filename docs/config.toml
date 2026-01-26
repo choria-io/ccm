@@ -14,7 +14,7 @@ showVisitedLinks = false
 disableLanguageSwitchingButton = true
 #themeVariant = "ccm"
 disableInlineCopyToClipBoard = true
-alwaysopen = true
+alwaysopen = false
 collapsibleMenu = true
 externalLinkTargetc= "_self"
 

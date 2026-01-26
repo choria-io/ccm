@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -179,7 +179,7 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 
 	var contentChecksum string
 	var err error
-	meta := state.Metadata.(*model.FileMetadata)
+	meta := state.Metadata
 
 	if properties.Ensure != state.Ensure {
 		t.log.Debug("Ensure does not match", "requested", properties.Ensure, "state", state.Ensure)
@@ -285,7 +285,7 @@ func (t *Type) selectProviderUnlocked() error {
 		return nil
 	}
 
-	selected, err := registry.FindSuitableProvider(model.FileTypeName, t.prop.Provider, t.facts, t.log, nil)
+	selected, err := registry.FindSuitableProvider(model.FileTypeName, t.prop.Provider, t.facts, t.prop, t.log, nil)
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,8 @@ func (t *Type) SelectProvider() (string, error) {
 
 func (t *Type) adjustedSource(properties *model.FileResourceProperties) string {
 	source := properties.Source
-	if properties.Source != "" && t.mgr.WorkingDirectory() != "" {
+
+	if source != "" && !filepath.IsAbs(source) && t.mgr.WorkingDirectory() != "" {
 		source = filepath.Join(t.mgr.WorkingDirectory(), properties.Source)
 	}
 

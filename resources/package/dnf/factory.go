@@ -22,7 +22,7 @@ func (p *factory) Name() string     { return ProviderName }
 func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 	return NewDnfProvider(log, runner)
 }
-func (p *factory) IsManageable(_ map[string]any) (bool, int, error) {
+func (p *factory) IsManageable(_ map[string]any, _ model.ResourceProperties) (bool, int, error) {
 	for _, path := range []string{"dnf", "rpm"} {
 		_, found, err := iu.ExecutableInPath(path)
 		if err != nil {

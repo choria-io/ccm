@@ -27,6 +27,7 @@ import (
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
+	archiveresource "github.com/choria-io/ccm/resources/archive"
 	execresource "github.com/choria-io/ccm/resources/exec"
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
@@ -81,6 +82,10 @@ func (a *Apply) validateManifestAny(m any) error {
 }
 
 func (a *Apply) validateManifest(mb []byte) error {
+	if os.Getenv("NO_SCHEMA_VALIDATION") == "1" {
+		return nil
+	}
+
 	if len(mb) == 0 {
 		return fmt.Errorf("manifest not parsed")
 	}
@@ -342,7 +347,9 @@ func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string
 	}
 	defer manifestFile.Close()
 
-	resolved, apply, err := ResolveManifestReader(ctx, mgr, filepath.Dir(path), manifestFile, opts...)
+	mgr.SetWorkingDirectory(filepath.Dir(path))
+
+	resolved, apply, err := ResolveManifestReader(ctx, mgr, mgr.WorkingDirectory(), manifestFile, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -564,6 +571,8 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 				resource, err = fileresource.New(ctx, mgr, *rprop)
 			case *model.ExecResourceProperties:
 				resource, err = execresource.New(ctx, mgr, *rprop)
+			case *model.ArchiveResourceProperties:
+				resource, err = archiveresource.New(ctx, mgr, *rprop)
 			default:
 				return nil, fmt.Errorf("unsupported resource property type %T", rprop)
 			}

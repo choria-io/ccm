@@ -24,7 +24,7 @@ CCM is a small-scale Configuration Management system designed to meet users wher
 
 ## Status
 
-This is experimental and a work in progress. Currently, only `exec`, `file`, `service`, and `package` resources are implemented, with support limited to `dnf`, `apt` and `systemd`.
+This is experimental and a work in progress. Currently, only `archive`, `exec`, `file`, `service`, and `package` resources are implemented, with support limited to `dnf`, `apt` and `systemd`.
 
 The CLI and shell interaction have reached a mature state. Next, we're exploring network-related features and deeper monitoring integration.
 

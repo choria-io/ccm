@@ -33,7 +33,7 @@ func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	file := ccm.Command("file", "File management").Action(cmd.fileAction)
 	file.Arg("name", "File name to manage").Required().StringVar(&cmd.name)
 	file.Arg("ensure", "Ensure value").Default(model.EnsurePresent).StringVar(&cmd.ensure)
-	file.Flag("owner", "File and group (owner:group)").StringVar(&cmd.owner)
+	file.Flag("owner", "User and group (user:group)").StringVar(&cmd.owner)
 	file.Flag("mode", "File mode (octal)").Default("0644").StringVar(&cmd.mode)
 	file.Flag("contents", "Contents of the file, will be template parsed").PlaceHolder("STRING").StringVar(&cmd.contents)
 	file.Flag("contents-file", "File containing the contents of the file, will be template parsed").PlaceHolder("FILE").ExistingFileVar(&cmd.contentsFile)

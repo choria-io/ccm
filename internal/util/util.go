@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -40,6 +41,18 @@ func FileExists(path string) bool {
 	return err == nil
 }
 
+// FileHasSuffix checks if a filename has one of the given suffixes (case-insensitive).
+// This handles compound extensions like ".tar.gz" correctly.
+func FileHasSuffix(filename string, suffixes ...string) bool {
+	lowerFilename := strings.ToLower(filename)
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(lowerFilename, strings.ToLower(suffix)) {
+			return true
+		}
+	}
+	return false
+}
+
 // IsDirectory determines if a path is a directory
 func IsDirectory(path string) bool {
 	stat, err := os.Stat(path)
@@ -51,6 +64,69 @@ func IsDirectory(path string) bool {
 	}
 
 	return stat.IsDir()
+}
+
+// LookupUserID looks up a user by name and returns the numeric UID.
+func LookupUserID(name string) (int, error) {
+	if name == "" {
+		return -1, fmt.Errorf("user name cannot be empty")
+	}
+	u, err := user.Lookup(name)
+	if err != nil {
+		return -1, fmt.Errorf("could not lookup user %q: %w", name, err)
+	}
+	uid, err := strconv.Atoi(u.Uid)
+	if err != nil {
+		return -1, fmt.Errorf("could not convert user id %s to integer: %w", u.Uid, err)
+	}
+	return uid, nil
+}
+
+// LookupGroupID looks up a group by name and returns the numeric GID.
+func LookupGroupID(name string) (int, error) {
+	if name == "" {
+		return -1, fmt.Errorf("group name cannot be empty")
+	}
+	g, err := user.LookupGroup(name)
+	if err != nil {
+		return -1, fmt.Errorf("could not lookup group %q: %w", name, err)
+	}
+	gid, err := strconv.Atoi(g.Gid)
+	if err != nil {
+		return -1, fmt.Errorf("could not convert group id %s to integer: %w", g.Gid, err)
+	}
+	return gid, nil
+}
+
+// LookupOwnerGroup looks up both user and group by name and returns their numeric IDs.
+func LookupOwnerGroup(owner string, group string) (int, int, error) {
+	uid, err := LookupUserID(owner)
+	if err != nil {
+		return -1, -1, err
+	}
+	gid, err := LookupGroupID(group)
+	if err != nil {
+		return -1, -1, err
+	}
+	return uid, gid, nil
+}
+
+// ChownFile changes the owner and group of an open file.
+func ChownFile(file *os.File, owner string, group string) error {
+	uid, gid, err := LookupOwnerGroup(owner, group)
+	if err != nil {
+		return err
+	}
+	return file.Chown(uid, gid)
+}
+
+// ChownPath changes the owner and group of a file by path.
+func ChownPath(path string, owner string, group string) error {
+	uid, gid, err := LookupOwnerGroup(owner, group)
+	if err != nil {
+		return err
+	}
+	return os.Chown(path, uid, gid)
 }
 
 // VersionCmp compares two version strings.
@@ -279,6 +355,14 @@ func UntarGz(s io.Reader, td string) ([]string, error) {
 				return nil, err
 			}
 			continue
+		} else {
+			dir := filepath.Dir(path)
+			if !IsDirectory(dir) {
+				err = os.MkdirAll(dir, 0555)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, nfo.Mode())
@@ -357,20 +441,21 @@ type HttpGetResult struct {
 	Status     string
 }
 
-// HttpGet performs an HTTP GET request with optional timeout and basic auth from URL credentials.
-// If timeout is 0 or negative, defaults to 1 minute.
-func HttpGet(ctx context.Context, rawUrl string, timeout time.Duration) (*HttpGetResult, error) {
+// HttpGetResponse performs an HTTP GET request with optional timeout and basic auth from URL credentials.
+// If timeout is 0 or negative, defaults to 1 minute. The response is returned, and, if the body is
+// accessed closed should be called
+func HttpGetResponse(ctx context.Context, rawUrl string, timeout time.Duration, hdrs http.Header) (*http.Response, context.CancelFunc, error) {
 	if rawUrl == "" {
-		return nil, fmt.Errorf("URL is required")
+		return nil, nil, fmt.Errorf("URL is required")
 	}
 
 	parsedUrl, err := url.Parse(rawUrl)
 	if err != nil {
-		return nil, fmt.Errorf("invalid URL: %w", err)
+		return nil, nil, fmt.Errorf("invalid URL: %w", err)
 	}
 
 	if parsedUrl.Scheme != "http" && parsedUrl.Scheme != "https" {
-		return nil, fmt.Errorf("URL scheme must be http or https, got %q", parsedUrl.Scheme)
+		return nil, nil, fmt.Errorf("URL scheme must be http or https, got %q", parsedUrl.Scheme)
 	}
 
 	if timeout <= 0 {
@@ -378,11 +463,11 @@ func HttpGet(ctx context.Context, rawUrl string, timeout time.Duration) (*HttpGe
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
 
 	req, err := http.NewRequestWithContext(timeoutCtx, http.MethodGet, rawUrl, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+		cancel()
+		return nil, nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
 	// Add Basic Auth if credentials are provided in the URL
@@ -392,11 +477,27 @@ func HttpGet(ctx context.Context, rawUrl string, timeout time.Duration) (*HttpGe
 		req.SetBasicAuth(username, password)
 	}
 
+	req.Header = hdrs
+
 	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		cancel()
+		return nil, nil, fmt.Errorf("failed to perform HTTP request: %w", err)
+	}
+
+	return resp, cancel, nil
+}
+
+// HttpGet performs an HTTP GET request with optional timeout and basic auth from URL credentials.
+// If timeout is 0 or negative, defaults to 1 minute. The body is read and returned as a byte slice
+// to return a http.Response instead use HttpGetResponse()
+func HttpGet(ctx context.Context, rawUrl string, timeout time.Duration) (*HttpGetResult, error) {
+	resp, cancel, err := HttpGetResponse(ctx, rawUrl, timeout, nil)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
+	defer cancel()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

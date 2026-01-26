@@ -66,7 +66,7 @@ var _ = Describe("Factory", func() {
 
 	Describe("IsManageable", func() {
 		It("Should always return true", func() {
-			manageable, prio, err := f.IsManageable(nil)
+			manageable, prio, err := f.IsManageable(nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
 			Expect(prio).To(Equal(1))
@@ -76,7 +76,7 @@ var _ = Describe("Factory", func() {
 			facts := map[string]any{
 				"os": "linux",
 			}
-			manageable, prio, err := f.IsManageable(facts)
+			manageable, prio, err := f.IsManageable(facts, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manageable).To(BeTrue())
 			Expect(prio).To(Equal(1))

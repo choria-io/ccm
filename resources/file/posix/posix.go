@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strconv"
 
@@ -38,7 +37,7 @@ func (p *Provider) CreateDirectory(ctx context.Context, dir string, owner string
 		return err
 	}
 
-	uid, gid, err := parseOwnerGroup(owner, group)
+	uid, gid, err := iu.LookupOwnerGroup(owner, group)
 	if err != nil {
 		return err
 	}
@@ -58,37 +57,6 @@ func parseFileMode(mode string) (os.FileMode, error) {
 	}
 
 	return os.FileMode(parsedMode), nil
-}
-
-func parseOwnerGroup(owner string, group string) (int, int, error) {
-	usrIDString, err := user.Lookup(owner)
-	if err != nil {
-		return -1, -1, fmt.Errorf("could not lookup user %q: %w", owner, err)
-	}
-	uid, err := strconv.Atoi(usrIDString.Uid)
-	if err != nil {
-		return -1, -1, fmt.Errorf("could not convert user id %s to integer: %w", usrIDString.Uid, err)
-	}
-
-	grpIDString, err := user.LookupGroup(group)
-	if err != nil {
-		return -1, -1, fmt.Errorf("could not lookup group %q: %w", group, err)
-	}
-	gid, err := strconv.Atoi(grpIDString.Gid)
-	if err != nil {
-		return -1, -1, fmt.Errorf("could not convert group id %s to integer: %w", grpIDString.Gid, err)
-	}
-
-	return uid, gid, nil
-}
-
-func chownFile(file *os.File, owner string, group string) error {
-	uid, gid, err := parseOwnerGroup(owner, group)
-	if err != nil {
-		return err
-	}
-
-	return file.Chown(uid, gid)
 }
 
 func (p *Provider) Store(ctx context.Context, file string, contents []byte, source string, owner string, group string, mode string) error {
@@ -132,7 +100,7 @@ func (p *Provider) Store(ctx context.Context, file string, contents []byte, sour
 		return err
 	}
 
-	err = chownFile(tf, owner, group)
+	err = iu.ChownFile(tf, owner, group)
 	if err != nil {
 		return err
 	}
@@ -176,7 +144,7 @@ func (p *Provider) Status(ctx context.Context, file string) (*model.FileState, e
 		metadata.Size = stat.Size()
 		metadata.MTime = stat.ModTime()
 
-		metadata.Owner, metadata.Group, metadata.Mode, err = getFileOwner(stat)
+		metadata.Owner, metadata.Group, metadata.Mode, err = iu.GetFileOwner(stat)
 		if err != nil {
 			p.log.Warn("Failed to get file ownership information: %s", err)
 		}
