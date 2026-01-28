@@ -13,13 +13,13 @@ import (
 	"github.com/choria-io/ccm/model"
 )
 
-type entry struct {
+type providerEntry struct {
 	factory model.ProviderFactory
 }
 
 var (
-	entries = make(map[string]map[string]*entry)
-	mu      sync.Mutex
+	providers = make(map[string]map[string]*providerEntry)
+	mu        sync.Mutex
 )
 
 // Clear removes all registered providers
@@ -27,48 +27,66 @@ func Clear() {
 	mu.Lock()
 	defer mu.Unlock()
 
-	entries = make(map[string]map[string]*entry)
+	providers = make(map[string]map[string]*providerEntry)
 }
 
-// MustRegister registers a provider factory and panics if registration fails
-func MustRegister(p model.ProviderFactory) {
+// Register registers a plugin
+func Register(p any) error {
+	switch tp := p.(type) {
+	case model.ProviderFactory:
+		return registerProvider(tp)
+	default:
+		return fmt.Errorf("cannot register provider of type %T", p)
+	}
+}
+
+// MustRegister registers a plugin and panics if registration fails
+func MustRegister(p any) {
 	err := Register(p)
 	if err != nil {
 		panic(err)
 	}
 }
 
-// Register registers a provider factory for its type and returns an error if a provider with the same name already exists
-func Register(p model.ProviderFactory) error {
+// mustRegisterProvider registers a provider factory and panics if registration fails
+func mustRegisterProvider(p model.ProviderFactory) {
+	err := registerProvider(p)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// registerProvider registers a provider factory for its type and returns an error if a provider with the same name already exists
+func registerProvider(p model.ProviderFactory) error {
 	mu.Lock()
 	defer mu.Unlock()
 
 	tn := p.TypeName()
 	pn := p.Name()
 
-	_, ok := entries[tn]
+	_, ok := providers[tn]
 	if !ok {
-		entries[tn] = make(map[string]*entry)
+		providers[tn] = make(map[string]*providerEntry)
 	}
 
-	_, ok = entries[tn][pn]
+	_, ok = providers[tn][pn]
 	if ok {
 		return model.ErrDuplicateProvider
 	}
 
-	entries[tn][pn] = &entry{factory: p}
+	providers[tn][pn] = &providerEntry{factory: p}
 
 	return nil
 }
 
-// SelectProviders returns a list of providers that can manage the node given facts
-func SelectProviders(typeName string, facts map[string]any, properties model.ResourceProperties, log model.Logger) ([]model.ProviderFactory, error) {
+// selectProviders returns a list of providers that can manage the node given facts
+func selectProviders(typeName string, facts map[string]any, properties model.ResourceProperties, log model.Logger) ([]model.ProviderFactory, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	var result []model.ProviderFactory
 
-	typeEntries, ok := entries[typeName]
+	typeEntries, ok := providers[typeName]
 	if !ok {
 		return result, nil
 	}
@@ -100,12 +118,12 @@ func SelectProviders(typeName string, facts map[string]any, properties model.Res
 	return result, nil
 }
 
-// SelectProvider finds a provider matching name and checks it's manageable before returning it
-func SelectProvider(typeName string, providerName string, facts map[string]any, properties model.ResourceProperties, log model.Logger) (model.ProviderFactory, error) {
+// selectProvider finds a provider matching name and checks it's manageable before returning it
+func selectProvider(typeName string, providerName string, facts map[string]any, properties model.ResourceProperties, log model.Logger) (model.ProviderFactory, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	typeEntries, ok := entries[typeName]
+	typeEntries, ok := providers[typeName]
 	if !ok {
 		log.Debug("No providers registered", "type", typeName)
 		return nil, nil
@@ -137,7 +155,7 @@ func Types() []string {
 	defer mu.Unlock()
 
 	var res []string
-	for k := range maps.Keys(entries) {
+	for k := range maps.Keys(providers) {
 		res = append(res, k)
 	}
 
@@ -151,7 +169,7 @@ func FindSuitableProvider(typeName string, provider string, facts map[string]any
 	var selected model.ProviderFactory
 
 	if provider == "" {
-		provs, err := SelectProviders(typeName, facts, properties, log)
+		provs, err := selectProviders(typeName, facts, properties, log)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", model.ErrProviderNotFound, err)
 		}
@@ -162,7 +180,7 @@ func FindSuitableProvider(typeName string, provider string, facts map[string]any
 
 		selected = provs[0]
 	} else {
-		prov, err := SelectProvider(typeName, provider, facts, properties, log)
+		prov, err := selectProvider(typeName, provider, facts, properties, log)
 		if err != nil && prov == nil {
 			return nil, fmt.Errorf("%w: %w", model.ErrResourceInvalid, err)
 		}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/resources"
 	"github.com/choria-io/fisk"
 )
 
@@ -48,6 +49,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	registerEnsureFileCommand(ens, cmd)
 	registerEnsurePackageCommand(ens, cmd)
 	registerEnsureServiceCommand(ens, cmd)
+	registerEnsureApiCommand(ens, cmd)
 }
 
 // we do it like this in each child so it shows up in the main sub command help without needing explicit --help
@@ -77,14 +79,6 @@ func (cmd *ensureCommand) manager() (model.Manager, error) {
 	return mgr, nil
 }
 
-func (cmd *ensureCommand) setCommonProperties(cp *model.CommonResourceProperties) error {
-	cp.HealthChecks = cmd.healthCheckProperties()
-	cp.Require = cmd.requires
-	cp.Alias = cmd.alias
-
-	return nil
-}
-
 func (cmd *ensureCommand) healthCheckProperties() []model.CommonHealthCheck {
 	if cmd.healthCheckCommand == "" {
 		return nil
@@ -107,4 +101,37 @@ func (cmd *ensureCommand) control() *model.CommonResourceControl {
 		ManageIf:     cmd.conditionIf,
 		ManageUnless: cmd.conditionUnless,
 	}
+}
+
+func (cmd *ensureCommand) commonEnsureResource(properties model.ResourceProperties) error {
+	mgr, err := cmd.manager()
+	if err != nil {
+		return err
+	}
+
+	cp := properties.CommonProperties()
+
+	cp.HealthChecks = cmd.healthCheckProperties()
+	cp.Control = cmd.control()
+	cp.Require = cmd.requires
+	cp.Alias = cmd.alias
+
+	svc, err := resources.NewResourceFromProperties(ctx, mgr, properties)
+	if err != nil {
+		return err
+	}
+
+	status, err := svc.Apply(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = mgr.RecordEvent(status)
+	if err != nil {
+		return err
+	}
+
+	status.LogStatus(cmd.out)
+
+	return nil
 }

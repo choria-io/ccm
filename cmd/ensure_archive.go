@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/choria-io/ccm/model"
-	archiveresource "github.com/choria-io/ccm/resources/archive"
 	"github.com/choria-io/fisk"
 )
 
@@ -55,7 +54,6 @@ func (c *ensureArchiveCommand) archiveAction(_ *fisk.ParseContext) error {
 			Name:     c.name,
 			Ensure:   model.EnsurePresent,
 			Provider: c.parent.provider,
-			Control:  c.parent.control(),
 		},
 		Url:           c.url,
 		Headers:       c.hdr,
@@ -65,11 +63,6 @@ func (c *ensureArchiveCommand) archiveAction(_ *fisk.ParseContext) error {
 		ExtractParent: c.extract,
 		Creates:       c.creates,
 		Cleanup:       c.cleanup,
-	}
-
-	err := c.parent.setCommonProperties(&properties.CommonResourceProperties)
-	if err != nil {
-		return err
 	}
 
 	parts := strings.SplitN(c.owner, ":", 2)
@@ -90,27 +83,5 @@ func (c *ensureArchiveCommand) archiveAction(_ *fisk.ParseContext) error {
 		properties.Group = grp.Name
 	}
 
-	mgr, err := c.parent.manager()
-	if err != nil {
-		return err
-	}
-
-	archive, err := archiveresource.New(ctx, mgr, properties)
-	if err != nil {
-		return err
-	}
-
-	status, err := archive.Apply(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = mgr.RecordEvent(status)
-	if err != nil {
-		return err
-	}
-
-	status.LogStatus(c.parent.out)
-
-	return nil
+	return c.parent.commonEnsureResource(&properties)
 }

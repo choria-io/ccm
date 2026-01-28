@@ -18,7 +18,7 @@ import (
 
 func TestRegistry(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry")
+	RunSpecs(t, "Internal/Registry")
 }
 
 var _ = Describe("Registry", func() {
@@ -56,58 +56,58 @@ var _ = Describe("Registry", func() {
 		Clear()
 	})
 
-	Describe("Register", func() {
+	Describe("registerProvider", func() {
 		It("Should register a provider factory", func() {
-			err := Register(factory1)
+			err := registerProvider(factory1)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("Should register multiple providers of the same type", func() {
-			err := Register(factory1)
+			err := registerProvider(factory1)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = Register(factory2)
+			err = registerProvider(factory2)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("Should register providers of different types", func() {
-			err := Register(factory1)
+			err := registerProvider(factory1)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = Register(factory3)
+			err = registerProvider(factory3)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("Should fail when registering duplicate provider", func() {
-			err := Register(factory1)
+			err := registerProvider(factory1)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = Register(factory1)
+			err = registerProvider(factory1)
 			Expect(err).To(Equal(model.ErrDuplicateProvider))
 		})
 	})
 
-	Describe("MustRegister", func() {
+	Describe("mustRegisterProvider", func() {
 		It("Should register a provider factory", func() {
 			Expect(func() {
-				MustRegister(factory1)
+				mustRegisterProvider(factory1)
 			}).ToNot(Panic())
 		})
 
 		It("Should panic when registration fails", func() {
-			MustRegister(factory1)
+			mustRegisterProvider(factory1)
 
 			Expect(func() {
-				MustRegister(factory1)
+				mustRegisterProvider(factory1)
 			}).To(Panic())
 		})
 	})
 
 	Describe("Clear", func() {
 		It("Should remove all registered providers", func() {
-			Register(factory1)
-			Register(factory2)
-			Register(factory3)
+			registerProvider(factory1)
+			registerProvider(factory2)
+			registerProvider(factory3)
 
 			Expect(Types()).To(HaveLen(2))
 
@@ -124,8 +124,8 @@ var _ = Describe("Registry", func() {
 		})
 
 		It("Should return list of registered type names", func() {
-			Register(factory1)
-			Register(factory3)
+			registerProvider(factory1)
+			registerProvider(factory3)
 
 			types := Types()
 			Expect(types).To(HaveLen(2))
@@ -133,8 +133,8 @@ var _ = Describe("Registry", func() {
 		})
 
 		It("Should not duplicate type names for multiple providers", func() {
-			Register(factory1)
-			Register(factory2)
+			registerProvider(factory1)
+			registerProvider(factory2)
 
 			types := Types()
 			Expect(types).To(HaveLen(1))
@@ -142,7 +142,7 @@ var _ = Describe("Registry", func() {
 		})
 	})
 
-	Describe("SelectProviders", func() {
+	Describe("selectProviders", func() {
 		var facts map[string]any
 
 		BeforeEach(func() {
@@ -152,16 +152,16 @@ var _ = Describe("Registry", func() {
 		})
 
 		It("Should return empty list when type not found", func() {
-			providers, err := SelectProviders("nonexistent", facts, nil, logger)
+			providers, err := selectProviders("nonexistent", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(providers).To(BeEmpty())
 		})
 
 		It("Should return empty list when no providers are manageable", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(false, 0, nil)
-			Register(factory1)
+			registerProvider(factory1)
 
-			providers, err := SelectProviders("package", facts, nil, logger)
+			providers, err := selectProviders("package", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(providers).To(BeEmpty())
 		})
@@ -169,10 +169,10 @@ var _ = Describe("Registry", func() {
 		It("Should return manageable providers", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 			factory2.EXPECT().IsManageable(facts, nil).Return(false, 0, nil)
-			Register(factory1)
-			Register(factory2)
+			registerProvider(factory1)
+			registerProvider(factory2)
 
-			providers, err := SelectProviders("package", facts, nil, logger)
+			providers, err := selectProviders("package", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(providers).To(HaveLen(1))
 			Expect(providers[0]).To(Equal(factory1))
@@ -181,10 +181,10 @@ var _ = Describe("Registry", func() {
 		It("Should return multiple manageable providers", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 			factory2.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
-			Register(factory1)
-			Register(factory2)
+			registerProvider(factory1)
+			registerProvider(factory2)
 
-			providers, err := SelectProviders("package", facts, nil, logger)
+			providers, err := selectProviders("package", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(providers).To(HaveLen(2))
 			Expect(providers).To(ConsistOf(factory1, factory2))
@@ -193,10 +193,10 @@ var _ = Describe("Registry", func() {
 		It("Should skip providers that error during IsManageable check", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(false, 0, fmt.Errorf("check failed"))
 			factory2.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
-			Register(factory1)
-			Register(factory2)
+			registerProvider(factory1)
+			registerProvider(factory2)
 
-			providers, err := SelectProviders("package", facts, nil, logger)
+			providers, err := selectProviders("package", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(providers).To(HaveLen(1))
 			Expect(providers[0]).To(Equal(factory2))
@@ -205,10 +205,10 @@ var _ = Describe("Registry", func() {
 		It("Should return providers sorted by priority (lowest first)", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(true, 10, nil)
 			factory2.EXPECT().IsManageable(facts, nil).Return(true, 5, nil)
-			Register(factory1)
-			Register(factory2)
+			registerProvider(factory1)
+			registerProvider(factory2)
 
-			providers, err := SelectProviders("package", facts, nil, logger)
+			providers, err := selectProviders("package", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(providers).To(HaveLen(2))
 			Expect(providers[0]).To(Equal(factory2)) // priority 5
@@ -218,17 +218,17 @@ var _ = Describe("Registry", func() {
 		It("Should return all providers with same priority", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(true, 5, nil)
 			factory2.EXPECT().IsManageable(facts, nil).Return(true, 5, nil)
-			Register(factory1)
-			Register(factory2)
+			registerProvider(factory1)
+			registerProvider(factory2)
 
-			providers, err := SelectProviders("package", facts, nil, logger)
+			providers, err := selectProviders("package", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(providers).To(HaveLen(2))
 			Expect(providers).To(ConsistOf(factory1, factory2))
 		})
 	})
 
-	Describe("SelectProvider", func() {
+	Describe("selectProvider", func() {
 		var facts map[string]any
 
 		BeforeEach(func() {
@@ -238,52 +238,52 @@ var _ = Describe("Registry", func() {
 		})
 
 		It("Should return nil when type not found", func() {
-			provider, err := SelectProvider("nonexistent", "apt", facts, nil, logger)
+			provider, err := selectProvider("nonexistent", "apt", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(provider).To(BeNil())
 		})
 
 		It("Should return error when provider not found", func() {
-			Register(factory1)
+			registerProvider(factory1)
 
-			provider, err := SelectProvider("package", "nonexistent", facts, nil, logger)
+			provider, err := selectProvider("package", "nonexistent", facts, nil, logger)
 			Expect(err).To(Equal(model.ErrProviderNotFound))
 			Expect(provider).To(BeNil())
 		})
 
 		It("Should return error when provider is not manageable", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(false, 0, nil)
-			Register(factory1)
+			registerProvider(factory1)
 
-			provider, err := SelectProvider("package", "apt", facts, nil, logger)
+			provider, err := selectProvider("package", "apt", facts, nil, logger)
 			Expect(err).To(MatchError(ContainSubstring("not applicable to instance")))
 			Expect(provider).To(BeNil())
 		})
 
 		It("Should return error when IsManageable check fails", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(false, 0, fmt.Errorf("check failed"))
-			Register(factory1)
+			registerProvider(factory1)
 
-			provider, err := SelectProvider("package", "apt", facts, nil, logger)
+			provider, err := selectProvider("package", "apt", facts, nil, logger)
 			Expect(err).To(MatchError(ContainSubstring("check failed")))
 			Expect(provider).To(BeNil())
 		})
 
 		It("Should return provider when found and manageable", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
-			Register(factory1)
+			registerProvider(factory1)
 
-			provider, err := SelectProvider("package", "apt", facts, nil, logger)
+			provider, err := selectProvider("package", "apt", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(provider).To(Equal(factory1))
 		})
 
 		It("Should select correct provider from multiple registered", func() {
 			factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
-			Register(factory1)
-			Register(factory2)
+			registerProvider(factory1)
+			registerProvider(factory2)
 
-			provider, err := SelectProvider("package", "apt", facts, nil, logger)
+			provider, err := selectProvider("package", "apt", facts, nil, logger)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(provider).To(Equal(factory1))
 		})
@@ -313,7 +313,7 @@ var _ = Describe("Registry", func() {
 
 			It("Should return ErrNoSuitableProvider when no providers are manageable", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(false, 0, nil)
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "", facts, nil, logger, runner)
 				Expect(err).To(Equal(model.ErrNoSuitableProvider))
@@ -323,7 +323,7 @@ var _ = Describe("Registry", func() {
 			It("Should create and return provider when exactly one is manageable", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 				factory1.EXPECT().New(logger, runner).Return(provider, nil)
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "", facts, nil, logger, runner)
 				Expect(err).ToNot(HaveOccurred())
@@ -334,8 +334,8 @@ var _ = Describe("Registry", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 				factory1.EXPECT().New(logger, runner).Return(provider, nil)
 				factory2.EXPECT().IsManageable(facts, nil).Return(false, 0, nil)
-				Register(factory1)
-				Register(factory2)
+				registerProvider(factory1)
+				registerProvider(factory2)
 
 				result, err := FindSuitableProvider("package", "", facts, nil, logger, runner)
 				Expect(err).ToNot(HaveOccurred())
@@ -349,8 +349,8 @@ var _ = Describe("Registry", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(true, 10, nil)
 				factory2.EXPECT().IsManageable(facts, nil).Return(true, 5, nil)
 				factory2.EXPECT().New(logger, runner).Return(provider2, nil)
-				Register(factory1)
-				Register(factory2)
+				registerProvider(factory1)
+				registerProvider(factory2)
 
 				result, err := FindSuitableProvider("package", "", facts, nil, logger, runner)
 				Expect(err).ToNot(HaveOccurred())
@@ -360,7 +360,7 @@ var _ = Describe("Registry", func() {
 			It("Should return error when provider New() fails", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 				factory1.EXPECT().New(logger, runner).Return(nil, fmt.Errorf("failed to create provider"))
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "", facts, nil, logger, runner)
 				Expect(err).To(MatchError(ContainSubstring("failed to create provider")))
@@ -376,7 +376,7 @@ var _ = Describe("Registry", func() {
 			})
 
 			It("Should return ErrResourceInvalid when provider not found", func() {
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "nonexistent", facts, nil, logger, runner)
 				Expect(err).To(MatchError(model.ErrResourceInvalid))
@@ -386,7 +386,7 @@ var _ = Describe("Registry", func() {
 
 			It("Should return ErrResourceInvalid when provider is not manageable", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(false, 0, nil)
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "apt", facts, nil, logger, runner)
 				Expect(err).To(MatchError(model.ErrResourceInvalid))
@@ -396,7 +396,7 @@ var _ = Describe("Registry", func() {
 
 			It("Should return ErrResourceInvalid when IsManageable check fails", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(false, 0, fmt.Errorf("check failed"))
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "apt", facts, nil, logger, runner)
 				Expect(err).To(MatchError(model.ErrResourceInvalid))
@@ -407,7 +407,7 @@ var _ = Describe("Registry", func() {
 			It("Should create and return provider when found and manageable", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 				factory1.EXPECT().New(logger, runner).Return(provider, nil)
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "apt", facts, nil, logger, runner)
 				Expect(err).ToNot(HaveOccurred())
@@ -417,7 +417,7 @@ var _ = Describe("Registry", func() {
 			It("Should return error when provider New() fails", func() {
 				factory1.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 				factory1.EXPECT().New(logger, runner).Return(nil, fmt.Errorf("initialization failed"))
-				Register(factory1)
+				registerProvider(factory1)
 
 				result, err := FindSuitableProvider("package", "apt", facts, nil, logger, runner)
 				Expect(err).To(MatchError(ContainSubstring("initialization failed")))
@@ -427,8 +427,8 @@ var _ = Describe("Registry", func() {
 			It("Should select correct provider from multiple registered", func() {
 				factory2.EXPECT().IsManageable(facts, nil).Return(true, 1, nil)
 				factory2.EXPECT().New(logger, runner).Return(provider, nil)
-				Register(factory1)
-				Register(factory2)
+				registerProvider(factory1)
+				registerProvider(factory2)
 
 				result, err := FindSuitableProvider("package", "yum", facts, nil, logger, runner)
 				Expect(err).ToNot(HaveOccurred())
@@ -439,7 +439,7 @@ var _ = Describe("Registry", func() {
 
 	Describe("Thread safety", func() {
 		It("Should handle concurrent operations", func() {
-			// Set up IsManageable expectations since SelectProviders may call it
+			// Set up IsManageable expectations since selectProviders may call it
 			// if factories are registered before it runs
 			factory1.EXPECT().IsManageable(gomock.Any(), gomock.Any()).Return(true, 1, nil).AnyTimes()
 			factory2.EXPECT().IsManageable(gomock.Any(), gomock.Any()).Return(true, 1, nil).AnyTimes()
@@ -449,13 +449,13 @@ var _ = Describe("Registry", func() {
 			// Concurrent registrations
 			go func() {
 				defer GinkgoRecover()
-				Register(factory1)
+				registerProvider(factory1)
 				done <- true
 			}()
 
 			go func() {
 				defer GinkgoRecover()
-				Register(factory2)
+				registerProvider(factory2)
 				done <- true
 			}()
 
@@ -468,7 +468,7 @@ var _ = Describe("Registry", func() {
 
 			go func() {
 				defer GinkgoRecover()
-				SelectProviders("package", map[string]any{}, nil, logger)
+				selectProviders("package", map[string]any{}, nil, logger)
 				done <- true
 			}()
 

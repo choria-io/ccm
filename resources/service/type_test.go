@@ -20,7 +20,7 @@ import (
 
 func TestServiceResource(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Types/Service")
+	RunSpecs(t, "Resources/Service")
 }
 
 // Helper function to create bool pointers for table tests

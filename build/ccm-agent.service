@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=root
 Group=root
-ExecStart=/usr/bin/ccm agent --config /etc/choria/ccm/config.yaml
+ExecStart=/usr/bin/ccm agent --config /etc/choria/ccm/agent.yaml
 KillMode=process
 Restart=on-failure
 RestartSec=5s
