@@ -20,7 +20,7 @@ import (
 
 func TestPackageResource(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Types/Package")
+	RunSpecs(t, "Resources/Package")
 }
 
 var _ = Describe("Package Type", func() {

@@ -27,7 +27,7 @@ import (
 
 func TestApply(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Apply")
+	RunSpecs(t, "Resources/Apply")
 }
 
 var _ = Describe("Apply", func() {

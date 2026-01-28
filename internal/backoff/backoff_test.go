@@ -18,7 +18,7 @@ import (
 
 func TestBackoff(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Backoff")
+	RunSpecs(t, "Internal/Backoff")
 }
 
 var _ = Describe("Backoff", func() {

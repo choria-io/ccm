@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -20,7 +20,7 @@ import (
 
 func TestManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Manager Suite")
+	RunSpecs(t, "Manager")
 }
 
 var _ = Describe("WithNatsContext", func() {

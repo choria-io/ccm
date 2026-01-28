@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/choria-io/ccm/model"
-	fileresource "github.com/choria-io/ccm/resources/file"
 	"github.com/choria-io/fisk"
 )
 
@@ -35,8 +34,8 @@ func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	file.Arg("ensure", "Ensure value").Default(model.EnsurePresent).StringVar(&cmd.ensure)
 	file.Flag("owner", "User and group (user:group)").StringVar(&cmd.owner)
 	file.Flag("mode", "File mode (octal)").Default("0644").StringVar(&cmd.mode)
-	file.Flag("contents", "Contents of the file, will be template parsed").PlaceHolder("STRING").StringVar(&cmd.contents)
-	file.Flag("contents-file", "File containing the contents of the file, will be template parsed").PlaceHolder("FILE").ExistingFileVar(&cmd.contentsFile)
+	file.Flag("content", "Contents of the file, will be template parsed").PlaceHolder("STRING").StringVar(&cmd.contents)
+	file.Flag("content-file", "File containing the contents of the file, will be template parsed").PlaceHolder("FILE").ExistingFileVar(&cmd.contentsFile)
 	file.Flag("source", "File to copy in place verbatim").PlaceHolder("FILE").ExistingFileVar(&cmd.source)
 	parent.addCommonFlags(file)
 }
@@ -70,20 +69,15 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		group = grp.Name
 	}
 
-	mgr, err := c.parent.manager()
-	if err != nil {
-		return err
-	}
-
 	properties := model.FileResourceProperties{
-		Owner: owner,
-		Group: group,
-		Mode:  c.mode,
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:     c.name,
 			Ensure:   c.ensure,
 			Provider: c.parent.provider,
 		},
+		Owner: owner,
+		Group: group,
+		Mode:  c.mode,
 	}
 
 	switch {
@@ -101,27 +95,5 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		properties.Source = c.source
 	}
 
-	err = c.parent.setCommonProperties(&properties.CommonResourceProperties)
-	if err != nil {
-		return err
-	}
-
-	file, err := fileresource.New(ctx, mgr, properties)
-	if err != nil {
-		return err
-	}
-
-	status, err := file.Apply(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = mgr.RecordEvent(status)
-	if err != nil {
-		return err
-	}
-
-	status.LogStatus(c.parent.out)
-
-	return nil
+	return c.parent.commonEnsureResource(&properties)
 }

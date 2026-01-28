@@ -1,7 +1,7 @@
 +++
 title = "CLI Plugins"
 toc = true
-weight = 10
+weight = 20
 +++
 
 CCM supports extending the CLI with custom commands using [App Builder](https://choria-io.github.io/appbuilder/index.html). This allows you to create organization-specific workflows that integrate with the `ccm` command.

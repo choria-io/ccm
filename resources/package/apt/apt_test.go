@@ -19,7 +19,7 @@ import (
 
 func TestAptProvider(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Types/Package/APT")
+	RunSpecs(t, "Resources/Package/APT")
 }
 
 var _ = Describe("APT Provider", func() {

@@ -20,7 +20,7 @@ import (
 
 func TestArchiveResource(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Types/Archive")
+	RunSpecs(t, "Resources/Archive")
 }
 
 var _ = Describe("Archive Type", func() {

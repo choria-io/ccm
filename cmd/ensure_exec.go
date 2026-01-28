@@ -6,7 +6,6 @@ package main
 
 import (
 	"github.com/choria-io/ccm/model"
-	execresource "github.com/choria-io/ccm/resources/exec"
 	"github.com/choria-io/fisk"
 )
 
@@ -48,7 +47,6 @@ func (c *ensureExecCommand) execAction(_ *fisk.ParseContext) error {
 			Name:     c.command,
 			Ensure:   model.EnsurePresent,
 			Provider: c.parent.provider,
-			Control:  c.parent.control(),
 		},
 		Returns:     c.returns,
 		Timeout:     c.timeout,
@@ -61,32 +59,5 @@ func (c *ensureExecCommand) execAction(_ *fisk.ParseContext) error {
 		LogOutput:   c.logoutput,
 	}
 
-	err := c.parent.setCommonProperties(&properties.CommonResourceProperties)
-	if err != nil {
-		return err
-	}
-
-	mgr, err := c.parent.manager()
-	if err != nil {
-		return err
-	}
-
-	exec, err := execresource.New(ctx, mgr, properties)
-	if err != nil {
-		return err
-	}
-
-	status, err := exec.Apply(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = mgr.RecordEvent(status)
-	if err != nil {
-		return err
-	}
-
-	status.LogStatus(c.parent.out)
-
-	return nil
+	return c.parent.commonEnsureResource(&properties)
 }

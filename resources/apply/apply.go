@@ -27,11 +27,7 @@ import (
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
-	archiveresource "github.com/choria-io/ccm/resources/archive"
-	execresource "github.com/choria-io/ccm/resources/exec"
-	fileresource "github.com/choria-io/ccm/resources/file"
-	packageresource "github.com/choria-io/ccm/resources/package"
-	serviceresource "github.com/choria-io/ccm/resources/service"
+	"github.com/choria-io/ccm/resources"
 	"github.com/choria-io/ccm/templates"
 )
 
@@ -562,20 +558,7 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 			// TODO: error here should rather create a TransactionEvent with an error status
 			// TODO: this stuff should be stored in the registry so it knows when to call what so its automatic
 
-			switch rprop := prop.(type) {
-			case *model.PackageResourceProperties:
-				resource, err = packageresource.New(ctx, mgr, *rprop)
-			case *model.ServiceResourceProperties:
-				resource, err = serviceresource.New(ctx, mgr, *rprop)
-			case *model.FileResourceProperties:
-				resource, err = fileresource.New(ctx, mgr, *rprop)
-			case *model.ExecResourceProperties:
-				resource, err = execresource.New(ctx, mgr, *rprop)
-			case *model.ArchiveResourceProperties:
-				resource, err = archiveresource.New(ctx, mgr, *rprop)
-			default:
-				return nil, fmt.Errorf("unsupported resource property type %T", rprop)
-			}
+			resource, err = resources.NewResourceFromProperties(ctx, mgr, prop)
 			if err != nil {
 				return nil, err
 			}
