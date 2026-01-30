@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://choria.io/schemas/ccm/v1/resource_ensure_response.json",
+  "title": "CCM Resource Ensure API Response",
+  "description": "Response format from the CCM ensure API after managing a resource",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "description": "Protocol identifier for the response",
+      "const": "io.choria.ccm.v1.resource.ensure.response"
+    },
+    "error": {
+      "type": "string",
+      "description": "Error message if the request failed. Mutually exclusive with 'state'."
+    },
+    "state": {
+      "$ref": "#/$defs/transactionEvent",
+      "description": "The resulting state after applying the resource. Present on success."
+    }
+  },
+  "required": ["protocol"],
+  "oneOf": [
+    {
+      "required": ["state"],
+      "properties": {
+        "error": false
+      }
+    },
+    {
+      "required": ["error"],
+      "properties": {
+        "state": false
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "transactionEvent": {
+      "type": "object",
+      "description": "A transaction event representing the result of applying a resource",
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "description": "Protocol identifier for the transaction event",
+          "const": "io.choria.ccm.v1.transaction.event"
+        },
+        "event_id": {
+          "type": "string",
+          "description": "Unique identifier for this event (KSUID format)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when the event occurred",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "description": "The resource type that was managed",
+          "enum": ["package", "service", "file", "exec", "archive"]
+        },
+        "provider": {
+          "type": "string",
+          "description": "The provider that was used to manage the resource",
+          "examples": ["dnf", "apt", "systemd", "posix", "http"]
+        },
+        "name": {
+          "type": "string",
+          "description": "The resource name"
+        },
+        "alias": {
+          "type": "string",
+          "description": "The resource alias if one was specified"
+        },
+        "requested_ensure": {
+          "type": "string",
+          "description": "The ensure value that was requested in the input properties"
+        },
+        "final_ensure": {
+          "type": "string",
+          "description": "The actual ensure/state value after the operation completed"
+        },
+        "duration": {
+          "type": "integer",
+          "description": "Time taken to apply the resource in nanoseconds"
+        },
+        "properties": {
+          "description": "The full resource properties that were applied"
+        },
+        "status": {
+          "description": "Provider-specific status information about the resource"
+        },
+        "noop_message": {
+          "type": "string",
+          "description": "Message describing what would have been done in noop mode"
+        },
+        "health_check": {
+          "type": "array",
+          "description": "Results of health checks run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheckResult"
+          }
+        },
+        "health_check_only": {
+          "type": "boolean",
+          "description": "True if only health checks were run without applying changes"
+        },
+        "error": {
+          "type": "array",
+          "description": "List of error messages if the resource failed",
+          "items": {
+            "type": "string"
+          }
+        },
+        "changed": {
+          "type": "boolean",
+          "description": "True if the resource was changed (or would be changed in noop mode)"
+        },
+        "refreshed": {
+          "type": "boolean",
+          "description": "True if the resource was refreshed due to a subscribe notification"
+        },
+        "failed": {
+          "type": "boolean",
+          "description": "True if the resource application failed"
+        },
+        "skipped": {
+          "type": "boolean",
+          "description": "True if the resource was skipped (e.g., due to control conditions)"
+        },
+        "noop": {
+          "type": "boolean",
+          "description": "True if the resource was applied in noop (dry-run) mode"
+        },
+        "unmet_requirements": {
+          "type": "array",
+          "description": "List of required resources that were not satisfied",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "protocol",
+        "event_id",
+        "timestamp",
+        "type",
+        "provider",
+        "name",
+        "requested_ensure",
+        "final_ensure",
+        "duration",
+        "changed",
+        "failed",
+        "noop"
+      ],
+      "additionalProperties": false
+    },
+    "healthCheckResult": {
+      "type": "object",
+      "description": "Result of a health check execution",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "The health check status",
+          "enum": ["ok", "warning", "critical", "unknown"]
+        },
+        "tries": {
+          "type": "integer",
+          "description": "Number of attempts made before the health check succeeded or failed"
+        },
+        "output": {
+          "type": "string",
+          "description": "Output from the health check command"
+        }
+      },
+      "required": ["status", "tries"],
+      "additionalProperties": false
+    }
+  }
+}

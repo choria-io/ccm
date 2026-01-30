@@ -59,7 +59,7 @@ lookup("data.packages.#")                    # Array length
 
 These expressions work on the CLI:
 
-```bash
+```nohighlight
 $ ccm ensure package '{{ lookup("data.package_name", "httpd") }}'
 ```
 
@@ -69,7 +69,7 @@ This fetches `package_name` from the data and defaults to `httpd` if not found.
 
 CCM includes a built-in fact resolver that gathers system information. To see available facts:
 
-```bash
+```nohighlight
 $ ccm facts                              # All facts as JSON
 $ ccm facts host                         # Query specific path
 $ ccm facts --yaml                       # Output as YAML

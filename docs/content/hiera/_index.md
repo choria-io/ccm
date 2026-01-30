@@ -86,7 +86,7 @@ Given the input file `data.json`:
 
 Resolve with facts provided on the command line:
 
-```bash
+```nohighlight
 $ ccm hiera parse data.json fqdn=my.fqdn.com
 {
   "test": "override"
@@ -100,7 +100,7 @@ $ ccm hiera parse data.json fqdn=other.fqdn.com
 
 Output formats:
 
-```bash
+```nohighlight
 # YAML output
 $ ccm hiera parse data.json fqdn=other.fqdn.com --yaml
 test: value
@@ -116,7 +116,7 @@ Facts can come from multiple sources, which are merged together:
 
 **System facts** (`-S` or `--system-facts`):
 
-```bash
+```nohighlight
 # View system facts
 $ ccm hiera facts -S
 
@@ -126,20 +126,20 @@ $ ccm hiera parse data.json -S
 
 **Environment variables as facts** (`-E` or `--env-facts`):
 
-```bash
-$ ccm hiera parse data.json -E
+```banohighlightsh
+ccm hiera parse data.json -E
 ```
 
 **Facts file** (`--facts FILE`):
 
-```bash
-$ ccm hiera parse data.json --facts facts.yaml
+```nohighlight
+ccm hiera parse data.json --facts facts.yaml
 ```
 
 **Command-line facts** (key=value pairs):
 
-```bash
-$ ccm hiera parse data.json env=prod role=web
+```nohighlight
+ccm hiera parse data.json env=prod role=web
 ```
 
 All fact sources can be combined. Command-line facts take highest precedence.
@@ -150,33 +150,34 @@ All fact sources can be combined. Command-line facts take highest precedence.
 
 To use NATS as a hierarchy store, configure a NATS context for authentication:
 
-```bash
-$ nats context add ccm --server nats.example.org --user ccm --password s3cret --description "CCM Configuration Store"
+```nohighlight
+nats context add ccm --server nats.example.org --user ccm --password s3cret \
+  --description "CCM Configuration Store"
 ```
 
 Create a KV store and add your hierarchy data:
 
-```bash
+```nohighlight
 $ nats kv add CCM --replicas 3 --context ccm
 $ nats kv put CCM data "$(cat hiera.yaml)"
 ```
 
 Resolve the hierarchy using the KV store:
 
-```bash
-$ ccm hiera parse kv://CCM/data --context ccm -S
+```nohighlight
+ccm hiera parse kv://CCM/data --context ccm -S
 ```
 
 ### Data on Web Servers
 
 Hierarchy data can also be stored on a web server and fetched via HTTP or HTTPS.
 
-```bash
-$ ccm hiera parse https://example.net/site.yaml -S
+```nohighlight
+ccm hiera parse https://example.net/site.yaml -S
 ```
 
 HTTP Basic Auth is supported via URL credentials:
 
-```bash
-$ ccm hiera parse https://user:pass@example.net/site.yaml -S
+```nohighlight
+ccm hiera parse https://user:pass@example.net/site.yaml -S
 ```

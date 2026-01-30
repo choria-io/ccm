@@ -74,7 +74,7 @@ overrides:
 
 The complete manifest:
 
-```
+```yaml
 data:
   package_name: "httpd"
 
@@ -95,7 +95,7 @@ overrides:
 
 Apply the manifest with `ccm apply`. The first run makes changes; subsequent runs are stable:
 
-```bash
+```nohighlight
 $ ccm apply manifest.yaml
 INFO  Creating new session record resources=1
 WARN  package#httpd changed ensure=latest runtime=3.560699287s provider=dnf
@@ -107,7 +107,7 @@ INFO  package#httpd stable ensure=latest runtime=293.448824ms provider=dnf
 
 To preview the fully resolved manifest without applying it:
 
-```bash
+```nohighlight
 $ ccm apply manifest.yaml --render
 data:
   package_name: apache2
@@ -137,8 +137,8 @@ Both are optional.
 
 Override or augment manifest data with an external Hiera source:
 
-```bash
-$ ccm apply manifest.yaml --hiera kv://CCM/common
+```nohighlight
+ccm apply manifest.yaml --hiera kv://CCM/common
 ```
 
 Supported sources include local files, KV stores (`kv://`), and HTTP(S) URLs.
@@ -245,7 +245,7 @@ ccm:
 
 The second resource is never executed:
 
-```bash
+```nohighlight
 $ ccm apply manifest.yaml
 INFO  Executing manifest manifest=manifest.yaml resources=2
 ERROR exec#/usr/bin/false failed ensure=present runtime=3ms provider=posix errors=failed to reach desired state exit code 1
@@ -279,8 +279,8 @@ If the required resource fails, the dependent resource is skipped.
 
 Preview changes without applying them:
 
-```bash
-$ ccm apply manifest.yaml --noop
+```nohighlight
+ccm apply manifest.yaml --noop
 ```
 
 > [!info] Note
@@ -290,8 +290,8 @@ $ ccm apply manifest.yaml --noop
 
 Run only health checks without applying resources:
 
-```bash
-$ ccm apply manifest.yaml --monitor-only
+```nohighlight
+ccm apply manifest.yaml --monitor-only
 ```
 
 This is useful for verifying system state without making changes.
@@ -302,19 +302,20 @@ Manifests can be stored in [NATS](https://nats.io) Object Stores, avoiding the n
 
 Configure a NATS context for authentication:
 
-```bash
-$ nats context add ccm --server nats.example.org --user ccm --password s3cret --description "CCM Configuration Store"
+```nohighlight
+nats context add ccm --server nats.example.org --user ccm --password s3cret \
+  --description "CCM Configuration Store"
 ```
 
 Create an Object Store:
 
-```bash
-$ nats obj add CCM --replicas 3 --context ccm
+```nohighlight
+nats obj add CCM --replicas 3 --context ccm
 ```
 
 Create a manifest with supporting files:
 
-```bash
+```nohighlight
 $ mkdir /tmp/manifest
 $ echo 'CCM Managed' > /tmp/manifest/motd
 $ cat > /tmp/manifest/manifest.yaml << 'EOF'
@@ -332,14 +333,14 @@ EOF
 
 Package and upload to the Object Store:
 
-```bash
+```nohighlight
 $ tar -C /tmp/manifest/ -cvzf /tmp/manifest.tgz .
 $ nats obj put CCM manifest.tgz --context ccm
 ```
 
 Apply the manifest:
 
-```bash
+```nohighlight
 $ ccm apply obj://CCM/manifest.tgz --context ccm
 INFO  Using manifest from Object Store in temporary directory bucket=CCM file=manifest.tgz
 INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix
@@ -349,7 +350,7 @@ INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix
 
 Store gzipped tar archives on a web server and apply them directly:
 
-```bash
+```nohighlight
 $ ccm apply https://example.net/manifest.tar.gz
 INFO  Executing manifest manifest=https://example.net/manifest.tar.gz resources=1
 INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix
@@ -357,15 +358,15 @@ INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix
 
 HTTP Basic Auth is supported via URL credentials:
 
-```bash
-$ ccm apply https://user:pass@example.net/manifest.tar.gz
+```nohighlight
+ccm apply https://user:pass@example.net/manifest.tar.gz
 ```
 
 ## Additional Facts
 
 Provide additional facts from the command line or a file:
 
-```bash
+```nohighlight
 # Individual facts
 $ ccm apply manifest.yaml --fact env=production --fact region=us-east
 
