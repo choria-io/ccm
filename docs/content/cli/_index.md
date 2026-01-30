@@ -15,23 +15,23 @@ Use `ccm --help` and `ccm <command> --help` to explore available commands and op
 
 Managing a single resource is straightforward.
 
-```bash
-$ ccm ensure package zsh 5.8
+```nohighlight
+ccm ensure package zsh 5.8
 ```
 
 This ensures the package `zsh` is installed at version `5.8`.
 
 To view the current state of a resource:
 
-```bash
-$ ccm status package zsh
+```nohighlight
+ccm status package zsh
 ```
 
 ## Managing Multiple Resources
 
 When managing multiple resources in a script, create a session first. The session records the outcome of each resource, enabling features like refreshing a service when a file changes.
 
-```bash
+```nohighlight
 #!/bin/bash
 
 eval "$(ccm session new)"
@@ -60,13 +60,13 @@ With data loaded, you can access:
 
 Example using Hiera data:
 
-```bash
-$ ccm ensure package '{{ lookup("data.package") }}' '{{ lookup("data.version") }}'
+```nohighlight
+ccm ensure package '{{ lookup("data.package") }}' '{{ lookup("data.version") }}'
 ```
 
 Expressions use the [Expr Language](https://expr-lang.org/docs/language-definition), enabling complex logic:
 
-```bash
+```nohighlight
 $ ccm ensure package '{{ lookup("facts.host.info.platformFamily") == "rhel" ? "httpd" : "apache2" }}'
 WARN  package#httpd changed ensure=present runtime=14.509s provider=dnf
 ```
@@ -83,7 +83,7 @@ See [YAML Manifests](../yamlmanifests/) for manifest format details.
 
 CCM gathers system facts that can be used in templates and conditions:
 
-```bash
+```nohighlight
 # Show all facts as JSON
 $ ccm facts
 
@@ -98,7 +98,7 @@ $ ccm facts host.info.platformFamily
 
 The `ccm hiera` command helps debug and test Hiera data resolution:
 
-```bash
+```nohighlight
 # Resolve a Hiera file with system facts
 $ ccm hiera parse data.yaml -S
 

@@ -27,7 +27,9 @@ All resources support the following common properties:
 
 Resources can be conditionally executed using a `control` section and expressions that should resolve to boolean values.
 
-```
+{{< tabs >}}
+{{% tab title="Manifest" %}}
+```yaml
 package:
   name: zsh
   ensure: 5.9
@@ -35,6 +37,32 @@ package:
     if: lookup("facts.host.info.os") == "linux"
     unless: lookup("facts.host.info.virtualizationSystem") == "docker"
 ```
+{{% /tab %}}
+{{% tab title="CLI" %}}
+```nohighlight
+ccm ensure package zsh 5.9 \
+    --if "lookup('facts.host.info.os') == 'linux'"
+    --unless "lookup('facts.host.info.virtualizationSystem') == 'docker'"
+```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "package",
+  "properties": {
+    "name": "zsh",
+    "ensure": "5.9",
+    "control": {
+      "if": "lookup(\"facts.host.info.os\") == \"linux\"",
+      "unless": "lookup(\"facts.host.info.virtualizationSystem\") == \"docker\""
+    }
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
+
 
 Here we install `zsh` on all `linux` machines unless they are running inside a `docker` container.
 
@@ -70,8 +98,8 @@ The archive resource downloads and extracts archives from HTTP/HTTPS URLs. It su
 > [!info] Note
 > The archive file path (`name`) must have the same archive type extension as the URL. For example, if the URL ends in `.tar.gz`, the name must also end in `.tar.gz`.
 
-In a manifest:
-
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - archive:
     - /opt/downloads/app-v1.2.3.tar.gz:
@@ -83,16 +111,36 @@ In a manifest:
         group: app
         cleanup: true
 ```
-
-On the CLI:
-
+{{% /tab %}}
+{{% tab title="CLI" %}}
 ```nohighlight
-$ ccm ensure archive /opt/downloads/app.tar.gz \
+ccm ensure archive /opt/downloads/app.tar.gz \
     --url https://releases.example.com/app.tar.gz \
     --extract-parent /opt/app \
     --creates /opt/app/bin/app \
     --owner root --group root
 ```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "archive",
+  "properties": {
+    "name": "/opt/downloads/app-v1.2.3.tar.gz",
+    "url": "https://releases.example.com/app/v1.2.3/app-v1.2.3.tar.gz",
+    "checksum": "a1b2c3d4e5f6...",
+    "extract_parent": "/opt/app",
+    "creates": "/opt/app/bin/app",
+    "owner": "app",
+    "group": "app",
+    "cleanup": true
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
+
 
 This downloads the archive, extracts it to `/opt/app`, and removes the archive file after extraction. Future runs skip the download if `/opt/app/bin/app` exists.
 
@@ -105,20 +153,20 @@ This downloads the archive, extracts it to `/opt/app`, and removes the archive f
 
 ### Properties
 
-| Property         | Description                                                                           |
-|------------------|---------------------------------------------------------------------------------------|
-| `name`           | Absolute path where the archive will be saved                                         |
-| `url`            | HTTP/HTTPS URL to download the archive from                                           |
-| `checksum`       | Expected SHA256 checksum of the downloaded file                                       |
-| `extract_parent` | Directory to extract the archive contents into                                        |
-| `creates`        | File path; if this file exists, the archive is not downloaded or extracted            |
+| Property         | Description                                                                                   |
+|------------------|-----------------------------------------------------------------------------------------------|
+| `name`           | Absolute path where the archive will be saved                                                 |
+| `url`            | HTTP/HTTPS URL to download the archive from                                                   |
+| `checksum`       | Expected SHA256 checksum of the downloaded file                                               |
+| `extract_parent` | Directory to extract the archive contents into                                                |
+| `creates`        | File path; if this file exists, the archive is not downloaded or extracted                    |
 | `cleanup`        | Remove the archive file after successful extraction (requires `extract_parent` and `creates`) |
-| `owner`          | Owner of the downloaded archive file (username)                                       |
-| `group`          | Group of the downloaded archive file (group name)                                     |
-| `username`       | Username for HTTP Basic Authentication                                                |
-| `password`       | Password for HTTP Basic Authentication                                                |
-| `headers`        | Additional HTTP headers to send with the request (map of header name to value)        |
-| `provider`       | Force a specific provider (`http` only)                                               |
+| `owner`          | Owner of the downloaded archive file (username)                                               |
+| `group`          | Group of the downloaded archive file (group name)                                             |
+| `username`       | Username for HTTP Basic Authentication                                                        |
+| `password`       | Password for HTTP Basic Authentication                                                        |
+| `headers`        | Additional HTTP headers to send with the request (map of header name to value)                |
+| `provider`       | Force a specific provider (`http` only)                                                       |
 
 ### Authentication
 
@@ -126,6 +174,8 @@ The archive resource supports two authentication methods:
 
 **Basic Authentication:**
 
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - archive:
     - /opt/downloads/private-app.tar.gz:
@@ -136,9 +186,38 @@ The archive resource supports two authentication methods:
         owner: root
         group: root
 ```
+{{% /tab %}}
+{{% tab title="CLI" %}}
+```nohighlight
+ccm ensure archive /opt/downloads/private-app.tar.gz \
+    --url https://private.example.com/app.tar.gz \
+    --username deploy \
+    --password "{{ lookup('data.deploy_password') }}"
+```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "archive",
+  "properties": {
+    "name": "/opt/downloads/private-app.tar.gz",
+    "url": "https://private.example.com/app.tar.gz",
+    "username": "deploy",
+    "password": "secret",
+    "extract_parent": "/opt/app",
+    "owner": "root",
+    "group": "root"
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 **Custom Headers:**
 
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - archive:
     - /opt/downloads/app.tar.gz:
@@ -150,6 +229,34 @@ The archive resource supports two authentication methods:
         owner: root
         group: root
 ```
+{{% /tab %}}
+{{% tab title="CLI" %}}
+```nohighlight
+ccm ensure archive /opt/downloads/app.tar.gz \
+    --url https://api.example.com/releases/app.tar.gz \
+    --headers "Authorization:{{ lookup('data.api_token') }}"
+```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "archive",
+  "properties": {
+    "name": "/opt/downloads/app.tar.gz",
+    "url": "https://api.example.com/releases/app.tar.gz",
+    "headers": {
+      "Authorization": "Bearer mytoken",
+      "X-Custom-Header": "custom-value"
+    },
+    "extract_parent": "/opt/app",
+    "owner": "root",
+    "group": "root"
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 ### Idempotency
 
@@ -187,8 +294,8 @@ The exec resource executes commands to bring the system into the desired state. 
 > [!info] Warning
 > Specify commands with their full path, or use the `path` property to set the search path.
 
-In a manifest:
-
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - exec:
     - /usr/bin/touch /tmp/hello:
@@ -207,12 +314,27 @@ Alternatively for long commands or to improve UX for referencing execs in `requi
         timeout: 30s
         cwd: /tmp
 ```
-
-On the CLI:
-
+{{% /tab %}}
+{{% tab title="CLI" %}}
 ```nohighlight
-$ ccm ensure exec "/usr/bin/touch /tmp/hello" --creates /tmp/hello --timeout 30s
+ccm ensure exec "/usr/bin/touch /tmp/hello" --creates /tmp/hello --timeout 30s
 ```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "exec",
+  "properties": {
+    "name": "/usr/bin/touch /tmp/hello",
+    "creates": "/tmp/hello",
+    "timeout": "30s",
+    "cwd": "/tmp"
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 The command runs only if `/tmp/hello` does not exist.
 
@@ -269,8 +391,8 @@ The file resource manages files and directories, including their content, owners
 > [!info] Warning
 > Use absolute file paths and primary group names.
 
-In a manifest:
-
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - file:
     - /etc/motd:
@@ -281,12 +403,29 @@ In a manifest:
         group: root
         mode: "0644"
 ```
-
-On the CLI:
-
+{{% /tab %}}
+{{% tab title="CLI" %}}
 ```nohighlight
-$ ccm ensure file /etc/motd --source /tmp/ccm/motd --owner root --group root --mode 0644
+ccm ensure file /etc/motd --source /tmp/ccm/motd --owner root --group root --mode 0644
 ```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "file",
+  "properties": {
+    "name": "/etc/motd",
+    "ensure": "present",
+    "content": "Managed by CCM\n",
+    "owner": "root",
+    "group": "root",
+    "mode": "0644"
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 This copies the contents of `/tmp/ccm/motd` to `/etc/motd` verbatim and sets ownership.
 
@@ -320,19 +459,32 @@ The package resource manages system packages. Specify whether the package should
 > [!info] Warning
 > Use real package names, not virtual names, aliases, or group names.
 
-In a manifest:
-
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - package:
     - zsh:
         ensure: "5.9"
 ```
-
-On the CLI:
-
+{{% /tab %}}
+{{% tab title="CLI" %}}
 ```nohighlight
-$ ccm ensure package zsh 5.9
+ccm ensure package zsh 5.9
 ```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "package",
+  "properties": {
+    "name": "zsh",
+    "ensure": "5.9"
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 ### Ensure Values
 
@@ -373,8 +525,8 @@ The service resource manages system services. Services have two independent prop
 
 Services can subscribe to other resources and restart when those resources change.
 
-In a manifest:
-
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - service:
     - httpd:
@@ -383,12 +535,27 @@ In a manifest:
         subscribe:
           - package#httpd
 ```
-
-On the CLI:
-
+{{% /tab %}}
+{{% tab title="CLI" %}}
 ```nohighlight
-$ ccm ensure service httpd running --enable --subscribe package#httpd
+ccm ensure service httpd running --enable --subscribe package#httpd
 ```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "service",
+  "properties": {
+    "name": "httpd",
+    "ensure": "running",
+    "enable": true,
+    "subscribe": ["package#httpd"]
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 ### Ensure Values
 

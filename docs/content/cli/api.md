@@ -10,15 +10,15 @@ CCM provides a STDIN/STDOUT API for managing resources programmatically. This en
 
 The API uses a simple request/response pattern:
 
-1. Send a request to `ccm ensure api` via STDIN
+1. Send a request to `ccm ensure api pipe` via STDIN
 2. Receive a response on STDOUT
 
 Both JSON and YAML formats are supported for requests. The response format is always JSON, but can be explicitly set to YAML using `--yaml`.
 
 ## Command
 
-```bash
-ccm ensure api [--yaml] [--noop] [--facts <file>] [--data <file>]
+```nohighlight
+ccm ensure api pipe [--yaml] [--noop] [--facts <file>] [--data <file>]
 ```
 
 | Flag             | Description                                                   |
@@ -31,6 +31,9 @@ ccm ensure api [--yaml] [--noop] [--facts <file>] [--data <file>]
 ## Request Format
 
 Requests must include a protocol identifier, resource type, and properties.
+
+> [!info] Note
+> JSON Schemas for these requests and responses are available at [resource_ensure_request.json](https://choria.io/schemas/ccm/v1/resource_ensure_request.json) and [resource_ensure_response.json](https://choria.io/schemas/ccm/v1/resource_ensure_response.json).
 
 ### JSON Request
 
@@ -103,7 +106,7 @@ For the full response structure, see [ResourceEnsureApiResponse](https://pkg.go.
 
 ### Install a Package
 
-```bash
+```nohighlight
 echo '{
   "protocol": "io.choria.ccm.v1.resource.ensure.request",
   "type": "package",
@@ -111,13 +114,13 @@ echo '{
     "name": "htop",
     "ensure": "present"
   }
-}' | ccm ensure api
+}' | ccm ensure api pipe
 ```
 
 ### Manage a Service
 
-```bash
-cat <<EOF | ccm ensure api
+```nohighlight
+cat <<EOF | ccm ensure api pipe
 protocol: io.choria.ccm.v1.resource.ensure.request
 type: service
 properties:
@@ -128,7 +131,7 @@ EOF
 
 ### Create a File
 
-```bash
+```nohighlight
 echo '{
   "protocol": "io.choria.ccm.v1.resource.ensure.request",
   "type": "file",
@@ -140,12 +143,12 @@ echo '{
     "group": "root",
     "mode": "0644"
   }
-}' | ccm ensure api
+}' | ccm ensure api pipe
 ```
 
 ### Dry-Run Mode
 
-```bash
+```nohighlight
 echo '{
   "protocol": "io.choria.ccm.v1.resource.ensure.request",
   "type": "package",
@@ -153,7 +156,7 @@ echo '{
     "name": "vim",
     "ensure": "absent"
   }
-}' | ccm ensure api --noop
+}' | ccm ensure api pipe --noop
 ```
 
 ## Resource Types

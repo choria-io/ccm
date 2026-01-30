@@ -158,7 +158,7 @@ monitor_port: 9100
 
 After configuring, start the service:
 
-```bash
+```nohighlight
 ccm ensure service ccm-agent running --enable
 ```
 

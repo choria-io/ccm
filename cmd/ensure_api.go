@@ -22,11 +22,13 @@ type ensureApiCommand struct {
 func registerEnsureApiCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	cmd := &ensureApiCommand{parent: parent}
 
-	api := ccm.Command("api", "Resource management API").Action(cmd.apiAction)
-	api.Flag("yaml", "Output YAML instead of JSON").BoolVar(&cmd.yaml)
+	api := ccm.Command("api", "Resource management API")
+
+	piped := api.Command("piped", "STDIN/STDOUT based piped API").Alias("pipe").Action(cmd.pipedAction)
+	piped.Flag("yaml", "Output YAML instead of JSON").BoolVar(&cmd.yaml)
 }
 
-func (c *ensureApiCommand) apiAction(_ *fisk.ParseContext) error {
+func (c *ensureApiCommand) pipedAction(_ *fisk.ParseContext) error {
 	event, _, err := c.apply()
 
 	format := model.JsonRequestEncoding

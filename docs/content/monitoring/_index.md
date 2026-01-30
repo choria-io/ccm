@@ -33,6 +33,8 @@ Health checks use Nagios plugin conventions for exit codes:
 
 ## Example
 
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - service:
     - httpd:
@@ -40,26 +42,25 @@ Health checks use Nagios plugin conventions for exit codes:
         enable: true
         health_checks:
           - name: check_http
-            command: /usr/lib64/nagios/plugins/check_http -H localhost -p 80 --expect "Acme Inc"
+            command: |
+              /usr/lib64/nagios/plugins/check_http -H localhost -p 80 --expect "Acme Inc"
             tries: 5
             try_sleep: 1s
             timeout: 10s
 ```
-
-This example verifies that the web server responds with content containing "Acme Inc". If the check fails, it retries up to 5 times with 1 second between attempts.
-
-## CLI Usage
-
-Health checks can be added to `ccm ensure` commands:
-
-```bash
-$ ccm ensure service httpd running \
+{{% /tab %}}
+{{% tab title="CLI" %}}
+```nohighlight
+ccm ensure service httpd running \
     --check '/usr/lib64/nagios/plugins/check_http -H localhost -p 80' \
     --check-tries 5 \
     --check-sleep 1s
 ```
-
 The CLI supports a single health check per resource. For multiple health checks, use a manifest.
+{{% /tab %}}
+{{< /tabs >}}
+
+This example verifies that the web server responds with content containing "Acme Inc". If the check fails, it retries up to 5 times with 1 second between attempts.
 
 ## Agent Integration
 

@@ -4,7 +4,10 @@ title = "Choria Configuration Manager"
 theme = "hugo-theme-relearn"
 
 [outputs]
-home = [ "HTML", "RSS", "JSON"]
+home = [ "html", "rss", "print", "markdown"]
+section = [ "html", "rss", "print", "markdown"]
+page = [ "html",  "print", "markdown"]
+
 
 [author]
 name = "Choria Project"
@@ -17,6 +20,11 @@ disableInlineCopyToClipBoard = true
 alwaysopen = false
 collapsibleMenu = true
 externalLinkTargetc= "_self"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
 
 [[params.themeVariant]]
     auto = ['zen-light', 'ccm']
