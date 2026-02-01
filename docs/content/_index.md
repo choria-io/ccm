@@ -42,7 +42,7 @@ Choose from simple webservers to clustered, reliable, Object and Key-Value store
 {{% card title="Everywhere" %}}
 Great at the CLI, shell scripts, YAML manifests, Choria Agents, and Go applications.
 
-Scales from single IoT Raspberry Pi 3 to millions of nodes.
+Scales from a single IoT Raspberry Pi 3 to millions of nodes.
 
 Integrates easily with other software via SDK or Unix-like APIs.
 {{% /card %}}
