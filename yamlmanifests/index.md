@@ -4,8 +4,8 @@ A manifest is a YAML file that combines data, hierarchy configuration, and resou
 
 Manifests support template expressions but not procedural logic. Think of them as declarative configuration similar to multi-resource shell scripts.
 
-> [!info] Note
-> A JSON Schema for manifests is available at [https://choria.io/schemas/ccm/v1/manifest.json](https://choria.io/schemas/ccm/v1/manifest.json). Configure your editor to use this schema for completion and validation.
+> [!tip] CCM Studio
+> An experimental visual editor for manifests is available at [Choria Studio](https://studio.choria-cm.dev/).
 
 ## Manifest Structure
 
@@ -17,6 +17,9 @@ A manifest contains these top-level sections:
 | `hierarchy` | Lookup order and merge strategy for overrides            |
 | `overrides` | Data overrides keyed by hierarchy entries                |
 | `ccm`       | Resource definitions and execution options               |
+
+> [!info] Note
+> A JSON Schema for manifests is available at [https://choria.io/schemas/ccm/v1/manifest.json](https://choria.io/schemas/ccm/v1/manifest.json). Configure your editor to use this schema for completion and validation.
 
 The manifest is resolved using the [Choria Hierarchical Data Resolver](../hiera/).
 
