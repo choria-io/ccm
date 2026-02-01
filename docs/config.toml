@@ -40,6 +40,11 @@ externalLinkTargetc= "_self"
     name = 'Dark'
 
 [[menu.shortcuts]]
+name = "<i class='far fa-pen-to-square'></i> CCM Studio"
+url = "https://studio.choria-cm.dev/"
+weight = 9
+
+[[menu.shortcuts]]
 name = "<i class='fab fa-fw fa-github'></i> GitHub"
 identifier = "ds"
 url = "https://github.com/choria-io/ccm"
