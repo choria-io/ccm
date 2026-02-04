@@ -30,12 +30,11 @@ When managing multiple resources in a script, create a session first. The sessio
 #!/bin/bash
 
 eval "$(ccm session new)"
-trap 'rm -rf -- "$CCM_SESSION_STORE"' EXIT
 
 ccm ensure package httpd
 ccm ensure file /etc/httpd/conf/httpd.conf .... --require package#httpd
 ccm ensure service httpd --subscribe file#/etc/httpd/conf/httpd.conf
-ccm session report
+ccm session report --remove
 ```
 
 This creates a temporary directory for session state. If the file resource changes, the service restarts automatically.
