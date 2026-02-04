@@ -14,10 +14,11 @@ import (
 )
 
 type ensureCommand struct {
-	session     string
-	hieraFile   string
-	readEnv     bool
-	natsContext string
+	session      string
+	sessionIsSet bool
+	hieraFile    string
+	readEnv      bool
+	natsContext  string
 
 	healthCheckCommand string
 	healthCheckTries   int
@@ -39,7 +40,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 
 	ens := ccm.Command("ensure", "Manage individual resources")
 	ens.Flag("noop", "Do not make any changes to the system").UnNegatableBoolVar(&cmd.noop)
-	ens.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").PlaceHolder("DIR").StringVar(&cmd.session)
+	ens.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").PlaceHolder("DIR").IsSetByUser(&cmd.sessionIsSet).StringVar(&cmd.session)
 	ens.Flag("hiera", "Hiera data file to use as data source").Default(".hiera").Envar("CCM_HIERA_DATA").StringVar(&cmd.hieraFile)
 	ens.Flag("read-env", "Read extra variables from .env file").Default("true").BoolVar(&cmd.readEnv)
 	ens.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
@@ -65,6 +66,10 @@ func (cmd *ensureCommand) addCommonFlags(app *fisk.CmdClause) {
 }
 
 func (cmd *ensureCommand) manager() (model.Manager, error) {
+	if cmd.sessionIsSet && cmd.session == "" {
+		return nil, fmt.Errorf("session store should not be empty")
+	}
+
 	if cmd.session == "" && len(cmd.requires) > 0 {
 		return nil, fmt.Errorf("session store should be set when using requires")
 	}
