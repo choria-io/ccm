@@ -45,6 +45,8 @@ func (c *ensureServiceCommand) serviceAction(_ *fisk.ParseContext) error {
 	}
 
 	switch {
+	case !c.parent.sessionIsSet && len(c.subscribe) > 0:
+		return fmt.Errorf("session store should be set when using subscribe")
 	case c.enableIsSet && c.disableIsSet:
 		return fmt.Errorf("cannot specify both enable and disable flags")
 	case c.enableIsSet:

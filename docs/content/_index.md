@@ -59,7 +59,7 @@ eval $(ccm session new)
 ccm ensure package httpd
 ccm ensure file /etc/httpd/conf.d/listen.conf content="Listen 8080"
 ccm ensure service httpd --subscribe file#/etc/httpd/conf.d/listen.conf
-ccm session report
+ccm session report --remove
 ```
 
 When run, this will create a session in a temporary directory and manage the resources. If the file resource changes after initial deployment, the service will restart.

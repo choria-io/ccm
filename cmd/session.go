@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +7,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	iu "github.com/choria-io/ccm/internal/util"
@@ -16,6 +18,7 @@ import (
 
 type sessionCmd struct {
 	sessionStore string
+	clearSession bool
 }
 
 func registerSessionCommand(app *fisk.Application) {
@@ -23,12 +26,12 @@ func registerSessionCommand(app *fisk.Application) {
 
 	sess := app.Command("session", "Manage session stores")
 
-	newAction := sess.Command("new", "Creates a new session store").Alias("start").Action(cmd.newAction)
+	newAction := sess.Command("new", "Creates a new session store").Alias("start").Alias("create").Action(cmd.newAction)
 	newAction.Flag("directory", "Directory to store the session in").StringVar(&cmd.sessionStore)
 
 	reportAction := sess.Command("report", "Report on the active session").Action(cmd.reportAction)
 	reportAction.Flag("session", "Session store to use").Envar("CCM_SESSION_STORE").StringVar(&cmd.sessionStore)
-
+	reportAction.Flag("remove", "Removes the session directory if it is in the system temporary directory").UnNegatableBoolVar(&cmd.clearSession)
 }
 
 func (c *sessionCmd) reportAction(_ *fisk.ParseContext) error {
@@ -36,7 +39,8 @@ func (c *sessionCmd) reportAction(_ *fisk.ParseContext) error {
 		return fmt.Errorf("no session store specified")
 	}
 
-	mgr, err := manager.NewManager(newLogger(), newOutputLogger(), manager.WithSessionDirectory(c.sessionStore))
+	logger := newLogger()
+	mgr, err := manager.NewManager(logger, newOutputLogger(), manager.WithSessionDirectory(c.sessionStore))
 	if err != nil {
 		return err
 	}
@@ -61,8 +65,29 @@ func (c *sessionCmd) reportAction(_ *fisk.ParseContext) error {
 	fmt.Printf("  Refreshed Resources: %d\n", summary.RefreshedCount)
 	fmt.Printf("         Total Errors: %d\n", summary.TotalErrors)
 
+	if c.clearSession {
+		// only clear files in temp dir
+		abs, err := filepath.Abs(c.sessionStore)
+		if err != nil {
+			logger.Debug("Could not get absolute path for session store, not clearing", "path", c.sessionStore, "error", err)
+			return nil
+		}
+		rel, err := filepath.Rel(os.TempDir(), abs)
+		if err != nil {
+			logger.Debug("Could not get relative path for session store, not clearing", "path", c.sessionStore, "error", err)
+			return nil
+		}
+		if rel == "." || strings.HasPrefix(rel, "..") {
+			logger.Debug("Session store is outside of temp dir, not clearing", "path", c.sessionStore)
+			return nil
+		}
+
+		return os.RemoveAll(c.sessionStore)
+	}
+
 	return nil
 }
+
 func (c *sessionCmd) newAction(_ *fisk.ParseContext) error {
 	var err error
 
