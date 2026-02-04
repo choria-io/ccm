@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -53,18 +54,24 @@ func newManager(session string, hieraSource string, natsContext string, readEnv 
 		mgr.MergeFacts(ctx, facts)
 	}
 
-	if hieraSource != "" && iu.FileExists(hieraSource) {
+	if hieraSource != "" {
 		facts, err := mgr.Facts(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
 
+		logger.Debug("Loading overriding hiera data from external source", "source", hieraSource)
 		resolved, err := hiera.ResolveUrl(ctx, hieraSource, mgr, facts, hiera.DefaultOptions, logger)
-		if err != nil {
-			return nil, nil, err
+		switch {
+		case err == nil:
+			mgr.SetData(resolved)
+		case errors.Is(err, hiera.ErrFileNotFound):
+			logger.Debug("Hiera data file not found, skipping", "file", hieraSource)
+		default:
+			if err != nil {
+				return nil, nil, err
+			}
 		}
-
-		mgr.SetData(resolved)
 	}
 
 	return mgr, out, nil

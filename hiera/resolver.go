@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -52,6 +52,8 @@ var (
 	DefaultHierarchy = map[string]any{
 		"order": []any{"default"},
 	}
+
+	ErrFileNotFound = fmt.Errorf("file not found")
 )
 
 // Resolve consumes a parsed data document and a map of facts to produce a final data map.
@@ -211,7 +213,7 @@ func ResolveFile(ctx context.Context, file string, facts map[string]any, opts Op
 	}
 
 	if !iu.FileExists(abs) {
-		return nil, fmt.Errorf("file %s does not exist", abs)
+		return nil, fmt.Errorf("%w: %s", ErrFileNotFound, abs)
 	}
 
 	raw, err := os.ReadFile(abs)
