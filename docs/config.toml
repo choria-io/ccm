@@ -3,11 +3,15 @@ languageCode = "en-us"
 title = "Choria Configuration Manager"
 theme = "hugo-theme-relearn"
 
+[outputFormats.TXT]
+mediaType = "text/plain"
+baseName = "llms"
+isPlainText = true
+
 [outputs]
-home = [ "html", "rss", "print", "markdown"]
+home = [ "html", "rss", "print", "markdown", "txt"]
 section = [ "html", "rss", "print", "markdown"]
 page = [ "html",  "print", "markdown"]
-
 
 [author]
 name = "Choria Project"
