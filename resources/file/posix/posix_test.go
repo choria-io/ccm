@@ -401,6 +401,42 @@ var _ = Describe("Posix Provider", func() {
 			err := provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, "invalid")
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("Should replace a symlink to a directory with a real directory", func() {
+			tmpDir := GinkgoT().TempDir()
+			targetDir := filepath.Join(tmpDir, "target")
+			symlinkDir := filepath.Join(tmpDir, "symlink")
+
+			// Create a real directory as the symlink target
+			err := os.Mkdir(targetDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Create a symlink pointing to the target directory
+			err = os.Symlink(targetDir, symlinkDir)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify symlink exists and points to target
+			linkTarget, err := os.Readlink(symlinkDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(linkTarget).To(Equal(targetDir))
+
+			// CreateDirectory should replace the symlink with a real directory
+			err = provider.CreateDirectory(context.Background(), symlinkDir, currentUser.Username, currentGroup.Name, "0750")
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify symlink path is now a real directory, not a symlink
+			lstat, err := os.Lstat(symlinkDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(lstat.Mode()&os.ModeSymlink).To(Equal(os.FileMode(0)), "should not be a symlink")
+			Expect(lstat.IsDir()).To(BeTrue(), "should be a directory")
+			Expect(lstat.Mode().Perm()).To(Equal(os.FileMode(0750)))
+
+			// Verify the original target directory is unchanged
+			targetStat, err := os.Stat(targetDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(targetStat.IsDir()).To(BeTrue())
+			Expect(targetStat.Mode().Perm()).To(Equal(os.FileMode(0755)), "target directory mode should be unchanged")
+		})
 	})
 
 	Describe("Status for directories", func() {
