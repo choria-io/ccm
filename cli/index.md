@@ -43,7 +43,7 @@ If you prefer not to eval command output, use: `export CCM_SESSION_STORE=$(mktem
 
 ## Data in the CLI
 
-As covered in the [data section](../data), commands automatically read `./.env` and `./.hiera` files, merging that data into the session.
+As covered in the [templates section](../templates), commands automatically read `./.env` and `./.hiera` files, merging that data into the session.
 
 Use the `--hiera` flag or `CCM_HIERA_DATA` environment variable to specify a different data file.
 

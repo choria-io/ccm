@@ -50,7 +50,7 @@ overrides:
       log_level: TRACE
 ```
 
-The templating here is identical to that in the [Data documentation](../data), except only the `lookup()` function is available (no file access functions).
+The templating here is identical to that in the [Template documentation](../templates), except only the `lookup()` function is available (no file access functions).
 
 > [!info] Default Hierarchy
 > If no `hierarchy` section is provided, the resolver uses a default hierarchy of `["default"]`.

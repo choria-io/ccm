@@ -7,7 +7,7 @@
 
 - [Resources](https://choria-cm.dev/resources/index.md): 
 - [Hierarchical Data](https://choria-cm.dev/hiera/index.md): 
-- [Data](https://choria-cm.dev/data/index.md): 
+- [Data](https://choria-cm.dev/templates/index.md): 
 - [Shell Usage](https://choria-cm.dev/cli/index.md): 
 - [YAML Manifests](https://choria-cm.dev/yamlmanifests/index.md): 
 - [Agent](https://choria-cm.dev/agent/index.md): 
