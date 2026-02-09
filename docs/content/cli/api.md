@@ -33,7 +33,7 @@ ccm ensure api pipe [--yaml] [--noop] [--facts <file>] [--data <file>]
 Requests must include a protocol identifier, resource type, and properties.
 
 > [!info] Note
-> JSON Schemas for these requests and responses are available at [resource_ensure_request.json](https://choria.io/schemas/ccm/v1/resource_ensure_request.json) and [resource_ensure_response.json](https://choria.io/schemas/ccm/v1/resource_ensure_response.json).
+> JSON Schemas for these requests and responses are available at [resource_ensure_request.json](https://choria-cm.dev/schemas/ccm/v1/resource_ensure_request.json) and [resource_ensure_response.json](https://choria-cm.dev/schemas/ccm/v1/resource_ensure_response.json).
 
 ### JSON Request
 
