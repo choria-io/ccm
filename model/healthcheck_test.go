@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -28,19 +28,19 @@ var _ = Describe("CommonHealthCheck", func() {
 				}
 			},
 
-			Entry("standard go duration seconds", `{"timeout": "30s"}`, 30*time.Second, false),
-			Entry("standard go duration minutes", `{"timeout": "5m"}`, 5*time.Minute, false),
-			Entry("standard go duration hours", `{"timeout": "2h"}`, 2*time.Hour, false),
-			Entry("standard go duration milliseconds", `{"timeout": "500ms"}`, 500*time.Millisecond, false),
-			Entry("fisk extended duration days", `{"timeout": "1d"}`, 24*time.Hour, false),
-			Entry("fisk extended duration weeks", `{"timeout": "1w"}`, 7*24*time.Hour, false),
-			Entry("fisk extended duration months", `{"timeout": "1M"}`, 30*24*time.Hour, false),
-			Entry("fisk extended duration years", `{"timeout": "1y"}`, 365*24*time.Hour, false),
-			Entry("combined duration", `{"timeout": "1h30m"}`, time.Hour+30*time.Minute, false),
-			Entry("empty timeout", `{"timeout": ""}`, time.Duration(0), false),
+			Entry("standard go duration seconds", `{"command": "/bin/check", "timeout": "30s"}`, 30*time.Second, false),
+			Entry("standard go duration minutes", `{"command": "/bin/check", "timeout": "5m"}`, 5*time.Minute, false),
+			Entry("standard go duration hours", `{"command": "/bin/check", "timeout": "2h"}`, 2*time.Hour, false),
+			Entry("standard go duration milliseconds", `{"command": "/bin/check", "timeout": "500ms"}`, 500*time.Millisecond, false),
+			Entry("fisk extended duration days", `{"command": "/bin/check", "timeout": "1d"}`, 24*time.Hour, false),
+			Entry("fisk extended duration weeks", `{"command": "/bin/check", "timeout": "1w"}`, 7*24*time.Hour, false),
+			Entry("fisk extended duration months", `{"command": "/bin/check", "timeout": "1M"}`, 30*24*time.Hour, false),
+			Entry("fisk extended duration years", `{"command": "/bin/check", "timeout": "1y"}`, 365*24*time.Hour, false),
+			Entry("combined duration", `{"command": "/bin/check", "timeout": "1h30m"}`, time.Hour+30*time.Minute, false),
+			Entry("empty timeout", `{"command": "/bin/check", "timeout": ""}`, time.Duration(0), false),
 			Entry("no timeout field", `{"command": "/bin/check"}`, time.Duration(0), false),
-			Entry("invalid duration", `{"timeout": "invalid"}`, time.Duration(0), true),
-			Entry("negative duration", `{"timeout": "-1s"}`, -1*time.Second, false),
+			Entry("invalid duration", `{"command": "/bin/check", "timeout": "invalid"}`, time.Duration(0), true),
+			Entry("negative duration", `{"command": "/bin/check", "timeout": "-1s"}`, -1*time.Second, false),
 		)
 
 		It("should preserve other fields", func() {
@@ -70,19 +70,19 @@ var _ = Describe("CommonHealthCheck", func() {
 				}
 			},
 
-			Entry("standard go duration seconds", "timeout: 30s", 30*time.Second, false),
-			Entry("standard go duration minutes", "timeout: 5m", 5*time.Minute, false),
-			Entry("standard go duration hours", "timeout: 2h", 2*time.Hour, false),
-			Entry("standard go duration milliseconds", "timeout: 500ms", 500*time.Millisecond, false),
-			Entry("fisk extended duration days", "timeout: 1d", 24*time.Hour, false),
-			Entry("fisk extended duration weeks", "timeout: 1w", 7*24*time.Hour, false),
-			Entry("fisk extended duration months", "timeout: 1M", 30*24*time.Hour, false),
-			Entry("fisk extended duration years", "timeout: 1y", 365*24*time.Hour, false),
-			Entry("combined duration", "timeout: 1h30m", time.Hour+30*time.Minute, false),
-			Entry("empty timeout", "timeout: \"\"", time.Duration(0), false),
+			Entry("standard go duration seconds", "command: /bin/check\ntimeout: 30s", 30*time.Second, false),
+			Entry("standard go duration minutes", "command: /bin/check\ntimeout: 5m", 5*time.Minute, false),
+			Entry("standard go duration hours", "command: /bin/check\ntimeout: 2h", 2*time.Hour, false),
+			Entry("standard go duration milliseconds", "command: /bin/check\ntimeout: 500ms", 500*time.Millisecond, false),
+			Entry("fisk extended duration days", "command: /bin/check\ntimeout: 1d", 24*time.Hour, false),
+			Entry("fisk extended duration weeks", "command: /bin/check\ntimeout: 1w", 7*24*time.Hour, false),
+			Entry("fisk extended duration months", "command: /bin/check\ntimeout: 1M", 30*24*time.Hour, false),
+			Entry("fisk extended duration years", "command: /bin/check\ntimeout: 1y", 365*24*time.Hour, false),
+			Entry("combined duration", "command: /bin/check\ntimeout: 1h30m", time.Hour+30*time.Minute, false),
+			Entry("empty timeout", "command: /bin/check\ntimeout: \"\"", time.Duration(0), false),
 			Entry("no timeout field", "command: /bin/check", time.Duration(0), false),
-			Entry("invalid duration", "timeout: invalid", time.Duration(0), true),
-			Entry("negative duration", "timeout: -1s", -1*time.Second, false),
+			Entry("invalid duration", "command: /bin/check\ntimeout: invalid", time.Duration(0), true),
+			Entry("negative duration", "command: /bin/check\ntimeout: -1s", -1*time.Second, false),
 		)
 
 		It("should preserve other fields", func() {
@@ -142,6 +142,52 @@ name: disk_space`
 			err := yaml.Unmarshal([]byte(yamlInput), &hc)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(hc.Name).To(Equal("disk_space"))
+		})
+	})
+
+	Describe("Format Auto-Detection", func() {
+		It("should default to nagios format when command is set", func() {
+			var hc CommonHealthCheck
+			err := json.Unmarshal([]byte(`{"command": "/bin/check"}`), &hc)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hc.Format).To(Equal(HealthCheckNagiosFormat))
+		})
+
+		It("should default to goss format when goss_check is set", func() {
+			var hc CommonHealthCheck
+			err := json.Unmarshal([]byte(`{"goss_rules": "/etc/goss/check.yaml"}`), &hc)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hc.Format).To(Equal(HealthCheckGossFormat))
+		})
+
+		It("should error when neither command nor goss_check is set and no format", func() {
+			var hc CommonHealthCheck
+			err := json.Unmarshal([]byte(`{"timeout": "30s"}`), &hc)
+			Expect(err).To(MatchError(ContainSubstring("'format' flag is required")))
+		})
+	})
+
+	Describe("GossRules", func() {
+		It("should error when both command and goss_check are set via JSON", func() {
+			var hc CommonHealthCheck
+			err := json.Unmarshal([]byte(`{"command": "/bin/check", "goss_rules": "/etc/goss/check.yaml"}`), &hc)
+			Expect(err).To(MatchError(ContainSubstring("mutually exclusive")))
+		})
+
+		It("should error when both command and goss_check are set via YAML", func() {
+			yamlInput := "command: /bin/check\ngoss_rules: /etc/goss/check.yaml"
+			var hc CommonHealthCheck
+			err := yaml.Unmarshal([]byte(yamlInput), &hc)
+			Expect(err).To(MatchError(ContainSubstring("mutually exclusive")))
+		})
+
+		It("should parse goss_check field via YAML", func() {
+			var hc CommonHealthCheck
+			err := yaml.Unmarshal([]byte("goss_rules: /etc/goss/check.yaml"), &hc)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hc.GossRules).To(Equal(yaml.RawMessage("/etc/goss/check.yaml")))
+			Expect(hc.Command).To(BeEmpty())
+			Expect(hc.Format).To(Equal(HealthCheckGossFormat))
 		})
 	})
 

@@ -1,8 +1,8 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package healthcheck
+package nagios
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/choria-io/ccm/internal/backoff"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/kballard/go-shellquote"
@@ -20,8 +21,8 @@ var (
 	ErrCommandNotSpecified = errors.New("command not specified")
 )
 
-// ParseNagiosExitCode converts a Nagios exit code to a HealthCheckResult with appropriate status
-func ParseNagiosExitCode(exitCode int, output string) *model.HealthCheckResult {
+// parseNagiosExitCode converts a Nagios exit code to a HealthCheckResult with appropriate status
+func parseNagiosExitCode(exitCode int, output string) *model.HealthCheckResult {
 	result := &model.HealthCheckResult{
 		Output: strings.TrimSpace(output),
 	}
@@ -67,6 +68,10 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 		tries = 1
 	}
 
+	if userLogger != nil {
+		userLogger = userLogger.With("format", "goss")
+	}
+
 	var result *model.HealthCheckResult
 
 	for attempt := 1; attempt <= tries; attempt++ {
@@ -96,7 +101,7 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 			return nil, err
 		}
 
-		result = ParseNagiosExitCode(exitCode, string(out))
+		result = parseNagiosExitCode(exitCode, string(out))
 		result.Tries = attempt
 
 		// If check passed, return immediately
@@ -118,13 +123,9 @@ func Execute(ctx context.Context, mgr model.Manager, hc *model.CommonHealthCheck
 			sleep = time.Second
 		}
 
-		// Sleep before next retry if configured
-		if hc.ParseTrySleep > 0 {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(hc.ParseTrySleep):
-			}
+		err = backoff.InterruptableSleep(ctx, hc.ParseTrySleep)
+		if err != nil {
+			return nil, err
 		}
 	}
 

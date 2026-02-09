@@ -1,5 +1,6 @@
 +++
 title = "Shell Usage"
+description = "How to use the ccm CLI tooling"
 toc = true
 weight = 40
 pre = "<b>4. </b>"

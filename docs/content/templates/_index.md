@@ -1,5 +1,6 @@
 +++
 title = "Data"
+description = "How to use templates in CCM Manifests and CLI"
 toc = true
 weight = 30
 pre = "<b>3. </b>"

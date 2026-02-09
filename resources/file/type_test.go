@@ -652,6 +652,7 @@ var _ = Describe("File Type", func() {
 				It("Should succeed when health check passes", func(ctx context.Context) {
 					file.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/bin/test -f /tmp/testfile",
+						Format:  model.HealthCheckNagiosFormat,
 					}}
 					state := &model.FileState{
 						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
@@ -675,6 +676,7 @@ var _ = Describe("File Type", func() {
 				It("Should fail when health check fails", func(ctx context.Context) {
 					file.prop.HealthChecks = []model.CommonHealthCheck{{
 						Command: "/usr/bin/test -f /tmp/testfile",
+						Format:  model.HealthCheckNagiosFormat,
 					}}
 					state := &model.FileState{
 						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},

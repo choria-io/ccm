@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -143,6 +143,7 @@ var _ = Describe("Base", func() {
 		It("Should succeed when health check passes", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/test", "-f", "/tmp/testfile").
@@ -159,6 +160,7 @@ var _ = Describe("Base", func() {
 		It("Should fail when health check fails", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/test", "-f", "/tmp/testfile").
@@ -176,6 +178,7 @@ var _ = Describe("Base", func() {
 		It("Should fail when health check returns warning", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/check_something",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/check_something").
@@ -192,6 +195,7 @@ var _ = Describe("Base", func() {
 		It("Should fail when health check command execution fails", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/nonexistent",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/nonexistent").
@@ -216,6 +220,7 @@ var _ = Describe("Base", func() {
 		It("Should capture health check output", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/check_disk",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 
 			runner.EXPECT().Execute(gomock.Any(), "/usr/bin/check_disk").
@@ -286,6 +291,7 @@ var _ = Describe("Base", func() {
 		It("Should run health check after apply", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 			state := &model.FileState{
 				CommonResourceState: model.CommonResourceState{
@@ -310,6 +316,7 @@ var _ = Describe("Base", func() {
 		It("Should mark event as failed when health check fails after successful apply", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 			state := &model.FileState{
 				CommonResourceState: model.CommonResourceState{
@@ -517,6 +524,7 @@ var _ = Describe("Base", func() {
 		It("Should run healthcheck when requirements are met", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 			b.CommonProperties.Require = []string{"package#nginx"}
 
@@ -773,6 +781,7 @@ var _ = Describe("Base", func() {
 		It("Should run healthcheck when control allows the resource", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
+				Format:  model.HealthCheckNagiosFormat,
 			}}
 			props.Control = &model.CommonResourceControl{
 				ManageIf: "true",
