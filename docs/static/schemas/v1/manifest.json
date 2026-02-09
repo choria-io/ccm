@@ -865,11 +865,16 @@
     },
     "healthCheck": {
       "type": "object",
-      "description": "Health check configuration to verify resource state after application",
+      "description": "Health check configuration to verify resource state after application. Specify either 'command' for Nagios-style checks or 'goss_rules' for inline Goss validation rules. These two options are mutually exclusive.",
       "properties": {
         "command": {
           "type": "string",
-          "description": "Command to execute for the health check"
+          "description": "Command to execute for the health check. Mutually exclusive with 'goss_rules'."
+        },
+        "goss_rules": {
+          "type": "object",
+          "description": "Inline Goss validation rules as a YAML object. Supports all Goss resource types (command, file, service, port, etc.). Mutually exclusive with 'command'.",
+          "additionalProperties": true
         },
         "name": {
           "type": "string",
@@ -892,12 +897,14 @@
         },
         "format": {
           "type": "string",
-          "description": "Expected output format of the health check command. Defaults to 'nagios' if not specified.",
-          "enum": ["nagios"],
-          "default": "nagios"
+          "description": "Output format of the health check. Defaults to 'nagios' when 'command' is set, 'goss' when 'goss_rules' is set.",
+          "enum": ["nagios", "goss"]
         }
       },
-      "required": ["command"],
+      "oneOf": [
+        { "required": ["command"] },
+        { "required": ["goss_rules"] }
+      ],
       "additionalProperties": false
     },
     "resourceControl": {

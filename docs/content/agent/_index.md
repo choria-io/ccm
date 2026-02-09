@@ -1,5 +1,6 @@
 +++
 title = "Agent"
+description = "Introduces a method for automatically running manifests on a schedule"
 toc = true
 weight = 60
 pre = "<b>6. </b>"

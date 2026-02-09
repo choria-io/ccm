@@ -1,5 +1,6 @@
 +++
 title = "Hierarchical Data"
+description = "Introduce a new take on the well-known hiera tool"
 toc = true
 weight = 20
 pre = "<b>2. </b>"

@@ -1,8 +1,8 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package healthcheck
+package nagios
 
 import (
 	"context"
@@ -21,10 +21,10 @@ func TestHealthCheck(t *testing.T) {
 	RunSpecs(t, "HealthCheck")
 }
 
-var _ = Describe("ParseNagiosExitCode", func() {
+var _ = Describe("parseNagiosExitCode", func() {
 	DescribeTable("parses exit codes correctly",
 		func(exitCode int, output string, expectedStatus model.HealthCheckStatus) {
-			result := ParseNagiosExitCode(exitCode, output)
+			result := parseNagiosExitCode(exitCode, output)
 
 			Expect(result.Status).To(Equal(expectedStatus))
 			Expect(result.Output).To(Equal(output))
@@ -40,12 +40,12 @@ var _ = Describe("ParseNagiosExitCode", func() {
 	)
 
 	It("should trim whitespace from output", func() {
-		result := ParseNagiosExitCode(0, "  OK - All good  \n")
+		result := parseNagiosExitCode(0, "  OK - All good  \n")
 		Expect(result.Output).To(Equal("OK - All good"))
 	})
 
 	It("should handle empty output", func() {
-		result := ParseNagiosExitCode(0, "")
+		result := parseNagiosExitCode(0, "")
 		Expect(result.Output).To(Equal(""))
 		Expect(result.Status).To(Equal(model.HealthCheckOK))
 	})
@@ -269,7 +269,7 @@ var _ = Describe("Execute", func() {
 
 			result, err := Execute(ctx, mgr, hc, logger, logger)
 
-			Expect(err).To(MatchError(context.Canceled))
+			Expect(err).To(Or(MatchError("sleep interrupted by context"), MatchError(context.Canceled)))
 			Expect(result).To(BeNil())
 		})
 

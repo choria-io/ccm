@@ -8,6 +8,7 @@ package backoff
 
 import (
 	"context"
+	"errors"
 	"math/rand/v2"
 	"time"
 )
@@ -109,4 +110,18 @@ func jitter(millis int) int {
 	}
 
 	return millis/2 + rand.N(millis)
+}
+
+// InterruptableSleep sleep for the duration of the n'th wait cycle
+// in a way that can be interrupted by the context.  An error is returned
+// if the context cancels the sleep
+func InterruptableSleep(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return errors.New("sleep interrupted by context")
+	}
 }

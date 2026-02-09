@@ -8,10 +8,3 @@ This is an Configuration Management System designed to manage software from CLI,
  * [Discussions](https://github.com/choria-io/ccm/discussions)
  * [Slack #choria](https://short.voxpupu.li/puppetcommunity_slack_signup)
  
-## Status
-
-This is an experimental work in progress, there are only `archve`, `exec`, `service`, `file` and `package` resources implemented so far, they support only dnf and systemd.
-
-It also includes a new implementation of Hiera that is focused on a single file.
-
-We've got the CLI/shell interaction to a quite mature state, next we're exploring network-related features and deeper monitoring integration.

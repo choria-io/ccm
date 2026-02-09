@@ -1,5 +1,6 @@
 +++
 title = "Design Documents"
+description = "LLM generated design documents for resources"
 toc = true
 weight = 80
 pre = "<b>8. </b>"

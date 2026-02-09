@@ -256,6 +256,54 @@ var _ = Describe("Backoff", func() {
 		})
 	})
 
+	Describe("InterruptableSleep", func() {
+		It("Should sleep for the specified duration", func() {
+			start := time.Now()
+			err := backoff.InterruptableSleep(context.Background(), 5*time.Millisecond)
+			elapsed := time.Since(start)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(elapsed).To(BeNumerically(">=", 5*time.Millisecond))
+		})
+
+		It("Should return nil immediately for zero duration", func() {
+			start := time.Now()
+			err := backoff.InterruptableSleep(context.Background(), 0)
+			elapsed := time.Since(start)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(elapsed).To(BeNumerically("<", 10*time.Millisecond))
+		})
+
+		It("Should be interrupted by context cancellation", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+
+			go func() {
+				time.Sleep(5 * time.Millisecond)
+				cancel()
+			}()
+
+			start := time.Now()
+			err := backoff.InterruptableSleep(ctx, 1*time.Second)
+			elapsed := time.Since(start)
+
+			Expect(err).To(MatchError("sleep interrupted by context"))
+			Expect(elapsed).To(BeNumerically("<", 100*time.Millisecond))
+		})
+
+		It("Should return error immediately if context is already canceled", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+
+			start := time.Now()
+			err := backoff.InterruptableSleep(ctx, 1*time.Second)
+			elapsed := time.Since(start)
+
+			Expect(err).To(MatchError("sleep interrupted by context"))
+			Expect(elapsed).To(BeNumerically("<", 10*time.Millisecond))
+		})
+	})
+
 	Describe("jitter", func() {
 		It("Should return values in expected range", func() {
 			// Test indirectly through Duration since jitter is unexported

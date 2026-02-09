@@ -14,7 +14,9 @@ import (
 	"github.com/expr-lang/expr"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/choria-io/ccm/healthcheck"
+	"github.com/choria-io/ccm/healthcheck/goss"
+	"github.com/choria-io/ccm/healthcheck/nagios"
+
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/templates"
@@ -129,7 +131,18 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 		hc.TypeName = b.CommonProperties.Type
 		hc.ResourceName = b.CommonProperties.Name
 
-		res, err := healthcheck.Execute(ctx, b.Manager, &hc, b.UserLogger, b.Log)
+		var res *model.HealthCheckResult
+		var err error
+
+		switch hc.Format {
+		case "", model.HealthCheckNagiosFormat:
+			res, err = nagios.Execute(ctx, b.Manager, &hc, b.UserLogger, b.Log)
+		case model.HealthCheckGossFormat:
+			res, err = goss.Execute(ctx, b.Manager, &hc, b.UserLogger, b.Log)
+		default:
+			err = fmt.Errorf("unknown health check format %q", hc.Format)
+		}
+
 		event.HealthChecks = append(event.HealthChecks, res)
 		if err != nil {
 			event.Failed = true
