@@ -69,6 +69,11 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		group = grp.Name
 	}
 
+	// Use 0755 as default for directories since they need execute permission
+	if c.ensure == model.FileEnsureDirectory && c.mode == "0644" {
+		c.mode = "0755"
+	}
+
 	properties := model.FileResourceProperties{
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:     c.name,
