@@ -19,7 +19,7 @@ A manifest contains these top-level sections:
 | `ccm`       | Resource definitions and execution options               |
 
 > [!info] Note
-> A JSON Schema for manifests is available at [https://choria.io/schemas/ccm/v1/manifest.json](https://choria.io/schemas/ccm/v1/manifest.json). Configure your editor to use this schema for completion and validation.
+> A JSON Schema for manifests is available at [https://choria-cm.dev/schemas/ccm/v1/manifest.json](https://choria-cm.dev/schemas/ccm/v1/manifest.json). Configure your editor to use this schema for completion and validation.
 
 The manifest is resolved using the [Choria Hierarchical Data Resolver](../hiera/).
 

@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://choria-cm.dev/schemas/ccm/v1/resource_ensure_request.json",
+  "title": "CCM Resource Ensure API Request",
+  "description": "Request format for the CCM ensure API to manage a single resource",
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "description": "Protocol identifier for the request",
+      "const": "io.choria.ccm.v1.resource.ensure.request"
+    },
+    "type": {
+      "type": "string",
+      "description": "The resource type to manage",
+      "enum": ["package", "service", "file", "exec", "archive"]
+    },
+    "properties": {
+      "type": "object",
+      "description": "Resource-specific properties. The schema varies by resource type.",
+      "oneOf": [
+        { "$ref": "#/$defs/packageProperties" },
+        { "$ref": "#/$defs/serviceProperties" },
+        { "$ref": "#/$defs/fileProperties" },
+        { "$ref": "#/$defs/execProperties" },
+        { "$ref": "#/$defs/archiveProperties" }
+      ]
+    }
+  },
+  "required": ["protocol", "type", "properties"],
+  "additionalProperties": false,
+  "$defs": {
+    "commonProperties": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The resource name (package name, service name, file path, etc.)"
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the resource"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        }
+      },
+      "required": ["name"]
+    },
+    "packageProperties": {
+      "allOf": [
+        { "$ref": "#/$defs/commonProperties" },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The package name"
+            },
+            "ensure": {
+              "type": "string",
+              "description": "Desired state: 'present' to install, 'absent' to remove, 'latest' to upgrade, or a specific version string",
+              "examples": ["present", "absent", "latest", "1.2.3"]
+            }
+          }
+        }
+      ]
+    },
+    "serviceProperties": {
+      "allOf": [
+        { "$ref": "#/$defs/commonProperties" },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The service name"
+            },
+            "ensure": {
+              "type": "string",
+              "description": "Desired running state of the service",
+              "enum": ["running", "stopped"],
+              "default": "running"
+            },
+            "enable": {
+              "type": "boolean",
+              "description": "Whether the service should be enabled to start on boot"
+            },
+            "subscribe": {
+              "type": "array",
+              "description": "List of resources to subscribe to for refresh notifications, in format 'type#name'",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z]+#.+$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "fileProperties": {
+      "allOf": [
+        { "$ref": "#/$defs/commonProperties" },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The absolute file path"
+            },
+            "ensure": {
+              "type": "string",
+              "description": "Desired state: 'present' for a file, 'absent' to remove, 'directory' for a directory",
+              "enum": ["present", "absent", "directory"],
+              "default": "present"
+            },
+            "content": {
+              "type": "string",
+              "description": "Desired file contents as a string. Mutually exclusive with 'source'."
+            },
+            "source": {
+              "type": "string",
+              "description": "Local file path or HTTP URL to use as the source for file contents. Mutually exclusive with 'content'."
+            },
+            "owner": {
+              "type": "string",
+              "description": "User that should own the file"
+            },
+            "group": {
+              "type": "string",
+              "description": "Group that should own the file"
+            },
+            "mode": {
+              "type": "string",
+              "description": "File permissions in octal notation",
+              "pattern": "^[0-7]{3,4}$",
+              "examples": ["0644", "0755", "0600"]
+            }
+          },
+          "required": ["owner", "group", "mode"]
+        }
+      ]
+    },
+    "execProperties": {
+      "allOf": [
+        { "$ref": "#/$defs/commonProperties" },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "A descriptive name for the resource, or the command to execute if 'command' is not specified"
+            },
+            "command": {
+              "type": "string",
+              "description": "The command to execute. If not specified, the 'name' property will be used."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Working directory from which to run the command"
+            },
+            "environment": {
+              "type": "array",
+              "description": "Additional environment variables in KEY=value format",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*=.+$"
+              }
+            },
+            "path": {
+              "type": "string",
+              "description": "Search path for executables, as a colon-separated list of absolute directories"
+            },
+            "returns": {
+              "type": "array",
+              "description": "Expected exit codes indicating success. Defaults to [0].",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "timeout": {
+              "type": "string",
+              "description": "Maximum time the command is allowed to run",
+              "examples": ["10s", "5m", "1h"]
+            },
+            "creates": {
+              "type": "string",
+              "description": "A file that the command creates. If this file exists, the command will not run."
+            },
+            "refreshonly": {
+              "type": "boolean",
+              "description": "If true, the command only runs when notified by a subscribed resource",
+              "default": false
+            },
+            "subscribe": {
+              "type": "array",
+              "description": "List of resources to subscribe to for refresh notifications, in format 'type#name'",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z]+#.+$"
+              }
+            },
+            "logoutput": {
+              "type": "boolean",
+              "description": "Whether to log the command's output",
+              "default": false
+            }
+          }
+        }
+      ]
+    },
+    "archiveProperties": {
+      "allOf": [
+        { "$ref": "#/$defs/commonProperties" },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The absolute file path where the archive will be saved"
+            },
+            "ensure": {
+              "type": "string",
+              "description": "Desired state of the archive",
+              "enum": ["present", "absent"],
+              "default": "present"
+            },
+            "url": {
+              "type": "string",
+              "description": "HTTP/HTTPS URL to download the archive from",
+              "format": "uri"
+            },
+            "headers": {
+              "type": "object",
+              "description": "Additional HTTP headers to send with the request",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "username": {
+              "type": "string",
+              "description": "Username for HTTP Basic Authentication"
+            },
+            "password": {
+              "type": "string",
+              "description": "Password for HTTP Basic Authentication"
+            },
+            "checksum": {
+              "type": "string",
+              "description": "Expected SHA256 checksum of the downloaded archive (hex encoded)"
+            },
+            "extract_parent": {
+              "type": "string",
+              "description": "Directory to extract the archive contents into"
+            },
+            "cleanup": {
+              "type": "boolean",
+              "description": "Remove the archive file after successful extraction",
+              "default": false
+            },
+            "creates": {
+              "type": "string",
+              "description": "A file path that the archive creates. If exists, the archive will not be processed."
+            },
+            "owner": {
+              "type": "string",
+              "description": "User that should own the archive file"
+            },
+            "group": {
+              "type": "string",
+              "description": "Group that should own the archive file"
+            }
+          },
+          "required": ["url", "owner", "group"]
+        }
+      ]
+    },
+    "healthCheck": {
+      "type": "object",
+      "description": "Health check configuration to verify resource state",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Command to execute for the health check"
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional name for the health check"
+        },
+        "timeout": {
+          "type": "string",
+          "description": "Maximum time to wait for the health check command",
+          "examples": ["10s", "30s"]
+        },
+        "tries": {
+          "type": "integer",
+          "description": "Number of times to retry the health check before failing",
+          "minimum": 1
+        },
+        "try_sleep": {
+          "type": "string",
+          "description": "Time to wait between health check retries",
+          "examples": ["1s", "5s"]
+        },
+        "format": {
+          "type": "string",
+          "description": "Expected output format of the health check command",
+          "enum": ["nagios"],
+          "default": "nagios"
+        }
+      },
+      "required": ["command"],
+      "additionalProperties": false
+    },
+    "resourceControl": {
+      "type": "object",
+      "description": "Control conditions that determine whether a resource should be managed",
+      "properties": {
+        "if": {
+          "type": "string",
+          "description": "Expression that must evaluate to true for the resource to be managed"
+        },
+        "unless": {
+          "type": "string",
+          "description": "Expression that must evaluate to false for the resource to be managed"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

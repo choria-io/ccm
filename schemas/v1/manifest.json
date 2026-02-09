@@ -1,0 +1,921 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://choria-cm.dev/schemas/ccm/v1/manifest.json",
+  "title": "CCM Manifest",
+  "description": "A CCM manifest file combining Hiera data and configuration management resources",
+  "type": "object",
+  "properties": {
+    "data": {
+      "type": "object",
+      "description": "Base data section containing key-value pairs that can be referenced in resources using template expressions like {{ Data.key }}",
+      "additionalProperties": true
+    },
+    "ccm": {
+      "type": "object",
+      "description": "CCM configuration section containing resource definitions",
+      "properties": {
+        "pre_message": {
+          "type": "string",
+          "description": "Message to display before applying resources"
+        },
+        "post_message": {
+          "type": "string",
+          "description": "Message to display after applying resources"
+        },
+        "fail_on_error": {
+          "type": "boolean",
+          "description": "If true, stop processing resources when any resource fails. If false, continue processing remaining resources.",
+          "default": false
+        },
+        "resources_jet_file": {
+          "type": "string",
+          "description": "Path to a Jet template file that generates the resources list"
+        },
+        "resources": {
+          "type": "array",
+          "description": "List of configuration management resources to apply",
+          "items": {
+            "$ref": "#/$defs/resource"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "hierarchy": {
+      "$ref": "#/$defs/hierarchy"
+    },
+    "overrides": {
+      "type": "object",
+      "description": "Override sections keyed by hierarchy order entries (e.g., 'os:debian'). Values in matching overrides will replace or merge with base data depending on the merge strategy.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Override data values for a specific hierarchy entry",
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "hierarchy": {
+      "type": "object",
+      "description": "Describes how data sections should be resolved using Hiera-like lookups",
+      "properties": {
+        "order": {
+          "type": "array",
+          "description": "Lookup sequence for data sections. Entries can contain template expressions like {{ lookup('facts.host.info.platformFamily') }}",
+          "items": {
+            "type": "string"
+          }
+        },
+        "merge": {
+          "type": "string",
+          "description": "Merge strategy for combining data from multiple hierarchy levels",
+          "enum": ["first", "deep"],
+          "default": "first"
+        }
+      },
+      "additionalProperties": false
+    },
+    "resource": {
+      "type": "object",
+      "description": "A configuration management resource entry. Each entry should have exactly one resource type key.",
+      "properties": {
+        "package": {
+          "oneOf": [
+            { "$ref": "#/$defs/packageResourceList" },
+            { "$ref": "#/$defs/packageResourcePropertiesWithName" }
+          ]
+        },
+        "service": {
+          "oneOf": [
+            { "$ref": "#/$defs/serviceResourceList" },
+            { "$ref": "#/$defs/serviceResourcePropertiesWithName" }
+          ]
+        },
+        "file": {
+          "oneOf": [
+            { "$ref": "#/$defs/fileResourceList" },
+            { "$ref": "#/$defs/fileResourcePropertiesWithName" }
+          ]
+        },
+        "exec": {
+          "oneOf": [
+            { "$ref": "#/$defs/execResourceList" },
+            { "$ref": "#/$defs/execResourcePropertiesWithName" }
+          ]
+        },
+        "archive": {
+          "oneOf": [
+            { "$ref": "#/$defs/archiveResourceList" },
+            { "$ref": "#/$defs/archiveResourcePropertiesWithName" }
+          ]
+        }
+      },
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false
+    },
+    "packageResourceList": {
+      "type": "array",
+      "description": "List of package resources to manage (named format)",
+      "items": {
+        "type": "object",
+        "description": "Package resource entry keyed by package name or template expression",
+        "additionalProperties": {
+          "$ref": "#/$defs/packageResourceProperties"
+        },
+        "minProperties": 1,
+        "maxProperties": 1
+      }
+    },
+    "serviceResourceList": {
+      "type": "array",
+      "description": "List of service resources to manage (named format)",
+      "items": {
+        "type": "object",
+        "description": "Service resource entry keyed by service name or template expression",
+        "additionalProperties": {
+          "$ref": "#/$defs/serviceResourceProperties"
+        },
+        "minProperties": 1,
+        "maxProperties": 1
+      }
+    },
+    "fileResourceList": {
+      "type": "array",
+      "description": "List of file resources to manage (named format)",
+      "items": {
+        "type": "object",
+        "description": "File resource entry keyed by absolute file path",
+        "additionalProperties": {
+          "$ref": "#/$defs/fileResourceProperties"
+        },
+        "minProperties": 1,
+        "maxProperties": 1
+      }
+    },
+    "execResourceList": {
+      "type": "array",
+      "description": "List of exec resources to manage (named format)",
+      "items": {
+        "type": "object",
+        "description": "Exec resource entry keyed by command to execute",
+        "additionalProperties": {
+          "$ref": "#/$defs/execResourceProperties"
+        },
+        "minProperties": 1,
+        "maxProperties": 1
+      }
+    },
+    "archiveResourceList": {
+      "type": "array",
+      "description": "List of archive resources to manage (named format)",
+      "items": {
+        "type": "object",
+        "description": "Archive resource entry keyed by absolute file path where the archive will be saved",
+        "additionalProperties": {
+          "$ref": "#/$defs/archiveResourceProperties"
+        },
+        "minProperties": 1,
+        "maxProperties": 1
+      }
+    },
+    "packageResourcePropertiesWithName": {
+      "type": "object",
+      "description": "Properties for a package resource (direct format with name)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The package name"
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the package: 'present' to install, 'absent' to remove, 'latest' to upgrade to latest version, or a specific version string",
+          "examples": ["present", "absent", "latest", "1.2.3"]
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "serviceResourcePropertiesWithName": {
+      "type": "object",
+      "description": "Properties for a service resource (direct format with name)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The service name"
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired running state of the service",
+          "enum": ["running", "stopped"],
+          "default": "running"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "enable": {
+          "type": "boolean",
+          "description": "Whether the service should be enabled to start on boot"
+        },
+        "subscribe": {
+          "type": "array",
+          "description": "List of resources to subscribe to for refresh notifications, in format 'type#name'. When a subscribed resource changes, this service will be restarted.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "fileResourcePropertiesWithName": {
+      "type": "object",
+      "description": "Properties for a file resource (direct format with name)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The absolute file path"
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the file: 'present' for a regular file, 'absent' to remove, 'directory' to create a directory",
+          "enum": ["present", "absent", "directory"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "content": {
+          "type": "string",
+          "description": "Desired file contents as a string. Mutually exclusive with 'source'."
+        },
+        "source": {
+          "type": "string",
+          "description": "Local file path to use as the source for file contents. Mutually exclusive with 'content'."
+        },
+        "owner": {
+          "type": "string",
+          "description": "User that should own the file"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group that should own the file"
+        },
+        "mode": {
+          "type": "string",
+          "description": "File permissions in octal notation",
+          "pattern": "^[0-7]{3,4}$",
+          "examples": ["0644", "0755", "0600"]
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "execResourcePropertiesWithName": {
+      "type": "object",
+      "description": "Properties for an exec resource (direct format with name)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A descriptive name for the resource, or the command to execute if 'command' is not specified"
+        },
+        "command": {
+          "type": "string",
+          "description": "The command to execute. If not specified, the 'name' property will be used as the command."
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the exec resource",
+          "enum": ["present", "absent"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory from which to run the command"
+        },
+        "environment": {
+          "type": "array",
+          "description": "Additional environment variables to set when running the command, in KEY=value format",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*=.+$"
+          }
+        },
+        "path": {
+          "type": "string",
+          "description": "Search path for executable commands, as a colon-separated list of absolute directories",
+          "examples": ["/usr/local/bin:/usr/bin:/bin"]
+        },
+        "returns": {
+          "type": "array",
+          "description": "Expected exit codes indicating success. Defaults to [0] if not specified.",
+          "items": {
+            "type": "integer"
+          },
+          "default": [0]
+        },
+        "timeout": {
+          "type": "string",
+          "description": "Maximum time the command is allowed to run. If exceeded, the command will be terminated. Specified as a duration string.",
+          "examples": ["10s", "5m", "1h"]
+        },
+        "creates": {
+          "type": "string",
+          "description": "A file that the command creates. If this file exists, the command will not run."
+        },
+        "refreshonly": {
+          "type": "boolean",
+          "description": "If true, the command only runs when notified by a subscribed resource",
+          "default": false
+        },
+        "subscribe": {
+          "type": "array",
+          "description": "List of resources to subscribe to for refresh notifications, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "logoutput": {
+          "type": "boolean",
+          "description": "Whether to log the command's output",
+          "default": false
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "archiveResourcePropertiesWithName": {
+      "type": "object",
+      "description": "Properties for an archive resource (direct format with name)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The absolute file path where the archive will be saved"
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the archive",
+          "enum": ["present", "absent"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "url": {
+          "type": "string",
+          "description": "HTTP/HTTPS URL to download the archive from. Must end in .zip, .tar.gz, .tgz, or .tar",
+          "format": "uri"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Additional HTTP headers to send with the request",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "username": {
+          "type": "string",
+          "description": "Username for HTTP Basic Authentication"
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for HTTP Basic Authentication"
+        },
+        "checksum": {
+          "type": "string",
+          "description": "Expected SHA256 checksum of the downloaded archive (hex encoded)"
+        },
+        "extract_parent": {
+          "type": "string",
+          "description": "Directory to extract the archive contents into"
+        },
+        "cleanup": {
+          "type": "boolean",
+          "description": "Remove the archive file after successful extraction. Requires extract_parent to be set.",
+          "default": false
+        },
+        "creates": {
+          "type": "string",
+          "description": "A file path that the archive creates. If this file exists, the archive will not be downloaded or extracted."
+        },
+        "owner": {
+          "type": "string",
+          "description": "User that should own the archive file"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group that should own the archive file"
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "packageResourceProperties": {
+      "type": "object",
+      "description": "Properties for a package resource",
+      "properties": {
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the package: 'present' to install, 'absent' to remove, 'latest' to upgrade to latest version, or a specific version string",
+          "examples": ["present", "absent", "latest", "1.2.3"]
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "serviceResourceProperties": {
+      "type": "object",
+      "description": "Properties for a service resource",
+      "properties": {
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired running state of the service",
+          "enum": ["running", "stopped"],
+          "default": "running"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "enable": {
+          "type": "boolean",
+          "description": "Whether the service should be enabled to start on boot"
+        },
+        "subscribe": {
+          "type": "array",
+          "description": "List of resources to subscribe to for refresh notifications, in format 'type#name'. When a subscribed resource changes, this service will be restarted.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "fileResourceProperties": {
+      "type": "object",
+      "description": "Properties for a file resource",
+      "properties": {
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the file: 'present' for a regular file, 'absent' to remove, 'directory' to create a directory",
+          "enum": ["present", "absent", "directory"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "content": {
+          "type": "string",
+          "description": "Desired file contents as a string. Mutually exclusive with 'source'."
+        },
+        "source": {
+          "type": "string",
+          "description": "Local file path to use as the source for file contents. Mutually exclusive with 'content'."
+        },
+        "owner": {
+          "type": "string",
+          "description": "User that should own the file"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group that should own the file"
+        },
+        "mode": {
+          "type": "string",
+          "description": "File permissions in octal notation",
+          "pattern": "^[0-7]{3,4}$",
+          "examples": ["0644", "0755", "0600"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "execResourceProperties": {
+      "type": "object",
+      "description": "Properties for an exec resource that runs commands",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "The command to execute. If not specified, the resource name (key) will be used as the command."
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the exec resource",
+          "enum": ["present", "absent"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory from which to run the command"
+        },
+        "environment": {
+          "type": "array",
+          "description": "Additional environment variables to set when running the command, in KEY=value format",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*=.+$"
+          }
+        },
+        "path": {
+          "type": "string",
+          "description": "Search path for executable commands, as a colon-separated list of absolute directories",
+          "examples": ["/usr/local/bin:/usr/bin:/bin"]
+        },
+        "returns": {
+          "type": "array",
+          "description": "Expected exit codes indicating success. Defaults to [0] if not specified.",
+          "items": {
+            "type": "integer"
+          },
+          "default": [0]
+        },
+        "timeout": {
+          "type": "string",
+          "description": "Maximum time the command is allowed to run. If exceeded, the command will be terminated. Specified as a duration string.",
+          "examples": ["10s", "5m", "1h"]
+        },
+        "creates": {
+          "type": "string",
+          "description": "A file that the command creates. If this file exists, the command will not run."
+        },
+        "refreshonly": {
+          "type": "boolean",
+          "description": "If true, the command only runs when notified by a subscribed resource",
+          "default": false
+        },
+        "subscribe": {
+          "type": "array",
+          "description": "List of resources to subscribe to for refresh notifications, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "logoutput": {
+          "type": "boolean",
+          "description": "Whether to log the command's output",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "archiveResourceProperties": {
+      "type": "object",
+      "description": "Properties for an archive resource that downloads and extracts archives",
+      "properties": {
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the archive",
+          "enum": ["present", "absent"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "url": {
+          "type": "string",
+          "description": "HTTP/HTTPS URL to download the archive from. Must end in .zip, .tar.gz, .tgz, or .tar",
+          "format": "uri"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Additional HTTP headers to send with the request",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "username": {
+          "type": "string",
+          "description": "Username for HTTP Basic Authentication"
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for HTTP Basic Authentication"
+        },
+        "checksum": {
+          "type": "string",
+          "description": "Expected SHA256 checksum of the downloaded archive (hex encoded)"
+        },
+        "extract_parent": {
+          "type": "string",
+          "description": "Directory to extract the archive contents into"
+        },
+        "cleanup": {
+          "type": "boolean",
+          "description": "Remove the archive file after successful extraction. Requires extract_parent to be set.",
+          "default": false
+        },
+        "creates": {
+          "type": "string",
+          "description": "A file path that the archive creates. If this file exists, the archive will not be downloaded or extracted."
+        },
+        "owner": {
+          "type": "string",
+          "description": "User that should own the archive file"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group that should own the archive file"
+        }
+      },
+      "additionalProperties": false
+    },
+    "healthCheck": {
+      "type": "object",
+      "description": "Health check configuration to verify resource state after application",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Command to execute for the health check"
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional name for the health check"
+        },
+        "timeout": {
+          "type": "string",
+          "description": "Maximum time to wait for the health check command to complete",
+          "examples": ["10s", "30s"]
+        },
+        "tries": {
+          "type": "integer",
+          "description": "Number of times to retry the health check before failing",
+          "minimum": 1
+        },
+        "try_sleep": {
+          "type": "string",
+          "description": "Time to wait between health check retries",
+          "examples": ["1s", "5s"]
+        },
+        "format": {
+          "type": "string",
+          "description": "Expected output format of the health check command. Defaults to 'nagios' if not specified.",
+          "enum": ["nagios"],
+          "default": "nagios"
+        }
+      },
+      "required": ["command"],
+      "additionalProperties": false
+    },
+    "resourceControl": {
+      "type": "object",
+      "description": "Control conditions that determine whether a resource should be managed",
+      "properties": {
+        "if": {
+          "type": "string",
+          "description": "Expression that must evaluate to true for the resource to be managed. Has access to Facts, Data, and Environ variables.",
+          "examples": ["Facts.os == \"linux\"", "lookup(\"facts.kernel\", \"\") == \"Linux\""]
+        },
+        "unless": {
+          "type": "string",
+          "description": "Expression that must evaluate to false for the resource to be managed. Has access to Facts, Data, and Environ variables.",
+          "examples": ["Facts.os == \"windows\"", "lookup(\"facts.virtual\", \"\") == \"docker\""]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
