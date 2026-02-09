@@ -3,8 +3,6 @@ title = "Introduction"
 weight = 5
 +++
 
-Configuration Management systems typically focus on full-system management - optimized for hundreds or thousands of resources per node. This makes them complex, dependency-heavy, and poorly suited to ad hoc systems where each node is a unique snowflake.
-
 CCM is a small-scale Configuration Management system designed to meet users where they are - enabling experimentation, R&D, and exploration without the overhead of full-system management while still following sound Configuration Management principles.
 
 We focus on great UX, immediate feedback, and interactive use with minimal friction.
