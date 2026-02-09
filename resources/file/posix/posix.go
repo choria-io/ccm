@@ -32,6 +32,16 @@ func (p *Provider) CreateDirectory(ctx context.Context, dir string, owner string
 		return err
 	}
 
+	// Check if path is a symlink - if so, remove it first to ensure
+	// we create an actual directory rather than following the symlink
+	lstat, err := os.Lstat(dir)
+	if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
+		err := os.Remove(dir)
+		if err != nil {
+			return fmt.Errorf("could not remove symlink: %w", err)
+		}
+	}
+
 	err = os.MkdirAll(dir, parsedMode)
 	if err != nil {
 		return err
