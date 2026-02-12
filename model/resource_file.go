@@ -80,7 +80,7 @@ func (p *FileResourceProperties) Validate() error {
 	}
 
 	if filepath.Clean(p.Name) != p.Name {
-		return fmt.Errorf("file path must be absolute")
+		return fmt.Errorf("file path must be canonical")
 	}
 
 	if p.Owner == "" {

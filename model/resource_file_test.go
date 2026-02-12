@@ -44,8 +44,8 @@ var _ = Describe("FileResourceProperties", func() {
 
 			// Name validation
 			Entry("empty name", "", "present", "root", "root", "0644", "name"),
-			Entry("path with ..", "/tmp/../etc/passwd", "present", "root", "root", "0644", "absolute"),
-			Entry("path with .", "/tmp/./file.txt", "present", "root", "root", "0644", "absolute"),
+			Entry("path with ..", "/tmp/../etc/passwd", "present", "root", "root", "0644", "canonical"),
+			Entry("path with .", "/tmp/./file.txt", "present", "root", "root", "0644", "canonical"),
 
 			// Ensure validation
 			Entry("empty ensure", "/tmp/test.txt", "", "root", "root", "0644", "ensure"),
