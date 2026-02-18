@@ -128,7 +128,7 @@ func (p *ArchiveResourceProperties) Validate() error {
 	}
 
 	if filepath.Clean(p.Name) != p.Name {
-		return fmt.Errorf("file path must be absolute")
+		return fmt.Errorf("file path must be canonical")
 	}
 
 	if !filepath.IsAbs(p.Name) {

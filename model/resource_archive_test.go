@@ -47,8 +47,8 @@ var _ = Describe("ArchiveResourceProperties", func() {
 
 			// Name validation
 			Entry("empty name", "", "present", "https://example.com/archive.tar.gz", "root", "root", "", "", "name"),
-			Entry("path with ..", "/tmp/../etc/archive.tar.gz", "present", "https://example.com/archive.tar.gz", "root", "root", "", "", "absolute"),
-			Entry("path with .", "/tmp/./archive.tar.gz", "present", "https://example.com/archive.tar.gz", "root", "root", "", "", "absolute"),
+			Entry("path with ..", "/tmp/../etc/archive.tar.gz", "present", "https://example.com/archive.tar.gz", "root", "root", "", "", "canonical"),
+			Entry("path with .", "/tmp/./archive.tar.gz", "present", "https://example.com/archive.tar.gz", "root", "root", "", "", "canonical"),
 
 			// URL validation
 			Entry("empty url", "/tmp/archive.tar.gz", "present", "", "root", "root", "", "", "url cannot be empty"),
