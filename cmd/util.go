@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/MatusOllah/slogcolor"
+	"github.com/SladkyCitron/slogcolor"
 
 	"github.com/choria-io/ccm/hiera"
 	iu "github.com/choria-io/ccm/internal/util"
