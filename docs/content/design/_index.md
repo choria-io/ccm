@@ -32,4 +32,5 @@ Each design document covers:
 | [File](file/)       | File resource for managing files and directories         |
 | [Package](package/) | Package resource for system package management           |
 | [Service](service/) | Service resource for system service management           |
+ | [New Type](new/)    | How to add a new resource type to CCM                    |
 
