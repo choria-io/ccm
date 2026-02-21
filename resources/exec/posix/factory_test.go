@@ -39,7 +39,7 @@ var _ = Describe("Factory", func() {
 
 	Describe("TypeName", func() {
 		It("Should return exec type name", func() {
-			Expect(f.TypeName()).To(Equal(model.ExecTypeName))
+			Expect(f.TypeName()).To(Equal(model.ScaffoldTypeName))
 		})
 	})
 

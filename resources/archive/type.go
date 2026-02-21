@@ -23,8 +23,6 @@ type Type struct {
 	mgr      model.Manager
 	log      model.Logger
 	provider model.Provider
-	facts    map[string]any
-	data     map[string]any
 
 	mu sync.Mutex
 }
@@ -51,11 +49,9 @@ func New(ctx context.Context, mgr model.Manager, properties model.ArchiveResourc
 	properties.CommonResourceProperties.Type = model.ArchiveTypeName
 
 	t := &Type{
-		prop:  &properties,
-		mgr:   mgr,
-		log:   logger,
-		facts: env.Facts,
-		data:  env.Data,
+		prop: &properties,
+		mgr:  mgr,
+		log:  logger,
 	}
 	t.Base = &base.Base{
 		Resource:           t,
@@ -64,6 +60,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.ArchiveResourc
 		Log:                logger,
 		UserLogger:         mgr.UserLogger().With(loggerArgs...),
 		Manager:            mgr,
+		Facts:              env.Facts,
+		Data:               env.Data,
 	}
 
 	err = t.Base.Validate()
@@ -255,7 +253,7 @@ func (t *Type) selectProviderUnlocked() error {
 	}
 
 	t.log.Debug("Trying to find providers")
-	selected, err := registry.FindSuitableProvider(model.ArchiveTypeName, t.prop.Provider, t.facts, t.prop, t.log, runner)
+	selected, err := registry.FindSuitableProvider(model.ArchiveTypeName, t.prop.Provider, t.Facts, t.prop, t.log, runner)
 	if err != nil {
 		return err
 	}

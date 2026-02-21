@@ -37,17 +37,18 @@ type ScaffoldResourceProperties struct {
 	RightDelimiter           string                 `json:"right_delimiter,omitempty" yaml:"right_delimiter,omitempty"`
 	Engine                   ScaffoldResourceEngine `json:"engine,omitempty" yaml:"engine,omitempty"`
 	Purge                    bool                   `json:"purge,omitempty" yaml:"purge,omitempty"`
-	Post                     map[string]string      `json:"post,omitempty" yaml:"post,omitempty"`
+	Post                     []map[string]string    `json:"post,omitempty" yaml:"post,omitempty"`
 }
 
 // ScaffoldMetadata contains detailed metadata about a scaffold
 type ScaffoldMetadata struct {
-	Name     string   `json:"name" yaml:"name"`
-	Provider string   `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Changed  []string `json:"changed,omitempty" yaml:"changed,omitempty"`
-	Purged   []string `json:"purged,omitempty" yaml:"purged,omitempty"`
-	Stable   []string `json:"stable,omitempty" yaml:"stable,omitempty"`
-	Engine   string   `json:"engine,omitempty" yaml:"engine,omitempty"`
+	Name         string                 `json:"name" yaml:"name"`
+	Provider     string                 `json:"provider,omitempty" yaml:"provider,omitempty"`
+	TargetExists bool                   `json:"target_exists,omitempty" yaml:"target_exists,omitempty"`
+	Changed      []string               `json:"changed,omitempty" yaml:"changed,omitempty"`
+	Purged       []string               `json:"purged,omitempty" yaml:"purged,omitempty"`
+	Stable       []string               `json:"stable,omitempty" yaml:"stable,omitempty"`
+	Engine       ScaffoldResourceEngine `json:"engine,omitempty" yaml:"engine,omitempty"`
 }
 
 // ScaffoldState represents the current state of a scaffold on the system
@@ -96,12 +97,14 @@ func (p *ScaffoldResourceProperties) Validate() error {
 		return fmt.Errorf("engine must be one of %q or %q", ScaffoldEngineGo, ScaffoldEngineJet)
 	}
 
-	for key, val := range p.Post {
-		if key == "" {
-			return fmt.Errorf("post keys cannot be empty")
-		}
-		if val == "" {
-			return fmt.Errorf("post value for key %q cannot be empty", key)
+	for _, entry := range p.Post {
+		for key, val := range entry {
+			if key == "" {
+				return fmt.Errorf("post keys cannot be empty")
+			}
+			if val == "" {
+				return fmt.Errorf("post value for key %q cannot be empty", key)
+			}
 		}
 	}
 

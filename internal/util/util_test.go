@@ -412,6 +412,50 @@ var _ = Describe("IsDirectory", func() {
 	})
 })
 
+var _ = Describe("IsEmptyDirectory", func() {
+	It("returns true for an empty directory", func() {
+		tempDir := GinkgoT().TempDir()
+		Expect(IsEmptyDirectory(tempDir)).To(BeTrue())
+	})
+
+	It("returns false for a directory with files", func() {
+		tempDir := GinkgoT().TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, "file.txt"), []byte("content"), 0644)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(IsEmptyDirectory(tempDir)).To(BeFalse())
+	})
+
+	It("returns false for a directory with subdirectories", func() {
+		tempDir := GinkgoT().TempDir()
+		err := os.Mkdir(filepath.Join(tempDir, "subdir"), 0755)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(IsEmptyDirectory(tempDir)).To(BeFalse())
+	})
+
+	It("returns false for a non-existent path", func() {
+		Expect(IsEmptyDirectory("/nonexistent/path/to/dir")).To(BeFalse())
+	})
+
+	It("returns false for a regular file", func() {
+		tempDir := GinkgoT().TempDir()
+		testFile := filepath.Join(tempDir, "file.txt")
+		err := os.WriteFile(testFile, []byte("content"), 0644)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(IsEmptyDirectory(testFile)).To(BeFalse())
+	})
+
+	It("returns false for a directory with only hidden files", func() {
+		tempDir := GinkgoT().TempDir()
+		err := os.WriteFile(filepath.Join(tempDir, ".hidden"), []byte("content"), 0644)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(IsEmptyDirectory(tempDir)).To(BeFalse())
+	})
+})
+
 var _ = Describe("LookupUserID", func() {
 	It("returns UID for root user", func() {
 		uid, err := LookupUserID("root")

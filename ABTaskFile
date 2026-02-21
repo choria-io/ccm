@@ -221,5 +221,6 @@ commands:
             mockgen -write_generate_directive -source resources/file/file.go -destination resources/file/provider_mock_test.go -package fileresource
             mockgen -write_generate_directive -source resources/exec/exec.go -destination resources/exec/provider_mock_test.go -package execresource
             mockgen -write_generate_directive -source resources/archive/archive.go -destination resources/archive/provider_mock_test.go -package archiveresource
+            mockgen -write_generate_directive -source resources/scaffold/scaffold.go -destination resources/scaffold/provider_mock_test.go -package scaffoldresource
             mockgen -write_generate_directive -source resources/base/base.go -destination resources/base/embedded_mock_test.go -package base
             mockgen -write_generate_directive -destination model/modelmocks/jetstream_mock.go -package modelmocks github.com/nats-io/nats.go/jetstream JetStream,KeyValue,KeyValueEntry,ObjectStore

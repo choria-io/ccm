@@ -6,13 +6,14 @@ require (
 	github.com/CloudyKit/jet/v6 v6.3.2-0.20260120165216-7cc3d1922b08
 	github.com/SladkyCitron/slogcolor v1.8.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.14.0
+	github.com/choria-io/appbuilder v0.14.1-0.20260223180406-bcf9a03a7272
 	github.com/choria-io/fisk v0.7.2
+	github.com/choria-io/scaffold v0.0.9-0.20260223170641-10ba4ec0e22a
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goss-org/goss v0.4.9
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/nats-io/nats.go v1.48.0
+	github.com/nats-io/nats.go v1.49.0
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/prometheus/client_golang v1.23.2
@@ -40,10 +41,9 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
 	github.com/choria-io/goform v0.0.3 // indirect
-	github.com/choria-io/scaffold v0.0.6 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ebitengine/purego v0.9.1 // indirect
+	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect

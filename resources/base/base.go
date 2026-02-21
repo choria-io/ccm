@@ -38,6 +38,9 @@ type Base struct {
 	UserLogger         model.Logger
 	Manager            model.Manager
 
+	Facts map[string]any
+	Data  map[string]any
+
 	sync.Mutex
 }
 

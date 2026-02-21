@@ -15,7 +15,7 @@ import (
 var _ = Describe("ScaffoldResourceProperties", func() {
 	Describe("Validate", func() {
 		DescribeTable("validation tests",
-			func(name, ensure, source string, engine ScaffoldResourceEngine, post map[string]string, errorText string) {
+			func(name, ensure, source string, engine ScaffoldResourceEngine, post []map[string]string, errorText string) {
 				prop := &ScaffoldResourceProperties{
 					CommonResourceProperties: CommonResourceProperties{
 						Name:   name,
@@ -40,7 +40,7 @@ var _ = Describe("ScaffoldResourceProperties", func() {
 			Entry("valid scaffold with go engine", "/opt/app/scaffold", "present", "https://example.com/scaffold.tar.gz", ScaffoldEngineGo, nil, ""),
 			Entry("valid scaffold with jet engine", "/opt/app/scaffold", "present", "https://example.com/scaffold.tar.gz", ScaffoldEngineJet, nil, ""),
 			Entry("valid scaffold with absent ensure", "/opt/app/scaffold", "absent", "https://example.com/scaffold.tar.gz", ScaffoldEngineGo, nil, ""),
-			Entry("valid scaffold with post", "/opt/app/scaffold", "present", "https://example.com/scaffold.tar.gz", ScaffoldEngineGo, map[string]string{"key1": "value1"}, ""),
+			Entry("valid scaffold with post", "/opt/app/scaffold", "present", "https://example.com/scaffold.tar.gz", ScaffoldEngineGo, []map[string]string{{"key1": "value1"}}, ""),
 
 			// Name validation
 			Entry("empty name", "", "present", "https://example.com/scaffold.tar.gz", ScaffoldEngineGo, nil, "name"),
@@ -60,7 +60,7 @@ var _ = Describe("ScaffoldResourceProperties", func() {
 			Entry("invalid engine", "/opt/app/scaffold", "present", "https://example.com/scaffold.tar.gz", ScaffoldResourceEngine("invalid"), nil, "engine must be one of"),
 
 			// Post validation
-			Entry("post with empty value", "/opt/app/scaffold", "present", "https://example.com/scaffold.tar.gz", ScaffoldEngineGo, map[string]string{"key1": ""}, "post value for key"),
+			Entry("post with empty value", "/opt/app/scaffold", "present", "https://example.com/scaffold.tar.gz", ScaffoldEngineGo, []map[string]string{{"key1": ""}}, "post value for key"),
 		)
 
 		DescribeTable("legitimate scaffold paths",
@@ -107,10 +107,10 @@ var _ = Describe("ScaffoldResourceProperties", func() {
 				},
 				Source: "https://example.com/scaffold.tar.gz",
 				Engine: ScaffoldEngineGo,
-				Post: map[string]string{
-					"key1": "value1",
-					"key2": "value2",
-					"key3": "value3",
+				Post: []map[string]string{
+					{"key1": "value1"},
+					{"key2": "value2"},
+					{"key3": "value3"},
 				},
 			}
 
@@ -193,7 +193,7 @@ var _ = Describe("ScaffoldResourceProperties", func() {
 				LeftDelimiter:  "<%",
 				RightDelimiter: "%>",
 				Purge:          true,
-				Post:           map[string]string{"reload": "systemctl reload app"},
+				Post:           []map[string]string{{"reload": "systemctl reload app"}},
 			}
 
 			raw, err := prop.ToYamlManifest()
@@ -246,7 +246,7 @@ left_delimiter: "<%"
 right_delimiter: "%>"
 purge: true
 post:
-  reload: systemctl reload app
+  - reload: systemctl reload app
 `
 			props, err := NewScaffoldResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
 			Expect(err).ToNot(HaveOccurred())
@@ -260,7 +260,8 @@ post:
 			Expect(prop.LeftDelimiter).To(Equal("<%"))
 			Expect(prop.RightDelimiter).To(Equal("%>"))
 			Expect(prop.Purge).To(BeTrue())
-			Expect(prop.Post).To(HaveKeyWithValue("reload", "systemctl reload app"))
+			Expect(prop.Post).To(HaveLen(1))
+			Expect(prop.Post[0]).To(HaveKeyWithValue("reload", "systemctl reload app"))
 			Expect(prop.Type).To(Equal(ScaffoldTypeName))
 		})
 
@@ -324,7 +325,7 @@ engine: go
 			Expect(state.Metadata.Changed).To(ConsistOf("file1.txt", "file2.txt"))
 			Expect(state.Metadata.Purged).To(ConsistOf("old.txt"))
 			Expect(state.Metadata.Stable).To(ConsistOf("unchanged.txt"))
-			Expect(state.Metadata.Engine).To(Equal("go"))
+			Expect(state.Metadata.Engine).To(Equal(ScaffoldEngineGo))
 		})
 
 		It("Should return CommonState correctly", func() {

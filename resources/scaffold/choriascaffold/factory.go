@@ -1,8 +1,8 @@
-// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package posix
+package choriascaffold
 
 import (
 	"github.com/choria-io/ccm/internal/registry"
@@ -16,14 +16,10 @@ func Register() {
 
 type factory struct{}
 
-func (p *factory) TypeName() string { return model.ScaffoldTypeName }
+func (p *factory) TypeName() string { return model.FileTypeName }
 func (p *factory) Name() string     { return ProviderName }
-func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
-	if runner == nil {
-		log.Warn("factory called with no runner")
-	}
-
-	return NewPosixProvider(log, runner)
+func (p *factory) New(log model.Logger, _ model.CommandRunner) (model.Provider, error) {
+	return NewChoriaProvider(log)
 }
 func (p *factory) IsManageable(_ map[string]any, _ model.ResourceProperties) (bool, int, error) {
 	return true, 1, nil

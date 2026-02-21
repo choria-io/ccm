@@ -510,3 +510,20 @@ func HttpGet(ctx context.Context, rawUrl string, timeout time.Duration) (*HttpGe
 		Status:     resp.Status,
 	}, nil
 }
+
+// IsEmptyDirectory checks if a directory is empty, if it does not exist or some error occurs its not reported as empty
+func IsEmptyDirectory(dir string) bool {
+	if !IsDirectory(dir) {
+		return false
+	}
+
+	f, err := os.Open(dir)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1)
+
+	return err == io.EOF
+}
