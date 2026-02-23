@@ -526,6 +526,15 @@ Add properties definition under `$defs`:
 }
 ```
 
+### Copy Schemas to Documentation Site
+
+After updating the schema files in `internal/fs/schemas/`, copy them to `docs/static/schemas/v1/` so they are available on the documentation website:
+
+```bash
+cp internal/fs/schemas/manifest.json docs/static/schemas/v1/manifest.json
+cp internal/fs/schemas/resource_ensure_request.json docs/static/schemas/v1/resource_ensure_request.json
+```
+
 ## Step 7: Generate Mocks
 
 Generate the provider mock for tests:
