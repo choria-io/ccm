@@ -283,12 +283,12 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})
 
-			It("Should be stable with empty scaffold", func() {
+			It("Should not be stable with empty scaffold", func() {
 				props := &model.ScaffoldResourceProperties{
 					CommonResourceProperties: model.CommonResourceProperties{
 						Ensure: model.EnsurePresent,
@@ -302,9 +302,9 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stable).To(BeTrue())
+				Expect(stable).To(BeFalse())
 			})
 
 			It("Should not be stable when there are changed files", func() {
@@ -321,7 +321,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -340,7 +340,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -359,9 +359,87 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
+			})
+		})
+
+		Describe("EnsurePresent post-apply", func() {
+			It("Should be desired when changed files exist", func() {
+				props := &model.ScaffoldResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Ensure: model.EnsurePresent,
+					},
+				}
+				state := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{},
+						Changed: []string{"file1.txt"},
+						Purged:  []string{},
+					},
+				}
+
+				desired, err := scaffold.isDesiredState(props, state, false)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(desired).To(BeTrue())
+			})
+
+			It("Should be desired when stable files exist", func() {
+				props := &model.ScaffoldResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Ensure: model.EnsurePresent,
+					},
+				}
+				state := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{"file1.txt"},
+						Changed: []string{},
+						Purged:  []string{},
+					},
+				}
+
+				desired, err := scaffold.isDesiredState(props, state, false)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(desired).To(BeTrue())
+			})
+
+			It("Should be desired when purged files exist", func() {
+				props := &model.ScaffoldResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Ensure: model.EnsurePresent,
+					},
+				}
+				state := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{},
+						Changed: []string{},
+						Purged:  []string{"old.txt"},
+					},
+				}
+
+				desired, err := scaffold.isDesiredState(props, state, false)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(desired).To(BeTrue())
+			})
+
+			It("Should not be desired when no files managed", func() {
+				props := &model.ScaffoldResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Ensure: model.EnsurePresent,
+					},
+				}
+				state := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{},
+						Changed: []string{},
+						Purged:  []string{},
+					},
+				}
+
+				desired, err := scaffold.isDesiredState(props, state, false)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(desired).To(BeFalse())
 			})
 		})
 
@@ -381,7 +459,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})
@@ -401,7 +479,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})
@@ -421,7 +499,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -441,7 +519,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -461,7 +539,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state)
+				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})

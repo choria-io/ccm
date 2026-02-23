@@ -16,7 +16,7 @@ func Register() {
 
 type factory struct{}
 
-func (p *factory) TypeName() string { return model.ScaffoldTypeName }
+func (p *factory) TypeName() string { return model.ExecTypeName }
 func (p *factory) Name() string     { return ProviderName }
 func (p *factory) New(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
 	if runner == nil {

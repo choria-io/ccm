@@ -8,8 +8,13 @@ import (
 	"context"
 
 	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/resources/scaffold/choriascaffold"
 	"github.com/choria-io/ccm/templates"
 )
+
+func init() {
+	choriascaffold.Register()
+}
 
 type ScaffoldProvider interface {
 	model.Provider

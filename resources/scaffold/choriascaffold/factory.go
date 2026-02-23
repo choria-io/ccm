@@ -16,7 +16,7 @@ func Register() {
 
 type factory struct{}
 
-func (p *factory) TypeName() string { return model.FileTypeName }
+func (p *factory) TypeName() string { return model.ScaffoldTypeName }
 func (p *factory) Name() string     { return ProviderName }
 func (p *factory) New(log model.Logger, _ model.CommandRunner) (model.Provider, error) {
 	return NewChoriaProvider(log)

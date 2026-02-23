@@ -106,11 +106,6 @@ func (p *Provider) render(_ context.Context, env *templates.Env, prop *model.Sca
 		Metadata:            metadata,
 	}
 
-	if !metadata.TargetExists {
-		state.Ensure = model.EnsureAbsent
-		return state, nil
-	}
-
 	var s *scaffold.Scaffold
 	var err error
 
@@ -128,7 +123,7 @@ func (p *Provider) render(_ context.Context, env *templates.Env, prop *model.Sca
 	case model.ScaffoldEngineGo:
 		s, err = scaffold.New(cfg, nil)
 	case model.ScaffoldEngineJet:
-		s, err = scaffold.NewJet(cfg, nil)
+		s, err = scaffold.NewJet(cfg, env.JetFunctions())
 	default:
 		return nil, fmt.Errorf("unknown scaffold engine %s", prop.Engine)
 	}
@@ -140,11 +135,12 @@ func (p *Provider) render(_ context.Context, env *templates.Env, prop *model.Sca
 
 	var result []scaffold.ManagedFile
 	if noop {
-		result, err = s.RenderNoop(env)
+		result, err = s.RenderNoop(env.JetVariables())
 	} else {
-		result, err = s.Render(env)
+		result, err = s.Render(env.JetVariables())
 	}
 	if err != nil {
+		p.log.Error("Failed to render scaffold", "error", err)
 		return nil, err
 	}
 
@@ -158,6 +154,5 @@ func (p *Provider) render(_ context.Context, env *templates.Env, prop *model.Sca
 			metadata.Purged = append(metadata.Purged, filepath.Join(prop.Name, f.Path))
 		}
 	}
-
 	return state, nil
 }

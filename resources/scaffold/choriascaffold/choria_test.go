@@ -109,7 +109,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			}
 		})
 
-		It("Should return absent when target does not exist", func(ctx context.Context) {
+		It("Should report target does not exist", func(ctx context.Context) {
 			prop := &model.ScaffoldResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{
 					Name:   targetDir,
@@ -122,7 +122,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			state, err := provider.Status(ctx, env, prop)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(state).ToNot(BeNil())
-			Expect(state.Ensure).To(Equal(model.EnsureAbsent))
+			Expect(state.Ensure).To(Equal(model.EnsurePresent))
 			Expect(state.Metadata.TargetExists).To(BeFalse())
 			Expect(state.Metadata.Name).To(Equal(targetDir))
 			Expect(state.Metadata.Provider).To(Equal(ProviderName))
@@ -209,7 +209,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 		})
 
 		It("Should expand templates in source files", func(ctx context.Context) {
-			err := os.WriteFile(filepath.Join(sourceDir, "config.txt"), []byte("hostname: {{ .Facts.hostname }}"), 0644)
+			err := os.WriteFile(filepath.Join(sourceDir, "config.txt"), []byte("hostname: [[ facts.hostname ]]"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = os.MkdirAll(targetDir, 0755)
@@ -223,9 +223,9 @@ var _ = Describe("Choria Scaffold Provider", func() {
 					Ensure: model.EnsurePresent,
 				},
 				Source:         sourceDir,
-				Engine:         model.ScaffoldEngineGo,
-				LeftDelimiter:  "{{",
-				RightDelimiter: "}}",
+				Engine:         model.ScaffoldEngineJet,
+				LeftDelimiter:  "[[",
+				RightDelimiter: "]]",
 			}
 
 			state, err := provider.Status(ctx, env, prop)
@@ -418,7 +418,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 		})
 
 		It("Should expand templates when writing files", func(ctx context.Context) {
-			err := os.WriteFile(filepath.Join(sourceDir, "config.txt"), []byte("host: {{ .Facts.hostname }}"), 0644)
+			err := os.WriteFile(filepath.Join(sourceDir, "config.txt"), []byte("host: [[ facts.hostname ]]"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			prop := &model.ScaffoldResourceProperties{
@@ -427,9 +427,9 @@ var _ = Describe("Choria Scaffold Provider", func() {
 					Ensure: model.EnsurePresent,
 				},
 				Source:         sourceDir,
-				Engine:         model.ScaffoldEngineGo,
-				LeftDelimiter:  "{{",
-				RightDelimiter: "}}",
+				Engine:         model.ScaffoldEngineJet,
+				LeftDelimiter:  "[[",
+				RightDelimiter: "]]",
 			}
 
 			_, err = provider.Scaffold(ctx, env, prop, false)

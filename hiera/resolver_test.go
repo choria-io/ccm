@@ -23,7 +23,7 @@ import (
 
 func TestHiera(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Hiera Resolver Suite")
+	RunSpecs(t, "Hiera")
 }
 
 var _ = Describe("ResolveYaml", func() {

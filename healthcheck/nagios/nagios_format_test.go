@@ -9,16 +9,17 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestHealthCheck(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "HealthCheck")
+	RunSpecs(t, "HealthCheck/Nagios")
 }
 
 var _ = Describe("parseNagiosExitCode", func() {

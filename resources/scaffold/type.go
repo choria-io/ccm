@@ -91,15 +91,14 @@ func New(ctx context.Context, mgr model.Manager, properties model.ScaffoldResour
 
 func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	var (
-		initialStatus  *model.ScaffoldState
-		finalStatus    *model.ScaffoldState
-		refreshState   bool
-		initialIsFinal = true
-		p              = t.provider.(ScaffoldProvider)
-		properties     = t.prop
-		noop           = t.mgr.NoopMode()
-		noopMessage    string
-		err            error
+		initialStatus *model.ScaffoldState
+		finalStatus   *model.ScaffoldState
+		refreshState  bool
+		p             = t.provider.(ScaffoldProvider)
+		properties    = t.prop
+		noop          = t.mgr.NoopMode()
+		noopMessage   string
+		err           error
 	)
 
 	env, err := t.mgr.TemplateEnvironment(ctx)
@@ -112,40 +111,44 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	isStable, err := t.isDesiredState(properties, initialStatus)
+	isStable, err := t.isDesiredState(properties, initialStatus, true)
 	if err != nil {
 		return nil, err
 	}
 
 	switch {
 	case isStable:
+		t.log.Debug("Scaffold is already in desired state")
+		refreshState = false
+	case noop:
+		t.log.Debug("Skipping render in noop mode")
 		refreshState = false
 	case properties.Ensure == model.EnsureAbsent:
 		refreshState = true
+		t.log.Debug("Removing scaffold")
 		err = p.Remove(ctx, properties, initialStatus)
 		if err != nil {
 			return nil, err
 		}
 	case properties.Ensure == model.EnsurePresent:
-		finalStatus, err = p.Scaffold(ctx, env, properties, noop)
-		refreshState = false
-		initialIsFinal = false
+		refreshState = true
+		_, err = p.Scaffold(ctx, env, properties, noop)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if refreshState && !noop {
+	if refreshState {
 		finalStatus, err = p.Status(ctx, env, properties)
 		if err != nil {
 			return nil, err
 		}
-	} else if initialIsFinal {
+	} else {
 		finalStatus = initialStatus
 	}
 
 	if !noop {
-		desired, err := t.isDesiredState(properties, finalStatus)
+		desired, err := t.isDesiredState(properties, finalStatus, false)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +158,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	}
 
 	changed := refreshState
-	if noop && refreshState {
+	if noop {
 		changed = true
 	}
 
@@ -164,7 +167,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	return finalStatus, nil
 }
 
-func (t *Type) isDesiredState(properties *model.ScaffoldResourceProperties, state *model.ScaffoldState) (bool, error) {
+func (t *Type) isDesiredState(properties *model.ScaffoldResourceProperties, state *model.ScaffoldState, fromStatus bool) (bool, error) {
 	meta := state.Metadata
 
 	if properties.Ensure == model.EnsureAbsent {
@@ -178,7 +181,11 @@ func (t *Type) isDesiredState(properties *model.ScaffoldResourceProperties, stat
 		return stable, nil
 	}
 
-	return len(meta.Changed) == 0 && len(meta.Purged) == 0, nil
+	if fromStatus {
+		return len(meta.Changed) == 0 && len(meta.Purged) == 0 && len(meta.Stable) > 0, nil
+	} else {
+		return len(meta.Changed) > 0 || len(meta.Purged) > 0 || len(meta.Stable) > 0, nil
+	}
 }
 
 func (t *Type) Info(ctx context.Context) (any, error) {

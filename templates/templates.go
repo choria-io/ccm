@@ -32,6 +32,23 @@ type Env struct {
 	mu      sync.Mutex
 }
 
+func (e *Env) JetVariables() jet.VarMap {
+	return jet.VarMap{
+		"facts":   reflect.ValueOf(e.Facts),
+		"Facts":   reflect.ValueOf(e.Facts),
+		"data":    reflect.ValueOf(e.Data),
+		"Data":    reflect.ValueOf(e.Data),
+		"environ": reflect.ValueOf(e.Environ),
+		"Environ": reflect.ValueOf(e.Environ),
+	}
+}
+
+func (e *Env) JetFunctions() map[string]jet.Func {
+	return map[string]jet.Func{
+		"lookup": e.jetLookup(),
+	}
+}
+
 func (e *Env) readFile(params ...any) (any, error) {
 	var file string
 	var ok bool
@@ -135,7 +152,9 @@ func (e *Env) jet(params ...any) (any, error) {
 		return nil, err
 	}
 
-	set.AddGlobalFunc("lookup", e.jetLookup())
+	for k, v := range e.JetFunctions() {
+		set.AddGlobalFunc(k, v)
+	}
 
 	variables := jet.VarMap{
 		"facts":   reflect.ValueOf(e.Facts),
