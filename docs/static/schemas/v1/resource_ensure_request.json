@@ -13,7 +13,7 @@
     "type": {
       "type": "string",
       "description": "The resource type to manage",
-      "enum": ["package", "service", "file", "exec", "archive"]
+      "enum": ["package", "service", "file", "exec", "archive", "scaffold"]
     },
     "properties": {
       "type": "object",
@@ -23,7 +23,8 @@
         { "$ref": "#/$defs/serviceProperties" },
         { "$ref": "#/$defs/fileProperties" },
         { "$ref": "#/$defs/execProperties" },
-        { "$ref": "#/$defs/archiveProperties" }
+        { "$ref": "#/$defs/archiveProperties" },
+        { "$ref": "#/$defs/scaffoldProperties" }
       ]
     }
   },
@@ -295,6 +296,67 @@
             }
           },
           "required": ["url", "owner", "group"]
+        }
+      ]
+    },
+    "scaffoldProperties": {
+      "allOf": [
+        { "$ref": "#/$defs/commonProperties" },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The absolute path of the target directory to render templates into"
+            },
+            "ensure": {
+              "type": "string",
+              "description": "Desired state of the scaffold",
+              "enum": ["present", "absent"],
+              "default": "present"
+            },
+            "source": {
+              "type": "string",
+              "description": "Path or URL to the source template directory"
+            },
+            "engine": {
+              "type": "string",
+              "description": "Template engine to use for rendering",
+              "enum": ["go", "jet"],
+              "default": "jet"
+            },
+            "skip_empty": {
+              "type": "boolean",
+              "description": "Skip files that are empty after template rendering",
+              "default": false
+            },
+            "left_delimiter": {
+              "type": "string",
+              "description": "Custom left template delimiter"
+            },
+            "right_delimiter": {
+              "type": "string",
+              "description": "Custom right template delimiter"
+            },
+            "purge": {
+              "type": "boolean",
+              "description": "Remove files in the target directory that are not present in the source",
+              "default": false
+            },
+            "post": {
+              "type": "array",
+              "description": "Post-processing commands to run after rendering",
+              "items": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "minProperties": 1,
+                "maxProperties": 1
+              }
+            }
+          },
+          "required": ["source"]
         }
       ]
     },
