@@ -163,6 +163,8 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 		props, err = NewExecResourcePropertiesFromYaml(rawProperties)
 	case ArchiveTypeName:
 		props, err = NewArchiveResourcePropertiesFromYaml(rawProperties)
+	case ScaffoldTypeName:
+		props, err = NewScaffoldResourcePropertiesFromYaml(rawProperties)
 	default:
 		return nil, fmt.Errorf("%w: %s %s", ErrResourceInvalid, ErrUnknownType, typeName)
 	}

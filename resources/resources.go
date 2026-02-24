@@ -13,6 +13,7 @@ import (
 	execresource "github.com/choria-io/ccm/resources/exec"
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
+	scaffoldresource "github.com/choria-io/ccm/resources/scaffold"
 	serviceresource "github.com/choria-io/ccm/resources/service"
 )
 
@@ -29,6 +30,8 @@ func NewResourceFromProperties(ctx context.Context, mgr model.Manager, props mod
 		return execresource.New(ctx, mgr, *rprop)
 	case *model.ArchiveResourceProperties:
 		return archiveresource.New(ctx, mgr, *rprop)
+	case *model.ScaffoldResourceProperties:
+		return scaffoldresource.New(ctx, mgr, *rprop)
 	default:
 		return nil, fmt.Errorf("unsupported resource property type %T", rprop)
 	}

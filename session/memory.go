@@ -75,7 +75,7 @@ func (s *MemorySessionStore) EventsForResource(resourceType string, resourceName
 		return nil, err
 	}
 
-	return fileterEvents(allEvents, resourceType, resourceName)
+	return filterEvents(allEvents, resourceType, resourceName)
 }
 
 // AllEvents returns all events in the session in time order

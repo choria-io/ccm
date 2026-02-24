@@ -31,5 +31,7 @@ Each design document covers:
 | [Exec](exec/)       | Exec resource for command execution                      |
 | [File](file/)       | File resource for managing files and directories         |
 | [Package](package/) | Package resource for system package management           |
+| [Scaffold](scaffold/) | Scaffold resource for template directory rendering     |
 | [Service](service/) | Service resource for system service management           |
+| [New Type](new/)    | How to add a new resource type to CCM                    |
 

@@ -8,17 +8,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/model/modelmocks"
 	"github.com/goccy/go-yaml"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+
+	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/model/modelmocks"
 )
 
 func TestGossHealthCheck(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "GossHealthCheck")
+	RunSpecs(t, "HealthCheck/Goss")
 }
 
 var _ = Describe("Execute", func() {

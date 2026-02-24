@@ -140,7 +140,7 @@ func (p *FileResourceProperties) ResolveTemplates(env *templates.Env) error {
 	return nil
 }
 
-// ToYamlManifest returns the package resource properties as a yaml document
+// ToYamlManifest returns the file resource properties as a yaml document
 func (p *FileResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
 	return yaml.Marshal(p)
 }

@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/MatusOllah/slogcolor"
+	"github.com/SladkyCitron/slogcolor"
 	"github.com/goccy/go-yaml"
 
 	iu "github.com/choria-io/ccm/internal/util"

@@ -49,6 +49,7 @@ func registerEnsureCommand(ccm *fisk.Application) {
 	registerEnsureExecCommand(ens, cmd)
 	registerEnsureFileCommand(ens, cmd)
 	registerEnsurePackageCommand(ens, cmd)
+	registerEnsureScaffoldCommand(ens, cmd)
 	registerEnsureServiceCommand(ens, cmd)
 	registerEnsureApiCommand(ens, cmd)
 }

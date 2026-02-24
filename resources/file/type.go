@@ -27,8 +27,6 @@ type Type struct {
 	mgr      model.Manager
 	log      model.Logger
 	provider model.Provider
-	facts    map[string]any
-	data     map[string]any
 
 	mu sync.Mutex
 }
@@ -57,11 +55,9 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 	properties.CommonResourceProperties.Type = model.FileTypeName
 
 	t := &Type{
-		prop:  &properties,
-		mgr:   mgr,
-		log:   logger,
-		facts: env.Facts,
-		data:  env.Data,
+		prop: &properties,
+		mgr:  mgr,
+		log:  logger,
 	}
 	t.Base = &base.Base{
 		Resource:           t,
@@ -70,6 +66,8 @@ func New(ctx context.Context, mgr model.Manager, properties model.FileResourcePr
 		Log:                logger,
 		UserLogger:         mgr.UserLogger().With(loggerArgs...),
 		Manager:            mgr,
+		Facts:              env.Facts,
+		Data:               env.Data,
 	}
 
 	err = t.validate()
@@ -285,7 +283,7 @@ func (t *Type) selectProviderUnlocked() error {
 		return nil
 	}
 
-	selected, err := registry.FindSuitableProvider(model.FileTypeName, t.prop.Provider, t.facts, t.prop, t.log, nil)
+	selected, err := registry.FindSuitableProvider(model.FileTypeName, t.prop.Provider, t.Facts, t.prop, t.log, nil)
 	if err != nil {
 		return err
 	}

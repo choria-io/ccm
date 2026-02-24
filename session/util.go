@@ -40,7 +40,7 @@ func updateMetrics(event model.SessionEvent) {
 	}
 }
 
-func fileterEvents(allEvents []model.SessionEvent, resourceType string, resourceName string) ([]model.TransactionEvent, error) {
+func filterEvents(allEvents []model.SessionEvent, resourceType string, resourceName string) ([]model.TransactionEvent, error) {
 	// Filter for the specific resource
 	var filtered []model.TransactionEvent
 	for _, event := range allEvents {
