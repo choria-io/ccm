@@ -109,6 +109,12 @@
             { "$ref": "#/$defs/archiveResourceList" },
             { "$ref": "#/$defs/archiveResourcePropertiesWithName" }
           ]
+        },
+        "scaffold": {
+          "oneOf": [
+            { "$ref": "#/$defs/scaffoldResourceList" },
+            { "$ref": "#/$defs/scaffoldResourcePropertiesWithName" }
+          ]
         }
       },
       "minProperties": 1,
@@ -175,6 +181,19 @@
         "description": "Archive resource entry keyed by absolute file path where the archive will be saved",
         "additionalProperties": {
           "$ref": "#/$defs/archiveResourceProperties"
+        },
+        "minProperties": 1,
+        "maxProperties": 1
+      }
+    },
+    "scaffoldResourceList": {
+      "type": "array",
+      "description": "List of scaffold resources to manage (named format)",
+      "items": {
+        "type": "object",
+        "description": "Scaffold resource entry keyed by absolute target directory path",
+        "additionalProperties": {
+          "$ref": "#/$defs/scaffoldResourceProperties"
         },
         "minProperties": 1,
         "maxProperties": 1
@@ -534,6 +553,90 @@
       "required": ["name"],
       "additionalProperties": false
     },
+    "scaffoldResourcePropertiesWithName": {
+      "type": "object",
+      "description": "Properties for a scaffold resource (direct format with name)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The absolute path of the target directory to render templates into"
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the scaffold",
+          "enum": ["present", "absent"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "source": {
+          "type": "string",
+          "description": "Path or URL to the source template directory"
+        },
+        "engine": {
+          "type": "string",
+          "description": "Template engine to use for rendering",
+          "enum": ["go", "jet"],
+          "default": "jet"
+        },
+        "skip_empty": {
+          "type": "boolean",
+          "description": "Skip files that are empty after template rendering",
+          "default": false
+        },
+        "left_delimiter": {
+          "type": "string",
+          "description": "Custom left template delimiter"
+        },
+        "right_delimiter": {
+          "type": "string",
+          "description": "Custom right template delimiter"
+        },
+        "purge": {
+          "type": "boolean",
+          "description": "Remove files in the target directory that are not present in the source",
+          "default": false
+        },
+        "post": {
+          "type": "array",
+          "description": "Post-processing commands to run after rendering",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "minProperties": 1,
+            "maxProperties": 1
+          }
+        }
+      },
+      "required": ["name", "source"],
+      "additionalProperties": false
+    },
     "packageResourceProperties": {
       "type": "object",
       "description": "Properties for a package resource",
@@ -859,6 +962,85 @@
         "group": {
           "type": "string",
           "description": "Group that should own the archive file"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scaffoldResourceProperties": {
+      "type": "object",
+      "description": "Properties for a scaffold resource that renders template directories",
+      "properties": {
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the scaffold",
+          "enum": ["present", "absent"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "source": {
+          "type": "string",
+          "description": "Path or URL to the source template directory"
+        },
+        "engine": {
+          "type": "string",
+          "description": "Template engine to use for rendering",
+          "enum": ["go", "jet"],
+          "default": "jet"
+        },
+        "skip_empty": {
+          "type": "boolean",
+          "description": "Skip files that are empty after template rendering",
+          "default": false
+        },
+        "left_delimiter": {
+          "type": "string",
+          "description": "Custom left template delimiter"
+        },
+        "right_delimiter": {
+          "type": "string",
+          "description": "Custom right template delimiter"
+        },
+        "purge": {
+          "type": "boolean",
+          "description": "Remove files in the target directory that are not present in the source",
+          "default": false
+        },
+        "post": {
+          "type": "array",
+          "description": "Post-processing commands to run after rendering",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "minProperties": 1,
+            "maxProperties": 1
+          }
         }
       },
       "additionalProperties": false

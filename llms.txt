@@ -21,6 +21,7 @@
 - [Exec](https://choria-cm.dev/resources/exec/index.md): Idempotent command execution
 - [File](https://choria-cm.dev/resources/file/index.md): Manage files content, ownership and more
 - [Package](https://choria-cm.dev/resources/package/index.md): Install, upgrade, downgrade and remove packages using OS Native packagers
+- [Scaffold](https://choria-cm.dev/resources/scaffold/index.md): Render template directories into target directories with synchronization and purge support
 - [Service](https://choria-cm.dev/resources/service/index.md): Enable, disable, start, stop and restart services using OS Native service managers
 
 
