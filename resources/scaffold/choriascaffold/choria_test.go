@@ -365,6 +365,87 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			Expect(state.Metadata.Stable).To(ContainElement(filepath.Join(targetDir, "keep.txt")))
 			Expect(state.Metadata.Purged).To(ContainElement(filepath.Join(targetDir, "extra.txt")))
 		})
+
+		It("Should filter non-existent files from status when ensure is absent", func(ctx context.Context) {
+			err := os.WriteFile(filepath.Join(sourceDir, "managed.txt"), []byte("content"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			// target exists but managed file has been removed, only unrelated file remains
+			err = os.MkdirAll(targetDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.WriteFile(filepath.Join(targetDir, "unrelated.txt"), []byte("extra"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			prop := &model.ScaffoldResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   targetDir,
+					Ensure: model.EnsureAbsent,
+				},
+				Source:         sourceDir,
+				Engine:         model.ScaffoldEngineGo,
+				LeftDelimiter:  "{{",
+				RightDelimiter: "}}",
+			}
+
+			state, err := provider.Status(ctx, env, prop)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(state.Metadata.TargetExists).To(BeTrue())
+			Expect(state.Metadata.Changed).To(BeEmpty())
+			Expect(state.Metadata.Stable).To(BeEmpty())
+			Expect(state.Metadata.Purged).To(ContainElement(filepath.Join(targetDir, "unrelated.txt")))
+		})
+
+		It("Should not filter files from status when ensure is present", func(ctx context.Context) {
+			err := os.WriteFile(filepath.Join(sourceDir, "managed.txt"), []byte("content"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			// target exists but managed file is missing
+			err = os.MkdirAll(targetDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.WriteFile(filepath.Join(targetDir, "unrelated.txt"), []byte("extra"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			prop := &model.ScaffoldResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   targetDir,
+					Ensure: model.EnsurePresent,
+				},
+				Source:         sourceDir,
+				Engine:         model.ScaffoldEngineGo,
+				LeftDelimiter:  "{{",
+				RightDelimiter: "}}",
+			}
+
+			state, err := provider.Status(ctx, env, prop)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(state.Metadata.Changed).To(ContainElement(filepath.Join(targetDir, "managed.txt")))
+		})
+
+		It("Should keep existing files in status when ensure is absent", func(ctx context.Context) {
+			err := os.WriteFile(filepath.Join(sourceDir, "managed.txt"), []byte("new content"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			// target exists with managed file that differs from source
+			err = os.MkdirAll(targetDir, 0755)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.WriteFile(filepath.Join(targetDir, "managed.txt"), []byte("old content"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			prop := &model.ScaffoldResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   targetDir,
+					Ensure: model.EnsureAbsent,
+				},
+				Source:         sourceDir,
+				Engine:         model.ScaffoldEngineGo,
+				LeftDelimiter:  "{{",
+				RightDelimiter: "}}",
+			}
+
+			state, err := provider.Status(ctx, env, prop)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(state.Metadata.Changed).To(ContainElement(filepath.Join(targetDir, "managed.txt")))
+		})
 	})
 
 	Describe("Scaffold", func() {
@@ -556,11 +637,15 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(file1).ToNot(BeAnExistingFile())
 			Expect(file2).ToNot(BeAnExistingFile())
+			Expect(targetDir).ToNot(BeADirectory())
 		})
 
-		It("Should remove purged files", func(ctx context.Context) {
-			file := filepath.Join(targetDir, "purged.txt")
-			err := os.WriteFile(file, []byte("content"), 0644)
+		It("Should not remove purged files", func(ctx context.Context) {
+			managed := filepath.Join(targetDir, "managed.txt")
+			purged := filepath.Join(targetDir, "purged.txt")
+			err := os.WriteFile(managed, []byte("content"), 0644)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.WriteFile(purged, []byte("content"), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
 			prop := &model.ScaffoldResourceProperties{
@@ -571,13 +656,16 @@ var _ = Describe("Choria Scaffold Provider", func() {
 
 			state := &model.ScaffoldState{
 				Metadata: &model.ScaffoldMetadata{
-					Purged: []string{file},
+					Stable: []string{managed},
+					Purged: []string{purged},
 				},
 			}
 
 			err = provider.Remove(ctx, prop, state)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(file).ToNot(BeAnExistingFile())
+			Expect(managed).ToNot(BeAnExistingFile())
+			Expect(purged).To(BeAnExistingFile())
+			Expect(targetDir).To(BeADirectory())
 		})
 
 		It("Should remove empty parent directories", func(ctx context.Context) {
@@ -605,6 +693,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(file).ToNot(BeAnExistingFile())
 			Expect(subDir).ToNot(BeADirectory())
+			Expect(targetDir).ToNot(BeADirectory())
 		})
 
 		It("Should remove deeply nested empty directories", func(ctx context.Context) {
@@ -634,9 +723,10 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			Expect(filepath.Join(targetDir, "a", "b", "c")).ToNot(BeADirectory())
 			Expect(filepath.Join(targetDir, "a", "b")).ToNot(BeADirectory())
 			Expect(filepath.Join(targetDir, "a")).ToNot(BeADirectory())
+			Expect(targetDir).ToNot(BeADirectory())
 		})
 
-		It("Should not remove the target directory itself", func(ctx context.Context) {
+		It("Should remove the target directory itself", func(ctx context.Context) {
 			file := filepath.Join(targetDir, "file.txt")
 			err := os.WriteFile(file, []byte("content"), 0644)
 			Expect(err).ToNot(HaveOccurred())
@@ -655,10 +745,11 @@ var _ = Describe("Choria Scaffold Provider", func() {
 
 			err = provider.Remove(ctx, prop, state)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(targetDir).To(BeADirectory())
+			Expect(file).ToNot(BeAnExistingFile())
+			Expect(targetDir).ToNot(BeADirectory())
 		})
 
-		It("Should not remove directories that still contain files", func(ctx context.Context) {
+		It("Should not remove target directory when purged files exist", func(ctx context.Context) {
 			file1 := filepath.Join(targetDir, "remove.txt")
 			file2 := filepath.Join(targetDir, "keep.txt")
 			err := os.WriteFile(file1, []byte("content"), 0644)
@@ -675,6 +766,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			state := &model.ScaffoldState{
 				Metadata: &model.ScaffoldMetadata{
 					Stable: []string{file1},
+					Purged: []string{file2},
 				},
 			}
 
@@ -682,6 +774,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(file1).ToNot(BeAnExistingFile())
 			Expect(file2).To(BeAnExistingFile())
+			Expect(targetDir).To(BeADirectory())
 		})
 
 		It("Should handle already removed files without error", func(ctx context.Context) {
@@ -734,6 +827,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 
 			err := provider.Remove(ctx, prop, state)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(targetDir).ToNot(BeADirectory())
 		})
 
 		It("Should not mutate the state metadata slices", func(ctx context.Context) {
@@ -764,6 +858,7 @@ var _ = Describe("Choria Scaffold Provider", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(state.Metadata.Changed).To(Equal([]string{file1}))
 			Expect(state.Metadata.Stable).To(Equal([]string{file2}))
+			Expect(targetDir).ToNot(BeADirectory())
 		})
 	})
 })

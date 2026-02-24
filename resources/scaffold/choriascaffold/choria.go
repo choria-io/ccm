@@ -33,7 +33,6 @@ func (p *Provider) Name() string {
 func (p *Provider) Remove(ctx context.Context, prop *model.ScaffoldResourceProperties, state *model.ScaffoldState) error {
 	var files []string
 	files = append(files, state.Metadata.Changed...)
-	files = append(files, state.Metadata.Purged...)
 	files = append(files, state.Metadata.Stable...)
 
 	dirs := map[string]bool{}
@@ -82,6 +81,12 @@ func (p *Provider) Remove(ctx context.Context, prop *model.ScaffoldResourcePrope
 		}
 	}
 
+	// best-effort removal of the target directory, only succeeds if empty
+	err := os.Remove(prop.Name)
+	if err != nil {
+		p.log.Debug("Target directory not removed", "dir", prop.Name, "error", err)
+	}
+
 	return nil
 }
 
@@ -90,7 +95,37 @@ func (p *Provider) Scaffold(ctx context.Context, env *templates.Env, prop *model
 }
 
 func (p *Provider) Status(ctx context.Context, env *templates.Env, prop *model.ScaffoldResourceProperties) (*model.ScaffoldState, error) {
-	return p.render(ctx, env, prop, true)
+	p.log.Debug("Getting scaffold status")
+	state, err := p.render(ctx, env, prop, true)
+	if err != nil {
+		return nil, err
+	}
+
+	// The noop render tells us what would happen if we scaffolded. When removing,
+	// we filter the lists to only include files that actually exist on disk so
+	// that status reflects reality rather than intent.
+	if prop.Ensure == model.EnsureAbsent {
+		p.log.Debug("Adjusting state for purge")
+		var changed []string
+		for _, f := range state.Metadata.Changed {
+			if iu.FileExists(f) {
+				p.log.Debug("Changed file still exist", "file", f)
+				changed = append(changed, f)
+			}
+		}
+		state.Metadata.Changed = changed
+
+		var stable []string
+		for _, f := range state.Metadata.Stable {
+			if iu.FileExists(f) {
+				p.log.Debug("Stable file still exist", "file", f)
+				stable = append(stable, f)
+			}
+		}
+		state.Metadata.Stable = stable
+	}
+
+	return state, nil
 }
 
 func (p *Provider) render(_ context.Context, env *templates.Env, prop *model.ScaffoldResourceProperties, noop bool) (*model.ScaffoldState, error) {
@@ -121,7 +156,7 @@ func (p *Provider) render(_ context.Context, env *templates.Env, prop *model.Sca
 
 	switch prop.Engine {
 	case model.ScaffoldEngineGo:
-		s, err = scaffold.New(cfg, nil)
+		s, err = scaffold.New(cfg, env.GoFunctions())
 	case model.ScaffoldEngineJet:
 		s, err = scaffold.NewJet(cfg, env.JetFunctions())
 	default:
@@ -152,6 +187,18 @@ func (p *Provider) render(_ context.Context, env *templates.Env, prop *model.Sca
 			metadata.Changed = append(metadata.Changed, filepath.Join(prop.Name, f.Path))
 		case scaffold.FileActionRemove:
 			metadata.Purged = append(metadata.Purged, filepath.Join(prop.Name, f.Path))
+			if prop.Purge {
+				if noop {
+					p.log.Info("Would have removed file", "file", filepath.Join(prop.Name, f.Path))
+					continue
+				}
+
+				err = os.Remove(filepath.Join(prop.Name, f.Path))
+				if err != nil {
+					return nil, fmt.Errorf("failed to remove %v: %w", filepath.Join(prop.Name, f.Path), err)
+				}
+				p.log.Info("Removed file", "file", filepath.Join(prop.Name, f.Path))
+			}
 		}
 	}
 	return state, nil

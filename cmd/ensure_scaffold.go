@@ -19,6 +19,7 @@ type ensureScaffoldCommand struct {
 	left      string
 	right     string
 	engine    string
+	purge     bool
 	post      map[string]string
 
 	parent *ensureCommand
@@ -36,6 +37,7 @@ func registerEnsureScaffoldCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	scaffold.Flag("right-delimiter", "Right template delimiter").StringVar(&cmd.right)
 	scaffold.Flag("engine", "Template engine to use (go, jet)").Default("jet").EnumVar(&cmd.engine, string(model.ScaffoldEngineGo), string(model.ScaffoldEngineJet))
 	scaffold.Flag("post", "Post processing steps").PlaceHolder("PATTERN=TOOL").StringMapVar(&cmd.post)
+	scaffold.Flag("purge", "Purge existing files").UnNegatableBoolVar(&cmd.purge)
 
 	parent.addCommonFlags(scaffold)
 }
@@ -46,6 +48,7 @@ func (c *ensureScaffoldCommand) scaffoldAction(_ *fisk.ParseContext) error {
 		LeftDelimiter:  c.left,
 		RightDelimiter: c.right,
 		Source:         c.source,
+		Purge:          c.purge,
 		CommonResourceProperties: model.CommonResourceProperties{
 			Name:     c.name,
 			Ensure:   c.ensure,

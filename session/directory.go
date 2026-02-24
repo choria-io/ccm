@@ -86,7 +86,7 @@ func (s *DirectorySessionStore) EventsForResource(resourceType string, resourceN
 		return nil, err
 	}
 
-	return fileterEvents(allEvents, resourceType, resourceName)
+	return filterEvents(allEvents, resourceType, resourceName)
 }
 
 func (s *DirectorySessionStore) RecordEvent(event model.SessionEvent) error {

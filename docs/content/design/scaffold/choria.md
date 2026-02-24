@@ -52,43 +52,45 @@ The Choria provider is the default and only scaffold provider. It is always avai
 
 File paths in the metadata lists are absolute paths, constructed by joining the target directory with the relative path from the scaffold result.
 
+**Purge Behavior:**
+
+When `purge` is enabled and a file has `FileActionRemove`, the provider deletes the file from disk during `Scaffold()`. In noop mode, the removal is logged but not performed. When `purge` is disabled, purged files are only tracked in metadata and not removed.
+
 ### Status
 
 **Process:**
 
-The `Status` method reuses the `render` function with noop mode enabled:
+1. Perform a dry-run render (noop mode) to determine what the scaffold would do
+2. When `ensure` is `absent`, filter `Changed` and `Stable` lists to only include files that actually exist on disk
 
-```go
-func (p *Provider) Status(ctx context.Context, env *templates.Env, prop *model.ScaffoldResourceProperties) (*model.ScaffoldState, error) {
-    return p.render(ctx, env, prop, true)
-}
-```
-
-This performs a dry-run render to determine the current state of all managed files without modifying anything.
+The noop render reports what *would happen* if the scaffold were applied. For `ensure: present`, this is the desired output — it shows what needs to change. For `ensure: absent`, the raw render output is misleading after removal (it would show files to be *added*), so the lists are filtered to reflect what managed files actually remain on disk.
 
 **State Detection:**
 
-| Target Directory | Ensure Value | Metadata                                  |
-|------------------|--------------|-------------------------------------------|
-| Exists           | `present`    | Changed, stable, and purged file lists    |
-| Does not exist   | `absent`     | Empty metadata, `TargetExists: false`     |
+| Target Directory | Ensure Value | Metadata                                              |
+|------------------|--------------|-------------------------------------------------------|
+| Exists           | `present`    | Changed, stable, and purged file lists from render    |
+| Exists           | `absent`     | Changed and stable filtered to files on disk, purged from render |
+| Does not exist   | Any          | Empty metadata, `TargetExists: false`                 |
 
 ### Remove
 
 **Process:**
 
-1. Collect all managed files from the state's changed, purged, and stable lists
+1. Collect managed files from the state's `Changed` and `Stable` lists (purged files are not removed as they don't belong to the scaffold)
 2. Remove each file individually
 3. Track parent directories of removed files
 4. Iteratively remove empty directories deepest-first
 5. Stop when no more empty directories can be removed
+6. Best-effort removal of the target directory (only succeeds if empty)
 
 **File Removal Order:**
 
-Files are collected from all three metadata lists:
+Files are collected from two metadata lists:
 1. `Changed` - Files that were added or modified
-2. `Purged` - Files that were marked for removal
-3. `Stable` - Files that were unchanged
+2. `Stable` - Files that were unchanged
+
+Purged files are not removed because they are unrelated to the scaffold and may belong to other processes.
 
 **Directory Cleanup:**
 
@@ -103,18 +105,21 @@ Repeat:
         Remove the directory
         Track its parent directory
 Until no more directories removed
+
+Best-effort: remove the target directory (fails silently if not empty)
 ```
 
-The target directory itself is never removed, only its contents.
+The target directory is removed if empty after all managed files and subdirectories are cleaned up. If unrelated files remain (purged files), the directory is preserved.
 
 **Error Handling:**
 
-| Condition                 | Behavior                                      |
-|---------------------------|-----------------------------------------------|
-| Non-absolute file path    | Return error immediately                      |
-| File removal fails        | Log error, continue with remaining files      |
-| Directory removal fails   | Log error, continue with remaining directories |
-| File does not exist       | Silently skip (`os.IsNotExist` check)         |
+| Condition                      | Behavior                                      |
+|--------------------------------|-----------------------------------------------|
+| Non-absolute file path         | Return error immediately                      |
+| File removal fails             | Log error, continue with remaining files      |
+| Directory removal fails        | Log error, continue with remaining directories |
+| File does not exist            | Silently skip (`os.IsNotExist` check)         |
+| Target directory removal fails | Log at debug level, no error returned         |
 
 ## Template Environment
 

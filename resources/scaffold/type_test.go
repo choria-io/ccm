@@ -6,12 +6,14 @@ package scaffoldresource
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
+	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
 )
@@ -252,6 +254,476 @@ var _ = Describe("Scaffold Type", func() {
 		})
 	})
 
+	Context("with a prepared provider", func() {
+		var (
+			factory  *modelmocks.MockProviderFactory
+			scaffold *Type
+			provider *MockScaffoldProvider
+		)
+
+		BeforeEach(func(ctx context.Context) {
+			provider = NewMockScaffoldProvider(mockctl)
+			provider.EXPECT().Name().Return("mock").AnyTimes()
+
+			factory = modelmocks.NewMockProviderFactory(mockctl)
+			factory.EXPECT().Name().Return("test").AnyTimes()
+			factory.EXPECT().TypeName().Return(model.ScaffoldTypeName).AnyTimes()
+			factory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
+				return provider, nil
+			})
+
+			runner := modelmocks.NewMockCommandRunner(mockctl)
+			mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
+
+			var err error
+			scaffold, err = New(ctx, mgr, model.ScaffoldResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:     "/opt/app/scaffold",
+					Ensure:   model.EnsurePresent,
+					Provider: "test",
+				},
+				Source: "https://example.com/scaffold.tar.gz",
+				Engine: model.ScaffoldEngineGo,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			registry.Clear()
+			registry.MustRegister(factory)
+		})
+
+		Describe("Apply", func() {
+			BeforeEach(func() {
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
+			})
+
+			It("Should fail if initial status check fails", func(ctx context.Context) {
+				provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("status failed"))
+
+				event, err := scaffold.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(event.Failed).To(BeTrue())
+				Expect(event.Errors).To(ContainElement(ContainSubstring("status failed")))
+			})
+
+			Context("ensure present", func() {
+				It("Should not make changes when already stable", func(ctx context.Context) {
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt", "file2.txt"},
+							Changed: []string{},
+							Purged:  []string{},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+					Expect(result.Noop).To(BeFalse())
+				})
+
+				It("Should scaffold when files need changing", func(ctx context.Context) {
+					initialState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt"},
+							Changed: []string{"file2.txt"},
+							Purged:  []string{},
+						},
+					}
+					finalState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt", "file2.txt"},
+							Changed: []string{},
+							Purged:  []string{},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().Scaffold(gomock.Any(), gomock.Any(), gomock.Any(), false).Return(nil, nil)
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+					result, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeFalse())
+				})
+
+				It("Should scaffold when files need purging with purge enabled", func(ctx context.Context) {
+					scaffold.prop.Purge = true
+					initialState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt"},
+							Changed: []string{},
+							Purged:  []string{"stale.txt"},
+						},
+					}
+					finalState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt"},
+							Changed: []string{},
+							Purged:  []string{"stale.txt"},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().Scaffold(gomock.Any(), gomock.Any(), gomock.Any(), false).Return(nil, nil)
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+					result, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+
+				It("Should fail when Scaffold returns an error", func(ctx context.Context) {
+					initialState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{},
+							Changed: []string{"file1.txt"},
+							Purged:  []string{},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().Scaffold(gomock.Any(), gomock.Any(), gomock.Any(), false).Return(nil, fmt.Errorf("scaffold failed"))
+
+					event, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Failed).To(BeTrue())
+					Expect(event.Errors).To(ContainElement(ContainSubstring("scaffold failed")))
+				})
+
+				It("Should fail when desired state is not reached after apply", func(ctx context.Context) {
+					initialState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{},
+							Changed: []string{"file1.txt"},
+							Purged:  []string{},
+						},
+					}
+					finalState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{},
+							Changed: []string{},
+							Purged:  []string{},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().Scaffold(gomock.Any(), gomock.Any(), gomock.Any(), false).Return(nil, nil)
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+					event, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Failed).To(BeTrue())
+					Expect(event.Errors).To(ContainElement(ContainSubstring(model.ErrDesiredStateFailed.Error())))
+				})
+			})
+
+			Context("ensure absent", func() {
+				BeforeEach(func() {
+					scaffold.prop.Ensure = model.EnsureAbsent
+				})
+
+				It("Should not make changes when target does not exist", func(ctx context.Context) {
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: false,
+							Stable:       []string{},
+							Changed:      []string{},
+							Purged:       []string{},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+					Expect(result.Noop).To(BeFalse())
+				})
+
+				It("Should remove scaffold files when present", func(ctx context.Context) {
+					initialState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: true,
+							Stable:       []string{"file1.txt"},
+							Changed:      []string{"file2.txt"},
+							Purged:       []string{},
+						},
+					}
+					finalState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: true,
+							Stable:       []string{},
+							Changed:      []string{},
+							Purged:       []string{},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().Remove(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+					result, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeFalse())
+				})
+
+				It("Should fail when Remove returns an error", func(ctx context.Context) {
+					initialState := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: true,
+							Stable:       []string{"file1.txt"},
+							Changed:      []string{},
+							Purged:       []string{},
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().Remove(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("remove failed"))
+
+					event, err := scaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Failed).To(BeTrue())
+					Expect(event.Errors).To(ContainElement(ContainSubstring("remove failed")))
+				})
+			})
+		})
+
+		Describe("Apply in noop mode", func() {
+			var (
+				noopMgr      *modelmocks.MockManager
+				noopScaffold *Type
+				noopProvider *MockScaffoldProvider
+			)
+
+			BeforeEach(func(ctx context.Context) {
+				noopMgr, _ = modelmocks.NewManager(facts, data, true, mockctl)
+				noopRunner := modelmocks.NewMockCommandRunner(mockctl)
+				noopMgr.EXPECT().NewRunner().AnyTimes().Return(noopRunner, nil)
+
+				noopProvider = NewMockScaffoldProvider(mockctl)
+				noopProvider.EXPECT().Name().Return("mock").AnyTimes()
+
+				noopFactory := modelmocks.NewMockProviderFactory(mockctl)
+				noopFactory.EXPECT().Name().Return("noop-test").AnyTimes()
+				noopFactory.EXPECT().TypeName().Return(model.ScaffoldTypeName).AnyTimes()
+				noopFactory.EXPECT().New(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(log model.Logger, runner model.CommandRunner) (model.Provider, error) {
+					return noopProvider, nil
+				})
+				noopFactory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
+
+				registry.Clear()
+				registry.MustRegister(noopFactory)
+
+				var err error
+				noopScaffold, err = New(ctx, noopMgr, model.ScaffoldResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name:     "/opt/app/scaffold",
+						Ensure:   model.EnsurePresent,
+						Provider: "noop-test",
+					},
+					Source: "https://example.com/scaffold.tar.gz",
+					Engine: model.ScaffoldEngineGo,
+				})
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			Context("ensure present", func() {
+				It("Should not change when already in desired state", func(ctx context.Context) {
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt", "file2.txt"},
+							Changed: []string{},
+							Purged:  []string{},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(BeEmpty())
+				})
+
+				It("Should report changes needed without applying them", func(ctx context.Context) {
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt"},
+							Changed: []string{"file2.txt", "file3.txt"},
+							Purged:  []string{},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(Equal("Would have changed 2 scaffold files"))
+				})
+
+				It("Should include purged files in count when purge is enabled", func(ctx context.Context) {
+					noopScaffold.prop.Purge = true
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt"},
+							Changed: []string{"file2.txt"},
+							Purged:  []string{"stale1.txt", "stale2.txt"},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(Equal("Would have changed 3 scaffold files"))
+				})
+
+				It("Should not include purged files in count when purge is disabled", func(ctx context.Context) {
+					noopScaffold.prop.Purge = false
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							Stable:  []string{"file1.txt"},
+							Changed: []string{"file2.txt"},
+							Purged:  []string{"stale1.txt", "stale2.txt"},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(Equal("Would have changed 1 scaffold files"))
+				})
+			})
+
+			Context("ensure absent", func() {
+				BeforeEach(func() {
+					noopScaffold.prop.Ensure = model.EnsureAbsent
+				})
+
+				It("Should not change when target does not exist", func(ctx context.Context) {
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: false,
+							Stable:       []string{},
+							Changed:      []string{},
+							Purged:       []string{},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(BeEmpty())
+				})
+
+				It("Should report removal needed without applying it", func(ctx context.Context) {
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: true,
+							Stable:       []string{"file1.txt", "file2.txt"},
+							Changed:      []string{"file3.txt"},
+							Purged:       []string{},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(Equal("Would have removed 3 scaffold files"))
+				})
+
+				It("Should include purged files in removal count when purge is enabled", func(ctx context.Context) {
+					noopScaffold.prop.Purge = true
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: true,
+							Stable:       []string{"file1.txt"},
+							Changed:      []string{},
+							Purged:       []string{"extra1.txt", "extra2.txt"},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(Equal("Would have removed 3 scaffold files"))
+				})
+
+				It("Should not include purged files in removal count when purge is disabled", func(ctx context.Context) {
+					noopScaffold.prop.Purge = false
+					state := &model.ScaffoldState{
+						Metadata: &model.ScaffoldMetadata{
+							TargetExists: true,
+							Stable:       []string{"file1.txt"},
+							Changed:      []string{},
+							Purged:       []string{"extra1.txt", "extra2.txt"},
+						},
+					}
+
+					noopProvider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(state, nil)
+
+					result, err := noopScaffold.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Noop).To(BeTrue())
+					Expect(result.NoopMessage).To(Equal("Would have removed 1 scaffold files"))
+				})
+			})
+		})
+
+		Describe("Info", func() {
+			It("Should fail if no suitable factory", func() {
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(false, 0, nil)
+
+				_, err := scaffold.Info(context.Background())
+				Expect(err).To(MatchError(model.ErrProviderNotManageable))
+			})
+
+			It("Should fail for unknown factory", func() {
+				scaffold.prop.Provider = "unknown"
+				_, err := scaffold.Info(context.Background())
+				Expect(err).To(MatchError(model.ErrProviderNotFound))
+			})
+
+			It("Should call status on the provider", func() {
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil)
+
+				res := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Name:   "/opt/app/scaffold",
+						Stable: []string{"file1.txt"},
+					},
+				}
+				provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(res, nil)
+
+				nfo, err := scaffold.Info(context.Background())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(nfo).To(Equal(res))
+			})
+		})
+	})
+
 	Describe("isDesiredState", func() {
 		var scaffold *Type
 
@@ -326,7 +798,7 @@ var _ = Describe("Scaffold Type", func() {
 				Expect(stable).To(BeFalse())
 			})
 
-			It("Should not be stable when there are purged files", func() {
+			It("Should be stable when there are purged files", func() {
 				props := &model.ScaffoldResourceProperties{
 					CommonResourceProperties: model.CommonResourceProperties{
 						Ensure: model.EnsurePresent,
@@ -342,7 +814,7 @@ var _ = Describe("Scaffold Type", func() {
 
 				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stable).To(BeFalse())
+				Expect(stable).To(BeTrue())
 			})
 
 			It("Should not be stable when there are both changed and purged files", func() {
@@ -412,7 +884,7 @@ var _ = Describe("Scaffold Type", func() {
 				}
 				state := &model.ScaffoldState{
 					Metadata: &model.ScaffoldMetadata{
-						Stable:  []string{},
+						Stable:  []string{"x.txt"},
 						Changed: []string{},
 						Purged:  []string{"old.txt"},
 					},
@@ -524,7 +996,7 @@ var _ = Describe("Scaffold Type", func() {
 				Expect(stable).To(BeFalse())
 			})
 
-			It("Should not be stable when target exists with purged files", func() {
+			It("Should be stable when target exists with only purged files", func() {
 				props := &model.ScaffoldResourceProperties{
 					CommonResourceProperties: model.CommonResourceProperties{
 						Ensure: model.EnsureAbsent,
@@ -541,7 +1013,7 @@ var _ = Describe("Scaffold Type", func() {
 
 				stable, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(stable).To(BeFalse())
+				Expect(stable).To(BeTrue())
 			})
 		})
 	})

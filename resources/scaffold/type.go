@@ -90,23 +90,16 @@ func New(ctx context.Context, mgr model.Manager, properties model.ScaffoldResour
 }
 
 func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
-	var (
-		initialStatus *model.ScaffoldState
-		finalStatus   *model.ScaffoldState
-		refreshState  bool
-		p             = t.provider.(ScaffoldProvider)
-		properties    = t.prop
-		noop          = t.mgr.NoopMode()
-		noopMessage   string
-		err           error
-	)
+	p := t.provider.(ScaffoldProvider)
+	properties := t.prop
+	noop := t.mgr.NoopMode()
 
 	env, err := t.mgr.TemplateEnvironment(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	initialStatus, err = p.Status(ctx, env, t.prop)
+	initialStatus, err := p.Status(ctx, env, t.prop)
 	if err != nil {
 		return nil, err
 	}
@@ -116,76 +109,99 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	switch {
-	case isStable:
+	if isStable {
 		t.log.Debug("Scaffold is already in desired state")
-		refreshState = false
-	case noop:
-		t.log.Debug("Skipping render in noop mode")
-		refreshState = false
-	case properties.Ensure == model.EnsureAbsent:
-		refreshState = true
+		t.FinalizeState(initialStatus, noop, "", false, true, false)
+
+		return initialStatus, nil
+	}
+
+	// noop: report what would change without modifying the filesystem
+	if noop {
+		affected, verb := t.noopAffected(properties, initialStatus)
+		noopMessage := fmt.Sprintf("Would have %s %d scaffold files", verb, affected)
+		changed := affected > 0
+
+		t.FinalizeState(initialStatus, true, noopMessage, changed, false, false)
+
+		return initialStatus, nil
+	}
+
+	// apply changes
+	switch properties.Ensure {
+	case model.EnsureAbsent:
 		t.log.Debug("Removing scaffold")
 		err = p.Remove(ctx, properties, initialStatus)
-		if err != nil {
-			return nil, err
-		}
-	case properties.Ensure == model.EnsurePresent:
-		refreshState = true
+	case model.EnsurePresent:
 		_, err = p.Scaffold(ctx, env, properties, noop)
-		if err != nil {
-			return nil, err
-		}
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	if refreshState {
-		finalStatus, err = p.Status(ctx, env, properties)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		finalStatus = initialStatus
+	// verify the desired state was reached
+	finalStatus, err := p.Status(ctx, env, properties)
+	if err != nil {
+		return nil, err
 	}
 
-	if !noop {
-		desired, err := t.isDesiredState(properties, finalStatus, false)
-		if err != nil {
-			return nil, err
-		}
-		if !desired {
-			return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
-		}
+	isStable, err = t.isDesiredState(properties, finalStatus, false)
+	if err != nil {
+		return nil, err
+	}
+	if !isStable {
+		return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
 	}
 
-	changed := refreshState
-	if noop {
-		changed = true
-	}
-
-	t.FinalizeState(finalStatus, noop, noopMessage, changed, !refreshState, false)
+	t.FinalizeState(finalStatus, false, "", true, true, false)
 
 	return finalStatus, nil
 }
 
+func (t *Type) noopAffected(properties *model.ScaffoldResourceProperties, state *model.ScaffoldState) (int, string) {
+	var affected int
+	var verb string
+
+	switch properties.Ensure {
+	case model.EnsureAbsent:
+		affected = len(state.Metadata.Changed) + len(state.Metadata.Stable)
+		verb = "removed"
+	case model.EnsurePresent:
+		affected = len(state.Metadata.Changed)
+		verb = "changed"
+	}
+
+	if properties.Purge {
+		affected += len(state.Metadata.Purged)
+	}
+
+	return affected, verb
+}
+
 func (t *Type) isDesiredState(properties *model.ScaffoldResourceProperties, state *model.ScaffoldState, fromStatus bool) (bool, error) {
 	meta := state.Metadata
+	changedCount := len(meta.Changed)
+	stableCount := len(meta.Stable)
+	purgedCount := 0
+	if properties.Purge { // we only check files to be purged if purge is enabled
+		purgedCount = len(meta.Purged)
+	}
 
 	if properties.Ensure == model.EnsureAbsent {
-		stable := len(meta.Stable) == 0 && len(meta.Changed) == 0 && len(meta.Purged) == 0
-		exists := meta.TargetExists
-
-		if !exists {
+		if !meta.TargetExists {
 			return true, nil
 		}
-
-		return stable, nil
+		t.log.Debug("desired state", "changed", meta.Changed, "stable", stableCount, "purged", purgedCount, "exist", meta.TargetExists)
+		return stableCount == 0 && changedCount == 0, nil
 	}
 
+	// a status call should show changes were made
 	if fromStatus {
-		return len(meta.Changed) == 0 && len(meta.Purged) == 0 && len(meta.Stable) > 0, nil
-	} else {
-		return len(meta.Changed) > 0 || len(meta.Purged) > 0 || len(meta.Stable) > 0, nil
+		return changedCount == 0 && stableCount > 0 && purgedCount == 0, nil
 	}
+
+	// a non status call should show that some changes were made or we have stable files
+	return changedCount > 0 || stableCount > 0 || purgedCount > 0, nil
 }
 
 func (t *Type) Info(ctx context.Context) (any, error) {

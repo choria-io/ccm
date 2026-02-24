@@ -8,7 +8,7 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/choria-io/appbuilder v0.14.1-0.20260223180406-bcf9a03a7272
 	github.com/choria-io/fisk v0.7.2
-	github.com/choria-io/scaffold v0.0.9-0.20260223201802-efcd1520bb71
+	github.com/choria-io/scaffold v0.0.10
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goss-org/goss v0.4.9

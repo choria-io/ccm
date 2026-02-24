@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"text/template"
 
 	"github.com/CloudyKit/jet/v6"
 	"github.com/expr-lang/expr"
@@ -46,6 +47,12 @@ func (e *Env) JetVariables() jet.VarMap {
 func (e *Env) JetFunctions() map[string]jet.Func {
 	return map[string]jet.Func{
 		"lookup": e.jetLookup(),
+	}
+}
+
+func (e *Env) GoFunctions() template.FuncMap {
+	return map[string]interface{}{
+		"lookup": e.lookup,
 	}
 }
 
