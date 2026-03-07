@@ -279,6 +279,21 @@ func (mr *MockManagerMockRecorder) MergeFacts(ctx, facts any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeFacts", reflect.TypeOf((*MockManager)(nil).MergeFacts), ctx, facts)
 }
 
+// NatsConnection mocks base method.
+func (m *MockManager) NatsConnection() (*nats.Conn, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NatsConnection")
+	ret0, _ := ret[0].(*nats.Conn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NatsConnection indicates an expected call of NatsConnection.
+func (mr *MockManagerMockRecorder) NatsConnection() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NatsConnection", reflect.TypeOf((*MockManager)(nil).NatsConnection))
+}
+
 // NewRunner mocks base method.
 func (m *MockManager) NewRunner() (model.CommandRunner, error) {
 	m.ctrl.T.Helper()
@@ -306,6 +321,20 @@ func (m *MockManager) NoopMode() bool {
 func (mr *MockManagerMockRecorder) NoopMode() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NoopMode", reflect.TypeOf((*MockManager)(nil).NoopMode))
+}
+
+// PublishRegistration mocks base method.
+func (m *MockManager) PublishRegistration(ctx context.Context, entry *model.RegistrationEntry) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishRegistration", ctx, entry)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishRegistration indicates an expected call of PublishRegistration.
+func (mr *MockManagerMockRecorder) PublishRegistration(ctx, entry any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishRegistration", reflect.TypeOf((*MockManager)(nil).PublishRegistration), ctx, entry)
 }
 
 // RecordEvent mocks base method.

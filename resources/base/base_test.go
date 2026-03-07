@@ -117,6 +117,47 @@ var _ = Describe("Base", func() {
 			Expect(b.String()).To(Equal("file#/tmp/testfile"))
 		})
 
+		It("Should return a stable ResourceId", func() {
+			id1 := b.ResourceId()
+			id2 := b.ResourceId()
+			Expect(id1).To(Equal(id2))
+			Expect(id1).To(HaveLen(20)) // 10 bytes hex-encoded
+		})
+
+		It("Should return different ResourceId for different names", func() {
+			other := &Base{
+				Resource:           mockRes,
+				ResourceProperties: props,
+				CommonProperties: model.CommonResourceProperties{
+					Type: model.FileTypeName,
+					Name: "/tmp/otherfile",
+				},
+				Log:     logger,
+				Manager: mgr,
+			}
+
+			Expect(b.ResourceId()).ToNot(Equal(other.ResourceId()))
+		})
+
+		It("Should return different ResourceId for different aliases", func() {
+			b.CommonProperties.Alias = "alias-a"
+			idA := b.ResourceId()
+
+			b.CommonProperties.Alias = "alias-b"
+			idB := b.ResourceId()
+
+			Expect(idA).ToNot(Equal(idB))
+		})
+
+		It("Should include alias in ResourceId calculation", func() {
+			idWithout := b.ResourceId()
+
+			b.CommonProperties.Alias = "motd"
+			idWith := b.ResourceId()
+
+			Expect(idWithout).ToNot(Equal(idWith))
+		})
+
 		It("Should return properties", func() {
 			Expect(b.Properties()).To(Equal(props))
 		})

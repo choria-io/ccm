@@ -105,6 +105,7 @@ commands:
           type: exec
           description: Run ginkgo unit tests
           aliases: [u]
+          dir: "{{ AppDir }}"
           arguments:
             - name: dir
               description: Directory to test
@@ -216,6 +217,7 @@ commands:
             mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
             mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
             mockgen -write_generate_directive -source model/transaction.go -destination model/modelmocks/transaction_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/registration.go -destination model/modelmocks/registration_mock.go -package modelmocks
             mockgen -write_generate_directive -source resources/package/package.go -destination resources/package/provider_mock_test.go -package packageresource
             mockgen -write_generate_directive -source resources/service/service.go -destination resources/service/provider_mock_test.go -package serviceresource
             mockgen -write_generate_directive -source resources/file/file.go -destination resources/file/provider_mock_test.go -package fileresource
@@ -224,3 +226,4 @@ commands:
             mockgen -write_generate_directive -source resources/scaffold/scaffold.go -destination resources/scaffold/provider_mock_test.go -package scaffoldresource
             mockgen -write_generate_directive -source resources/base/base.go -destination resources/base/embedded_mock_test.go -package base
             mockgen -write_generate_directive -destination model/modelmocks/jetstream_mock.go -package modelmocks github.com/nats-io/nats.go/jetstream JetStream,KeyValue,KeyValueEntry,ObjectStore
+            mockgen -write_generate_directive -source regpublisher/nats.go -destination regpublisher/publisher_mock_test.go -package regpublisher NatsMessagePublisher,JetStreamMessagePublisher
