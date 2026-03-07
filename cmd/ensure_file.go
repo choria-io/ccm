@@ -37,6 +37,8 @@ func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	file.Flag("content", "Contents of the file, will be template parsed").PlaceHolder("STRING").StringVar(&cmd.contents)
 	file.Flag("content-file", "File containing the contents of the file, will be template parsed").PlaceHolder("FILE").ExistingFileVar(&cmd.contentsFile)
 	file.Flag("source", "File to copy in place verbatim").PlaceHolder("FILE").ExistingFileVar(&cmd.source)
+	file.Flag("registration", "The NATS Stream holding registration data").Default("REGISTRATION").Short('R').StringVar(&cmd.parent.registrationStream)
+
 	parent.addCommonFlags(file)
 }
 

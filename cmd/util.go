@@ -20,7 +20,7 @@ import (
 	"github.com/choria-io/ccm/model"
 )
 
-func newManager(session string, hieraSource string, natsContext string, readEnv bool, noop bool, facts map[string]any) (model.Manager, model.Logger, error) {
+func newManager(session string, hieraSource string, natsContext string, readEnv bool, noop bool, regStream string, facts map[string]any) (model.Manager, model.Logger, error) {
 	var opts []manager.Option
 
 	if session != "" {
@@ -29,6 +29,10 @@ func newManager(session string, hieraSource string, natsContext string, readEnv 
 
 	if natsContext != "" {
 		opts = append(opts, manager.WithNatsContext(natsContext))
+	}
+
+	if regStream != "" {
+		opts = append(opts, manager.WithRegistrationStream(regStream))
 	}
 
 	logger := newLogger()

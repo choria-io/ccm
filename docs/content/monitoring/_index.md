@@ -3,7 +3,7 @@ title = "Monitoring"
 description = "Integrating deep health knowledge into resources"
 toc = true
 weight = 70
-pre = "<b>7. </b>"
+pre = "<b>8. </b>"
 +++
 
 By default, CCM verifies resource health using the resource's native state. For example, if a service should be running and `systemd` reports it as running, CCM considers it healthy.

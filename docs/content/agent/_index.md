@@ -10,7 +10,7 @@ For certain use cases, it is useful to run [YAML Manifests](../yamlmanifests/) c
 
 The CCM Agent runs manifests continuously, loading them from local files, Object Storage, or HTTP(S) URLs, with Key-Value data overlaid.
 
-In time, the Agent will become a key part of a service registry system, allowing for continuous monitoring of managed resources and sharing that state into a registry—enabling other nodes to use `file` resources to create configurations that combine knowledge of all nodes.
+The Agent also supports [Registration](../registration/), a service discovery system where resources that reach a stable state publish their details to NATS. Other nodes can query the registry in templates to build configurations dynamically.
 
 ## Run Modes
 
@@ -155,6 +155,11 @@ cache_dir: /etc/choria/ccm/source
 # Port for Prometheus metrics endpoint (/metrics).
 # Set to 0 or omit to disable.
 monitor_port: 9100
+
+# Registration destination for service discovery.
+# Valid values: "nats" (fire-and-forget) or "jetstream" (reliable with rollup).
+# Omit to disable registration. See the Registration section for details.
+# registration: jetstream
 ```
 
 After configuring, start the service:

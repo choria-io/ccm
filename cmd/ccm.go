@@ -43,6 +43,7 @@ func main() {
 	registerEnsureCommand(app)
 	registerFactsCommand(app)
 	registerHieraCommand(app)
+	registerRegistrationCommand(app)
 	registerSessionCommand(app)
 	registerStatusCommand(app)
 

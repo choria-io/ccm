@@ -36,6 +36,8 @@ type Manager interface {
 	UserLogger() Logger
 	NewRunner() (CommandRunner, error)
 	RecordEvent(event *TransactionEvent) error
+	PublishRegistration(ctx context.Context, entry *RegistrationEntry) error
+	RegistrationStream() string
 	ShouldRefresh(resourceType string, resourceName string) (bool, error)
 	IsResourceFailed(resourceType string, resourceName string) (bool, error)
 	TemplateEnvironment(ctx context.Context) (*templates.Env, error)
@@ -46,6 +48,7 @@ type Manager interface {
 	SessionSummary() (*SessionSummary, error)
 	NoopMode() bool
 	JetStream() (jetstream.JetStream, error)
+	NatsConnection() (*nats.Conn, error)
 }
 
 type NatsConnProvider interface {

@@ -31,7 +31,7 @@ func registerStatusCommand(ccm *fisk.Application) {
 }
 
 func (c *statusCommand) statusAction(_ *fisk.ParseContext) error {
-	mgr, _, err := newManager("", "", "", false, true, nil)
+	mgr, _, err := newManager("", "", "", false, true, "", nil)
 	if err != nil {
 		return err
 	}

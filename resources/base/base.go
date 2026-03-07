@@ -6,6 +6,8 @@ package base
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -209,6 +211,11 @@ func (b *Base) checkControl(ctx context.Context) (bool, error) {
 
 func (b *Base) Type() string {
 	return b.CommonProperties.Type
+}
+
+func (b *Base) ResourceId() string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s#%s#%s", b.CommonProperties.Type, b.CommonProperties.Name, b.CommonProperties.Alias)))
+	return hex.EncodeToString(sum[:10])
 }
 
 func (b *Base) Name() string {

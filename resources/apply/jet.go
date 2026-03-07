@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"reflect"
 
 	"github.com/CloudyKit/jet/v6"
 	"github.com/goccy/go-yaml"
@@ -23,22 +22,18 @@ func jetParseManifestResources(path string, env *templates.Env) (yaml.RawMessage
 	}
 
 	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims("[[", "]]"))
+
+	for k, v := range env.JetFunctions() {
+		set.AddGlobalFunc(k, v)
+	}
+
 	tpl, err := set.Parse(path, string(jb))
 	if err != nil {
 		return nil, err
 	}
 
-	variables := jet.VarMap{
-		"facts":   reflect.ValueOf(env.Facts),
-		"Facts":   reflect.ValueOf(env.Facts),
-		"data":    reflect.ValueOf(env.Data),
-		"Data":    reflect.ValueOf(env.Data),
-		"environ": reflect.ValueOf(env.Environ),
-		"Environ": reflect.ValueOf(env.Environ),
-	}
-
 	buff := bytes.NewBuffer([]byte{})
-	err = tpl.Execute(buff, variables, env)
+	err = tpl.Execute(buff, env.JetVariables(), env)
 	if err != nil {
 		return nil, err
 	}
