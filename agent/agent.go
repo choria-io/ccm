@@ -57,7 +57,15 @@ func New(cfg *Config, opts ...Option) (*Agent, error) {
 		return nil, err
 	}
 
-	mgr, err := manager.NewManager(logger, logger, manager.WithNatsContext(cfg.NatsContext), manager.WithNatsConnection(&cachingNatsProvider{}))
+	mgrOpts := []manager.Option{
+		manager.WithNatsContext(cfg.NatsContext),
+		manager.WithNatsConnection(&cachingNatsProvider{}),
+	}
+	if cfg.Registration != "" {
+		mgrOpts = append(mgrOpts, manager.WithRegistrationDestination(cfg.Registration))
+	}
+
+	mgr, err := manager.NewManager(logger, logger, mgrOpts...)
 	if err != nil {
 		return nil, err
 	}

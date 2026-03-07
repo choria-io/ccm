@@ -201,6 +201,77 @@ var _ = Describe("CommonResourceProperties", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
+
+		Describe("RegisterWhenStable", func() {
+			It("Should accept nil register_when_stable", func() {
+				prop := &CommonResourceProperties{
+					Name:               "test",
+					Ensure:             "present",
+					RegisterWhenStable: nil,
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should accept a valid register_when_stable entry", func() {
+				prop := &CommonResourceProperties{
+					Name:   "test",
+					Ensure: "present",
+					RegisterWhenStable: &RegistrationEntry{
+						Cluster:  "production",
+						Protocol: "tcp",
+						Service:  "web",
+						IP:       "192.168.1.1",
+						Port:     8080,
+						Priority: 1,
+					},
+				}
+
+				err := prop.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should reject an invalid register_when_stable entry", func() {
+				prop := &CommonResourceProperties{
+					Name:   "test",
+					Ensure: "present",
+					RegisterWhenStable: &RegistrationEntry{
+						Cluster:  "production",
+						Protocol: "",
+						Service:  "web",
+						IP:       "192.168.1.1",
+						Port:     8080,
+						Priority: 1,
+					},
+				}
+
+				err := prop.Validate()
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ErrResourceInvalid))
+				Expect(err.Error()).To(ContainSubstring("protocol is required"))
+			})
+
+			It("Should wrap the registration validation error", func() {
+				prop := &CommonResourceProperties{
+					Name:   "test",
+					Ensure: "present",
+					RegisterWhenStable: &RegistrationEntry{
+						Cluster:  "",
+						Protocol: "tcp",
+						Service:  "web",
+						IP:       "192.168.1.1",
+						Port:     8080,
+						Priority: 1,
+					},
+				}
+
+				err := prop.Validate()
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ErrResourceInvalid))
+				Expect(err.Error()).To(ContainSubstring(ErrRegistrationInvalid))
+			})
+		})
 	})
 	Describe("NewPackageResourcePropertiesFromYaml", func() {
 		Describe("traditional single resource format", func() {

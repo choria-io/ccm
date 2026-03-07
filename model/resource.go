@@ -26,6 +26,8 @@ const (
 type Resource interface {
 	Type() string
 	Name() string
+	ResourceId() string
+	String() string
 	Provider() string
 	Properties() ResourceProperties
 	Apply(context.Context) (*TransactionEvent, error)
@@ -47,15 +49,16 @@ type ResourceProperties interface {
 
 // CommonResourceProperties contains properties shared by all resource types
 type CommonResourceProperties struct {
-	Type         string                 `json:"-" yaml:"-"`
-	Name         string                 `json:"name" yaml:"name"`
-	Alias        string                 `json:"alias,omitempty" yaml:"alias,omitempty"`
-	Ensure       string                 `json:"ensure,omitempty" yaml:"ensure,omitempty"`
-	Provider     string                 `json:"provider,omitempty" yaml:"provider,omitempty"`
-	HealthChecks []CommonHealthCheck    `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
-	Require      []string               `json:"require,omitempty" yaml:"require,omitempty"`
-	Control      *CommonResourceControl `json:"control,omitempty" yaml:"control,omitempty"`
-	SkipValidate bool                   `json:"-" yaml:"-"`
+	Type               string                 `json:"-" yaml:"-"`
+	Name               string                 `json:"name" yaml:"name"`
+	Alias              string                 `json:"alias,omitempty" yaml:"alias,omitempty"`
+	Ensure             string                 `json:"ensure,omitempty" yaml:"ensure,omitempty"`
+	Provider           string                 `json:"provider,omitempty" yaml:"provider,omitempty"`
+	HealthChecks       []CommonHealthCheck    `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
+	Require            []string               `json:"require,omitempty" yaml:"require,omitempty"`
+	Control            *CommonResourceControl `json:"control,omitempty" yaml:"control,omitempty"`
+	RegisterWhenStable *RegistrationEntry     `json:"register_when_stable,omitempty" yaml:"register_when_stable,omitempty"`
+	SkipValidate       bool                   `json:"-" yaml:"-"`
 }
 
 type CommonResourceControl struct {
@@ -114,6 +117,13 @@ func (p *CommonResourceProperties) Validate() error {
 		}
 	}
 
+	if p.RegisterWhenStable != nil {
+		err := p.RegisterWhenStable.Validate()
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrResourceInvalid, err)
+		}
+	}
+
 	return nil
 }
 
@@ -127,8 +137,6 @@ func NewCommonResourceState(protocol string, resourceType string, name string, e
 		Ensure:       ensure,
 	}
 }
-
-// TODO: seems redundant
 
 // CommonResourceState contains state information shared by all resource types
 type CommonResourceState struct {

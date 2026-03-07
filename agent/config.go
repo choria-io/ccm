@@ -54,6 +54,9 @@ type Config struct {
 
 	// NatsContext is the NATS context to use for remote KV and Object store access
 	NatsContext string `yaml:"nats_context"`
+
+	// Registration is the registration destination to support
+	Registration model.RegistrationDestination `yaml:"registration"`
 }
 
 func ParseConfig(c []byte) (*Config, error) {
@@ -103,6 +106,10 @@ func (c *Config) Validate() error {
 
 	if c.CacheDir == "" {
 		return fmt.Errorf("cache_dir must be set")
+	}
+
+	if c.Registration != "" && !(c.Registration == model.NatsRegistrationDestination || c.Registration == model.JetStreamRegistrationDestination) {
+		return fmt.Errorf("invalid registration destination %q", c.Registration)
 	}
 
 	switch c.LogLevel {

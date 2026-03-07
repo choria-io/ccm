@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -585,6 +586,11 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 				log.Error("Could not save event", "event", event.String())
 			}
 
+			err = publishRegistration(ctx, mgr, prop, event, healthCheckOnly)
+			if err != nil {
+				return nil, err
+			}
+
 			if !healthCheckOnly && a.FailOnError() && event.Failed {
 				userLog.Warn("Terminating manifest execution due to failed resource")
 				terminate = true
@@ -597,4 +603,49 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 	}
 
 	return session, nil
+}
+
+// publishRegistration publishes a registration entry for a resource that has register_when_stable configured.
+// Registration is skipped in noop mode, when the resource failed, or when it is not yet stable. During normal
+// apply a resource is considered stable when it was not changed, during health check only mode it is stable
+// when all health checks passed.
+func publishRegistration(ctx context.Context, mgr model.Manager, prop model.ResourceProperties, event *model.TransactionEvent, healthCheckOnly bool) error {
+	reg := prop.CommonProperties().RegisterWhenStable
+	if reg == nil || mgr.NoopMode() || event.Failed {
+		return nil
+	}
+
+	shouldPublish := false
+
+	if healthCheckOnly {
+		shouldPublish = allHealthChecksPassed(event)
+	} else {
+		shouldPublish = !event.Changed
+	}
+
+	if !shouldPublish {
+		return nil
+	}
+
+	err := mgr.PublishRegistration(ctx, reg)
+	if err != nil && !errors.Is(err, model.ErrNoRegistrationPublisher) {
+		return err
+	}
+
+	return nil
+}
+
+// allHealthChecksPassed returns true when the event has at least one health check and all checks have OK status
+func allHealthChecksPassed(event *model.TransactionEvent) bool {
+	if len(event.HealthChecks) == 0 {
+		return false
+	}
+
+	for _, hc := range event.HealthChecks {
+		if hc.Status != model.HealthCheckOK {
+			return false
+		}
+	}
+
+	return true
 }

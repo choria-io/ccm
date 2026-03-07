@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -1113,6 +1114,28 @@ var _ = Describe("CopyFrom", func() {
 		Expect(dest.env).To(BeEmpty())
 	})
 
+	It("copies registration publisher and destination", func() {
+		mockNCP := modelmocks.NewMockNatsConnProvider(ctrl)
+		mockNCP.EXPECT().Connect(gomock.Any(), gomock.Any()).Return(&nats.Conn{}, nil)
+
+		source, err := NewManager(mockLog, mockLog,
+			WithNatsConnection(mockNCP),
+			WithRegistrationDestination(model.NatsRegistrationDestination),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(source.regPublisher).NotTo(BeNil())
+		Expect(source.regPublisherDest).To(Equal(model.NatsRegistrationDestination))
+
+		dest, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = dest.CopyFrom(source)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(dest.regPublisher).To(Equal(source.regPublisher))
+		Expect(dest.regPublisherDest).To(Equal(model.NatsRegistrationDestination))
+	})
+
 	It("does not copy session, loggers, or NATS connection", func() {
 		source, err := NewManager(mockLog, mockLog)
 		Expect(err).NotTo(HaveOccurred())
@@ -1134,6 +1157,140 @@ var _ = Describe("CopyFrom", func() {
 		Expect(dest.userLogger).To(Equal(originalUserLog))
 		Expect(dest.nc).To(BeNil())
 		Expect(dest.js).To(BeNil())
+	})
+})
+
+var _ = Describe("WithRegistrationDestination", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("defaults to a noop publisher when no destination is set", func() {
+		mgr, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.regPublisher).NotTo(BeNil())
+
+		// NoopPublisher should not error on publish
+		err = mgr.regPublisher.Publish(context.Background(), &model.RegistrationEntry{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("creates a nats publisher when destination is nats", func() {
+		mockNCP := modelmocks.NewMockNatsConnProvider(ctrl)
+		mockNCP.EXPECT().Connect(gomock.Any(), gomock.Any()).Return(&nats.Conn{}, nil)
+
+		mgr, err := NewManager(mockLog, mockLog,
+			WithNatsConnection(mockNCP),
+			WithRegistrationDestination(model.NatsRegistrationDestination),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.regPublisher).NotTo(BeNil())
+		Expect(mgr.regPublisherDest).To(Equal(model.NatsRegistrationDestination))
+	})
+
+	It("creates a jetstream publisher when destination is jetstream", func() {
+		mockNCP := modelmocks.NewMockNatsConnProvider(ctrl)
+		mockNCP.EXPECT().Connect(gomock.Any(), gomock.Any()).Return(&nats.Conn{}, nil)
+
+		mgr, err := NewManager(mockLog, mockLog,
+			WithNatsConnection(mockNCP),
+			WithRegistrationDestination(model.JetStreamRegistrationDestination),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.regPublisher).NotTo(BeNil())
+		Expect(mgr.regPublisherDest).To(Equal(model.JetStreamRegistrationDestination))
+	})
+
+	It("returns an error for an unknown destination", func() {
+		_, err := NewManager(mockLog, mockLog,
+			WithRegistrationDestination(model.RegistrationDestination("unknown")),
+		)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring(`unknown registration destination "unknown"`))
+	})
+
+	It("returns an error when nats connection fails", func() {
+		mockNCP := modelmocks.NewMockNatsConnProvider(ctrl)
+		mockNCP.EXPECT().Connect(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("connection refused"))
+
+		_, err := NewManager(mockLog, mockLog,
+			WithNatsConnection(mockNCP),
+			WithRegistrationDestination(model.NatsRegistrationDestination),
+		)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("connection refused"))
+	})
+
+	It("returns an error when nats context is not set and no connection provider", func() {
+		_, err := NewManager(mockLog, mockLog,
+			WithRegistrationDestination(model.NatsRegistrationDestination),
+		)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("nats context not set"))
+	})
+})
+
+var _ = Describe("PublishRegistration", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+		mgr     *CCM
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+
+		var err error
+		mgr, err = NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("returns an error when no publisher is set", func() {
+		mgr.regPublisher = nil
+
+		err := mgr.PublishRegistration(context.Background(), &model.RegistrationEntry{})
+		Expect(err).To(MatchError(model.ErrNoRegistrationPublisher))
+	})
+
+	It("publishes using the configured publisher", func() {
+		mockPub := modelmocks.NewMockRegistrationPublisher(ctrl)
+		entry := &model.RegistrationEntry{Cluster: "test"}
+		mockPub.EXPECT().Publish(gomock.Any(), entry).Return(nil)
+
+		mgr.regPublisher = mockPub
+
+		err := mgr.PublishRegistration(context.Background(), entry)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("returns publisher errors", func() {
+		mockPub := modelmocks.NewMockRegistrationPublisher(ctrl)
+		entry := &model.RegistrationEntry{Cluster: "test"}
+		mockPub.EXPECT().Publish(gomock.Any(), entry).Return(fmt.Errorf("publish failed"))
+
+		mgr.regPublisher = mockPub
+
+		err := mgr.PublishRegistration(context.Background(), entry)
+		Expect(err).To(MatchError("publish failed"))
 	})
 })
 

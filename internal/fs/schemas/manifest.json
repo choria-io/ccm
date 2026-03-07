@@ -237,6 +237,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         }
       },
       "required": ["name"],
@@ -281,6 +284,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         },
         "enable": {
           "type": "boolean",
@@ -337,6 +343,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         },
         "content": {
           "type": "string",
@@ -407,6 +416,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         },
         "cwd": {
           "type": "string",
@@ -504,6 +516,9 @@
         "control": {
           "$ref": "#/$defs/resourceControl"
         },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
+        },
         "url": {
           "type": "string",
           "description": "HTTP/HTTPS URL to download the archive from. Must end in .zip, .tar.gz, .tgz, or .tar",
@@ -593,6 +608,9 @@
         "control": {
           "$ref": "#/$defs/resourceControl"
         },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
+        },
         "source": {
           "type": "string",
           "description": "Path or URL to the source template directory"
@@ -671,6 +689,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         }
       },
       "additionalProperties": false
@@ -710,6 +731,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         },
         "enable": {
           "type": "boolean",
@@ -761,6 +785,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         },
         "content": {
           "type": "string",
@@ -826,6 +853,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         },
         "cwd": {
           "type": "string",
@@ -918,6 +948,9 @@
         "control": {
           "$ref": "#/$defs/resourceControl"
         },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
+        },
         "url": {
           "type": "string",
           "description": "HTTP/HTTPS URL to download the archive from. Must end in .zip, .tar.gz, .tgz, or .tar",
@@ -1001,6 +1034,9 @@
         },
         "control": {
           "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "$ref": "#/$defs/registrationEntry"
         },
         "source": {
           "type": "string",
@@ -1087,6 +1123,50 @@
         { "required": ["command"] },
         { "required": ["goss_rules"] }
       ],
+      "additionalProperties": false
+    },
+    "registrationEntry": {
+      "type": "object",
+      "description": "Registration entry to publish when the resource is stable. Used for service discovery via NATS.",
+      "properties": {
+        "cluster": {
+          "type": "string",
+          "description": "Cluster name for the registration entry"
+        },
+        "service": {
+          "type": "string",
+          "description": "Service name for the registration entry",
+          "pattern": "^[a-zA-Z][a-zA-Z\\d_-]*$"
+        },
+        "protocol": {
+          "type": "string",
+          "description": "Protocol for the service (e.g., tcp, udp, http)"
+        },
+        "address": {
+          "type": "string",
+          "description": "IP address of the service",
+          "format": "ipv4"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Port number of the service",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Priority of the registration entry",
+          "minimum": 1
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Optional key-value annotations for the registration entry",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["cluster", "service", "protocol", "address", "port", "priority"],
       "additionalProperties": false
     },
     "resourceControl": {

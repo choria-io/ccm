@@ -22,6 +22,7 @@ import (
 	"github.com/choria-io/ccm/internal/facts"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
+	"github.com/choria-io/ccm/regpublisher"
 	archiveresource "github.com/choria-io/ccm/resources/archive"
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
@@ -32,12 +33,14 @@ import (
 
 // CCM is the main configuration and change management orchestrator
 type CCM struct {
-	session    model.SessionStore
-	log        model.Logger
-	userLogger model.Logger
-	js         jetstream.JetStream
-	nc         *nats.Conn
-	ncProvider model.NatsConnProvider
+	session          model.SessionStore
+	regPublisherDest model.RegistrationDestination
+	regPublisher     model.RegistrationPublisher
+	log              model.Logger
+	userLogger       model.Logger
+	js               jetstream.JetStream
+	nc               *nats.Conn
+	ncProvider       model.NatsConnProvider
 
 	noop        bool
 	workingDir  string
@@ -68,6 +71,15 @@ func NewManager(log model.Logger, userLogger model.Logger, opts ...Option) (*CCM
 		}
 
 		mgr.session, err = session.NewMemorySessionStore(sessionLog, userLogger)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	mgr.regPublisher = regpublisher.NewNoopPublisher()
+	if mgr.regPublisherDest != "" {
+		var err error
+		mgr.regPublisher, err = regpublisher.New(mgr, mgr.regPublisherDest)
 		if err != nil {
 			return nil, err
 		}
@@ -115,8 +127,40 @@ func (m *CCM) CopyFrom(source model.Manager) error {
 	m.natsContext = src.natsContext
 	m.ncProvider = src.ncProvider
 	m.nc = src.nc
+	m.regPublisher = src.regPublisher
+	m.regPublisherDest = src.regPublisherDest
 
 	return nil
+}
+
+func (m *CCM) NatsConnection() (*nats.Conn, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.natsConnectionUnlocked()
+}
+
+func (m *CCM) natsConnectionUnlocked() (*nats.Conn, error) {
+	if m.nc != nil {
+		return m.nc, nil
+	}
+
+	var err error
+
+	if m.ncProvider != nil {
+		m.nc, err = m.ncProvider.Connect(m.natsContext, DefaultNatsOptions(m.log)...)
+	} else {
+		if m.natsContext == "" {
+			return nil, fmt.Errorf("nats context not set")
+		}
+
+		m.nc, _, err = natscontext.Connect(m.natsContext, DefaultNatsOptions(m.log)...)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("nats connection error: %w", err)
+	}
+
+	return m.nc, nil
 }
 
 // JetStream returns a JetStream connection, requires the context be set using WithNatsContext()
@@ -128,22 +172,12 @@ func (m *CCM) JetStream() (jetstream.JetStream, error) {
 		return m.js, nil
 	}
 
-	if m.natsContext == "" {
-		return nil, fmt.Errorf("nats context not set")
-	}
-
-	var err error
-
-	if m.ncProvider != nil {
-		m.nc, err = m.ncProvider.Connect(m.natsContext, DefaultNatsOptions(m.log)...)
-	} else {
-		m.nc, _, err = natscontext.Connect(m.natsContext, DefaultNatsOptions(m.log)...)
-	}
+	nc, err := m.natsConnectionUnlocked()
 	if err != nil {
-		return nil, fmt.Errorf("nats connection error: %w", err)
+		return nil, err
 	}
 
-	m.js, err = jetstream.New(m.nc, jetstream.WithDefaultTimeout(2*time.Second))
+	m.js, err = jetstream.New(nc, jetstream.WithDefaultTimeout(2*time.Second))
 	if err != nil {
 		return nil, err
 	}
@@ -483,6 +517,18 @@ func (m *CCM) RecordEvent(event *model.TransactionEvent) error {
 	}
 
 	return m.session.RecordEvent(event)
+}
+
+// PublishRegistration publishes a registration event to the target
+func (m *CCM) PublishRegistration(ctx context.Context, entry *model.RegistrationEntry) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.regPublisher == nil {
+		return model.ErrNoRegistrationPublisher
+	}
+
+	return m.regPublisher.Publish(ctx, entry)
 }
 
 func (m *CCM) findEvents(resourceType string, resourceName string) ([]model.TransactionEvent, error) {

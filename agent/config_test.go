@@ -10,6 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/choria-io/ccm/model"
 )
 
 func TestConfig(t *testing.T) {
@@ -124,6 +126,23 @@ nats_context: custom-context
 			Expect(err.Error()).To(ContainSubstring("log_level must be one of"))
 			Expect(cfg).To(BeNil())
 		})
+
+		It("Should parse registration destination", func() {
+			yamlData := `registration: jetstream`
+
+			cfg, err := ParseConfig([]byte(yamlData))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.Registration).To(Equal(model.JetStreamRegistrationDestination))
+		})
+
+		It("Should return error for invalid registration destination", func() {
+			yamlData := `registration: invalid`
+
+			cfg, err := ParseConfig([]byte(yamlData))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid registration destination"))
+			Expect(cfg).To(BeNil())
+		})
 	})
 
 	Describe("Validate", func() {
@@ -232,6 +251,45 @@ nats_context: custom-context
 			err := cfg.Validate()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("log_level must be one of"))
+		})
+
+		It("Should accept valid registration destinations", func() {
+			for _, dest := range []model.RegistrationDestination{model.NatsRegistrationDestination, model.JetStreamRegistrationDestination} {
+				cfg := &Config{
+					intervalDuration: 5 * time.Minute,
+					CacheDir:         "/some/path",
+					LogLevel:         "info",
+					Registration:     dest,
+				}
+
+				err := cfg.Validate()
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
+		It("Should accept empty registration destination", func() {
+			cfg := &Config{
+				intervalDuration: 5 * time.Minute,
+				CacheDir:         "/some/path",
+				LogLevel:         "info",
+				Registration:     "",
+			}
+
+			err := cfg.Validate()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should fail with invalid registration destination", func() {
+			cfg := &Config{
+				intervalDuration: 5 * time.Minute,
+				CacheDir:         "/some/path",
+				LogLevel:         "info",
+				Registration:     "invalid",
+			}
+
+			err := cfg.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid registration destination"))
 		})
 	})
 
