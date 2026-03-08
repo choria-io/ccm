@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	natsSubjectPrefix = "ccm.registration.v1"
-	natsTTLHeader     = "Nats-TTL"
-	natsRollupHeader  = "Nats-Rollup"
-	natsSubRollup     = "sub"
+	natsSubjectPrefix        = "ccm.registration.v1"
+	natsTTLHeader            = "Nats-TTL"
+	natsRollupHeader         = "Nats-Rollup"
+	natsExpectedStreamHeader = "Nats-Expected-Stream"
+	natsSubRollup            = "sub"
 )
 
 // NatsMessagePublisher publishes a NATS message using core NATS
@@ -48,6 +49,7 @@ func defaultJetStreamFactory(nc *nats.Conn) (JetStreamMessagePublisher, error) {
 type NatsPublisher struct {
 	log       model.Logger
 	reliable  bool
+	stream    string
 	nc        NatsMessagePublisher
 	rawNC     *nats.Conn
 	js        JetStreamMessagePublisher
@@ -114,6 +116,10 @@ func (n *NatsPublisher) message(e *model.RegistrationEntry) (*nats.Msg, error) {
 			msg.Header.Add(natsTTLHeader, e.TTL.String())
 		}
 		msg.Header.Add(natsRollupHeader, natsSubRollup)
+
+		if n.stream != "" {
+			msg.Header.Add(natsExpectedStreamHeader, n.stream)
+		}
 	}
 
 	var err error

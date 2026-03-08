@@ -37,6 +37,7 @@ type Manager interface {
 	NewRunner() (CommandRunner, error)
 	RecordEvent(event *TransactionEvent) error
 	PublishRegistration(ctx context.Context, entry *RegistrationEntry) error
+	RegistrationStream() string
 	ShouldRefresh(resourceType string, resourceName string) (bool, error)
 	IsResourceFailed(resourceType string, resourceName string) (bool, error)
 	TemplateEnvironment(ctx context.Context) (*templates.Env, error)

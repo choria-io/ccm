@@ -351,6 +351,20 @@ func (mr *MockManagerMockRecorder) RecordEvent(event any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordEvent", reflect.TypeOf((*MockManager)(nil).RecordEvent), event)
 }
 
+// RegistrationStream mocks base method.
+func (m *MockManager) RegistrationStream() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegistrationStream")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// RegistrationStream indicates an expected call of RegistrationStream.
+func (mr *MockManagerMockRecorder) RegistrationStream() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegistrationStream", reflect.TypeOf((*MockManager)(nil).RegistrationStream))
+}
+
 // ResourceInfo mocks base method.
 func (m *MockManager) ResourceInfo(ctx context.Context, typeName, name string) (any, error) {
 	m.ctrl.T.Helper()

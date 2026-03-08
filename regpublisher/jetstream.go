@@ -17,7 +17,7 @@ type JetStreamPublisher struct {
 	nats *NatsPublisher
 }
 
-func NewJetStreamPublisher(nc *nats.Conn, log model.Logger) (*JetStreamPublisher, error) {
+func NewJetStreamPublisher(nc *nats.Conn, stream string, log model.Logger) (*JetStreamPublisher, error) {
 	if nc == nil {
 		return nil, fmt.Errorf("no nats connection provided")
 	}
@@ -26,6 +26,7 @@ func NewJetStreamPublisher(nc *nats.Conn, log model.Logger) (*JetStreamPublisher
 		nc:        nc,
 		rawNC:     nc,
 		log:       log,
+		stream:    stream,
 		reliable:  true,
 		jsFactory: defaultJetStreamFactory,
 	}

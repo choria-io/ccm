@@ -22,6 +22,7 @@ func New(mgr model.Manager, destination model.RegistrationDestination) (model.Re
 		if err != nil {
 			return nil, err
 		}
+
 		return NewNatsPublisher(nc, logger)
 
 	case model.JetStreamRegistrationDestination:
@@ -29,7 +30,8 @@ func New(mgr model.Manager, destination model.RegistrationDestination) (model.Re
 		if err != nil {
 			return nil, err
 		}
-		return NewJetStreamPublisher(nc, logger)
+
+		return NewJetStreamPublisher(nc, mgr.RegistrationStream(), logger)
 
 	default:
 		return nil, fmt.Errorf("unknown registration destination %q", destination)

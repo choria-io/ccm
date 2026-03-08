@@ -33,14 +33,15 @@ import (
 
 // CCM is the main configuration and change management orchestrator
 type CCM struct {
-	session          model.SessionStore
-	regPublisherDest model.RegistrationDestination
-	regPublisher     model.RegistrationPublisher
-	log              model.Logger
-	userLogger       model.Logger
-	js               jetstream.JetStream
-	nc               *nats.Conn
-	ncProvider       model.NatsConnProvider
+	session            model.SessionStore
+	regPublisherDest   model.RegistrationDestination
+	regPublisherStream string
+	regPublisher       model.RegistrationPublisher
+	log                model.Logger
+	userLogger         model.Logger
+	js                 jetstream.JetStream
+	nc                 *nats.Conn
+	ncProvider         model.NatsConnProvider
 
 	noop        bool
 	workingDir  string
@@ -129,8 +130,18 @@ func (m *CCM) CopyFrom(source model.Manager) error {
 	m.nc = src.nc
 	m.regPublisher = src.regPublisher
 	m.regPublisherDest = src.regPublisherDest
+	m.regPublisherStream = src.regPublisherStream
 
 	return nil
+}
+
+func (m *CCM) RegistrationPublisher() model.RegistrationPublisher {
+	return m.regPublisher
+}
+
+// RegistrationStream returns the registration stream
+func (m *CCM) RegistrationStream() string {
+	return m.regPublisherStream
 }
 
 func (m *CCM) NatsConnection() (*nats.Conn, error) {

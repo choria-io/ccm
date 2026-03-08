@@ -28,6 +28,14 @@ func WithRegistrationDestination(destination model.RegistrationDestination) Opti
 	}
 }
 
+// WithRegistrationStream sets the registration stream to use
+func WithRegistrationStream(stream string) Option {
+	return func(c *CCM) error {
+		c.regPublisherStream = stream
+		return nil
+	}
+}
+
 // WithSessionDirectory sets the session store to use
 func WithSessionDirectory(path string) Option {
 	return func(c *CCM) error {

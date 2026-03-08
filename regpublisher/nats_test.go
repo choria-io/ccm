@@ -92,6 +92,7 @@ var _ = Describe("NatsPublisher", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(msg.Header.Get(natsTTLHeader)).To(Equal("30s"))
 			Expect(msg.Header.Get(natsRollupHeader)).To(Equal(natsSubRollup))
+			Expect(msg.Header.Get(natsExpectedStreamHeader)).To(BeEmpty())
 		})
 
 		It("should set rollup header but not TTL header when reliable and TTL is zero", func() {
@@ -100,6 +101,22 @@ var _ = Describe("NatsPublisher", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(msg.Header.Get(natsTTLHeader)).To(BeEmpty())
 			Expect(msg.Header.Get(natsRollupHeader)).To(Equal(natsSubRollup))
+			Expect(msg.Header.Get(natsExpectedStreamHeader)).To(BeEmpty())
+		})
+
+		It("should set expected stream header when reliable and stream is set", func() {
+			p := &NatsPublisher{reliable: true, stream: "REGISTRATIONS"}
+			msg, err := p.message(entry)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(msg.Header.Get(natsRollupHeader)).To(Equal(natsSubRollup))
+			Expect(msg.Header.Get(natsExpectedStreamHeader)).To(Equal("REGISTRATIONS"))
+		})
+
+		It("should not set expected stream header when stream is empty", func() {
+			p := &NatsPublisher{reliable: true}
+			msg, err := p.message(entry)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(msg.Header.Get(natsExpectedStreamHeader)).To(BeEmpty())
 		})
 
 		It("should not set TTL or rollup headers when not reliable", func() {
@@ -108,6 +125,14 @@ var _ = Describe("NatsPublisher", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(msg.Header.Get(natsTTLHeader)).To(BeEmpty())
 			Expect(msg.Header.Get(natsRollupHeader)).To(BeEmpty())
+			Expect(msg.Header.Get(natsExpectedStreamHeader)).To(BeEmpty())
+		})
+
+		It("should not set expected stream header when not reliable even if stream is set", func() {
+			p := &NatsPublisher{stream: "REGISTRATIONS"}
+			msg, err := p.message(entry)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(msg.Header.Get(natsExpectedStreamHeader)).To(BeEmpty())
 		})
 	})
 

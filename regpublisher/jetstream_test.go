@@ -52,7 +52,7 @@ var _ = Describe("JetStreamPublisher", func() {
 
 	Describe("NewJetStreamPublisher", func() {
 		It("should return error when connection is nil", func() {
-			_, err := NewJetStreamPublisher(nil, logger)
+			_, err := NewJetStreamPublisher(nil, "", logger)
 			Expect(err).To(MatchError("no nats connection provided"))
 		})
 	})
@@ -64,6 +64,7 @@ var _ = Describe("JetStreamPublisher", func() {
 					log:      logger,
 					js:       mockJS,
 					reliable: true,
+					stream:   "REGISTRATIONS",
 				},
 			}
 
@@ -91,6 +92,27 @@ var _ = Describe("JetStreamPublisher", func() {
 			Expect(pub.nats.reliable).To(BeTrue())
 
 			mockJS.EXPECT().PublishMsg(ctx, gomock.Any()).Return(&jetstream.PubAck{Stream: "REG", Sequence: 1}, nil)
+
+			err := pub.Publish(ctx, entry)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should set expected stream header when stream is configured", func() {
+			pub := &JetStreamPublisher{
+				nats: &NatsPublisher{
+					log:      logger,
+					js:       mockJS,
+					reliable: true,
+					stream:   "REGISTRATIONS",
+				},
+			}
+
+			mockJS.EXPECT().PublishMsg(ctx, gomock.Any()).DoAndReturn(
+				func(_ context.Context, msg *nats.Msg, _ ...jetstream.PublishOpt) (*jetstream.PubAck, error) {
+					Expect(msg.Header.Get(natsExpectedStreamHeader)).To(Equal("REGISTRATIONS"))
+					return &jetstream.PubAck{Stream: "REGISTRATIONS", Sequence: 1}, nil
+				},
+			)
 
 			err := pub.Publish(ctx, entry)
 			Expect(err).ToNot(HaveOccurred())

@@ -1114,17 +1114,19 @@ var _ = Describe("CopyFrom", func() {
 		Expect(dest.env).To(BeEmpty())
 	})
 
-	It("copies registration publisher and destination", func() {
+	It("copies registration publisher, destination, and stream", func() {
 		mockNCP := modelmocks.NewMockNatsConnProvider(ctrl)
 		mockNCP.EXPECT().Connect(gomock.Any(), gomock.Any()).Return(&nats.Conn{}, nil)
 
 		source, err := NewManager(mockLog, mockLog,
 			WithNatsConnection(mockNCP),
 			WithRegistrationDestination(model.NatsRegistrationDestination),
+			WithRegistrationStream("REGISTRATIONS"),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(source.regPublisher).NotTo(BeNil())
 		Expect(source.regPublisherDest).To(Equal(model.NatsRegistrationDestination))
+		Expect(source.RegistrationStream()).To(Equal("REGISTRATIONS"))
 
 		dest, err := NewManager(mockLog, mockLog)
 		Expect(err).NotTo(HaveOccurred())
@@ -1134,6 +1136,7 @@ var _ = Describe("CopyFrom", func() {
 
 		Expect(dest.regPublisher).To(Equal(source.regPublisher))
 		Expect(dest.regPublisherDest).To(Equal(model.NatsRegistrationDestination))
+		Expect(dest.RegistrationStream()).To(Equal("REGISTRATIONS"))
 	})
 
 	It("does not copy session, loggers, or NATS connection", func() {
@@ -1239,6 +1242,42 @@ var _ = Describe("WithRegistrationDestination", func() {
 		)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("nats context not set"))
+	})
+})
+
+var _ = Describe("WithRegistrationStream", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("sets the registration stream on the manager", func() {
+		mgr, err := NewManager(mockLog, mockLog, WithRegistrationStream("REGISTRATIONS"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.RegistrationStream()).To(Equal("REGISTRATIONS"))
+	})
+
+	It("defaults to an empty string when not set", func() {
+		mgr, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.RegistrationStream()).To(Equal(""))
+	})
+
+	It("allows empty stream to be set", func() {
+		mgr, err := NewManager(mockLog, mockLog, WithRegistrationStream(""))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.RegistrationStream()).To(Equal(""))
 	})
 })
 
