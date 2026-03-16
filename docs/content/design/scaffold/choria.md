@@ -125,8 +125,10 @@ The target directory is removed if empty after all managed files and subdirector
 
 Templates receive the full `templates.Env` environment, which provides access to:
 - `facts` - System facts for the managed node
-- `data` - Hiera-resolved configuration data
+- `data` - Hiera-resolved configuration data, or custom data when the resource's `data` property is set
 - Template helper functions
+
+When the scaffold resource has a `data` property set, `env.Data` is replaced with the custom data before the provider's `Status()` and `Scaffold()` methods are called. The provider receives the already-resolved environment and does not need to handle this override itself.
 
 This allows templates to generate host-specific configurations based on facts and hierarchical data.
 

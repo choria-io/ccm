@@ -96,6 +96,7 @@ The engine defaults to `jet` if not specified. Delimiters can be customized via 
 | `left_delimiter`  | string            | No       | Custom left template delimiter                             |
 | `right_delimiter` | string            | No       | Custom right template delimiter                            |
 | `purge`           | bool              | No       | Remove files in target not present in source               |
+| `data`            | map[string]any    | No       | Custom data that replaces Hiera data for template rendering |
 | `post`            | []map[string]string | No     | Post-processing: glob pattern to command mapping           |
 
 ```yaml
@@ -123,11 +124,57 @@ The engine defaults to `jet` if not specified. Delimiters can be customized via 
         source: templates/app
         post:
           - "*.go": "go fmt {}"
+
+# With custom data replacing Hiera data
+- scaffold:
+    - /etc/app:
+        ensure: present
+        source: templates/app
+        engine: jet
+        data:
+          app_name: myapp
+          version: "{{ Facts.version }}"
+          port: 8080
 ```
+
+## Custom Data
+
+The `data` property allows supplying custom data that completely replaces the Hiera-resolved data for template rendering. When `data` is set and non-empty, templates receive only the custom data via `data` instead of the Hiera-resolved data from the manifest.
+
+This is useful when a scaffold resource needs data that differs from or is unrelated to the global Hiera data, or when you want to provide a self-contained data set for a specific scaffold.
+
+### Behavior
+
+- When `data` is **not set or empty**: templates receive the Hiera-resolved data from the manager as normal.
+- When `data` is **set and non-empty**: `env.Data` is replaced with the custom data before calling `Status()` and `Scaffold()`. The custom data is used consistently throughout the entire apply cycle.
+- `facts` remain available regardless of whether custom data is provided.
+
+### Template Resolution in Data Values
+
+String values in the `data` map support template expressions that are resolved during property template resolution. Both keys and values can contain templates:
+
+```yaml
+data:
+  "{{ Facts.key_name }}": "{{ Facts.value }}"
+  static_key: "{{ Facts.hostname }}"
+  port: 8080
+```
+
+Non-string values (integers, booleans, lists, maps) are preserved as-is without template resolution.
 
 ## Apply Logic
 
 ```
+┌─────────────────────────────────────────┐
+│ Get template environment from manager   │
+└─────────────────┬───────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────┐
+│ Custom data set? Override env.Data      │
+└─────────────────┬───────────────────────┘
+                  │
+                  ▼
 ┌─────────────────────────────────────────┐
 │ Get current state via Status()          │
 └─────────────────┬───────────────────────┘
