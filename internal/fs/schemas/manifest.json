@@ -621,6 +621,11 @@
           "description": "Remove files in the target directory that are not present in the source",
           "default": false
         },
+        "data": {
+          "type": "object",
+          "description": "Custom data map that replaces Hiera data for template rendering. String values support template expressions.",
+          "additionalProperties": true
+        },
         "post": {
           "type": "array",
           "description": "Post-processing commands to run after rendering",
@@ -1029,6 +1034,11 @@
           "type": "boolean",
           "description": "Remove files in the target directory that are not present in the source",
           "default": false
+        },
+        "data": {
+          "type": "object",
+          "description": "Custom data map that replaces Hiera data for template rendering. String values support template expressions.",
+          "additionalProperties": true
         },
         "post": {
           "type": "array",

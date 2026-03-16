@@ -163,6 +163,144 @@ var _ = Describe("ScaffoldResourceProperties", func() {
 			Expect(prop.Source).To(Equal("https://example.com/scaffold.tar.gz"))
 		})
 
+		It("Should resolve templates in data string values", func() {
+			prop := &ScaffoldResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/opt/app/scaffold",
+					Ensure: EnsurePresent,
+				},
+				Source: "https://example.com/scaffold.tar.gz",
+				Engine: ScaffoldEngineGo,
+				Data: map[string]any{
+					"app":     "{{ Facts.appname }}",
+					"version": "{{ Facts.version }}",
+				},
+			}
+
+			env := &templates.Env{
+				Facts: map[string]any{
+					"appname": "myapp",
+					"version": "v1.0.0",
+				},
+			}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Data).To(HaveKeyWithValue("app", "myapp"))
+			Expect(prop.Data).To(HaveKeyWithValue("version", "v1.0.0"))
+		})
+
+		It("Should resolve templates in data keys", func() {
+			prop := &ScaffoldResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/opt/app/scaffold",
+					Ensure: EnsurePresent,
+				},
+				Source: "https://example.com/scaffold.tar.gz",
+				Engine: ScaffoldEngineGo,
+				Data: map[string]any{
+					"{{ Facts.key }}": "value",
+				},
+			}
+
+			env := &templates.Env{
+				Facts: map[string]any{
+					"key": "resolved_key",
+				},
+			}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Data).To(HaveKeyWithValue("resolved_key", "value"))
+			Expect(prop.Data).ToNot(HaveKey("{{ Facts.key }}"))
+		})
+
+		It("Should preserve non-string data values", func() {
+			prop := &ScaffoldResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/opt/app/scaffold",
+					Ensure: EnsurePresent,
+				},
+				Source: "https://example.com/scaffold.tar.gz",
+				Engine: ScaffoldEngineGo,
+				Data: map[string]any{
+					"count":   42,
+					"enabled": true,
+					"tags":    []string{"web", "prod"},
+					"nested":  map[string]any{"inner": "value"},
+				},
+			}
+
+			env := &templates.Env{
+				Facts: map[string]any{},
+			}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Data).To(HaveKeyWithValue("count", 42))
+			Expect(prop.Data).To(HaveKeyWithValue("enabled", true))
+			Expect(prop.Data).To(HaveKeyWithValue("tags", []string{"web", "prod"}))
+			Expect(prop.Data["nested"]).To(HaveKeyWithValue("inner", "value"))
+		})
+
+		It("Should not modify properties when data is empty", func() {
+			prop := &ScaffoldResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/opt/app/scaffold",
+					Ensure: EnsurePresent,
+				},
+				Source: "https://example.com/scaffold.tar.gz",
+				Engine: ScaffoldEngineGo,
+				Data:   map[string]any{},
+			}
+
+			env := &templates.Env{
+				Facts: map[string]any{},
+			}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Data).To(BeEmpty())
+		})
+
+		It("Should return error for invalid template in data value", func() {
+			prop := &ScaffoldResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/opt/app/scaffold",
+					Ensure: EnsurePresent,
+				},
+				Source: "https://example.com/scaffold.tar.gz",
+				Engine: ScaffoldEngineGo,
+				Data: map[string]any{
+					"key": "{{ invalid syntax }}",
+				},
+			}
+
+			env := &templates.Env{Facts: map[string]any{}}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should return error for invalid template in data key", func() {
+			prop := &ScaffoldResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/opt/app/scaffold",
+					Ensure: EnsurePresent,
+				},
+				Source: "https://example.com/scaffold.tar.gz",
+				Engine: ScaffoldEngineGo,
+				Data: map[string]any{
+					"{{ invalid syntax }}": "value",
+				},
+			}
+
+			env := &templates.Env{Facts: map[string]any{}}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("Should return error for invalid template in source", func() {
 			prop := &ScaffoldResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{

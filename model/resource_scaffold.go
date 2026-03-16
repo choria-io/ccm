@@ -36,6 +36,7 @@ type ScaffoldResourceProperties struct {
 	LeftDelimiter            string                 `json:"left_delimiter,omitempty" yaml:"left_delimiter,omitempty"`
 	RightDelimiter           string                 `json:"right_delimiter,omitempty" yaml:"right_delimiter,omitempty"`
 	Engine                   ScaffoldResourceEngine `json:"engine,omitempty" yaml:"engine,omitempty"`
+	Data                     map[string]any         `json:"data,omitempty" yaml:"data,omitempty"`
 	Purge                    bool                   `json:"purge,omitempty" yaml:"purge,omitempty"`
 	Post                     []map[string]string    `json:"post,omitempty" yaml:"post,omitempty"`
 }
@@ -123,6 +124,27 @@ func (p *ScaffoldResourceProperties) ResolveTemplates(env *templates.Env) error 
 		return err
 	}
 	p.Source = val
+
+	if len(p.Data) > 0 {
+		data := make(map[string]any)
+		for k, v := range p.Data {
+			key, err := templates.ResolveTemplateString(k, env)
+			if err != nil {
+				return err
+			}
+
+			val := v
+			if vals, ok := v.(string); ok {
+				val, err = templates.ResolveTemplateString(vals, env)
+				if err != nil {
+					return err
+				}
+			}
+
+			data[key] = val
+		}
+		p.Data = data
+	}
 
 	return nil
 }

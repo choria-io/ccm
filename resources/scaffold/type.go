@@ -99,6 +99,10 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
+	if len(properties.Data) > 0 {
+		env.Data = properties.Data
+	}
+
 	initialStatus, err := p.Status(ctx, env, t.prop)
 	if err != nil {
 		return nil, err

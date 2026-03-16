@@ -16,6 +16,7 @@ import (
 	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
+	"github.com/choria-io/ccm/templates"
 )
 
 func TestScaffoldResource(t *testing.T) {
@@ -489,6 +490,116 @@ var _ = Describe("Scaffold Type", func() {
 					Expect(event.Failed).To(BeTrue())
 					Expect(event.Errors).To(ContainElement(ContainSubstring("remove failed")))
 				})
+			})
+		})
+
+		Describe("Apply with custom Data", func() {
+			BeforeEach(func() {
+				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
+			})
+
+			It("Should override env.Data with properties.Data", func(ctx context.Context) {
+				scaffold.prop.Data = map[string]any{
+					"custom_key": "custom_value",
+				}
+
+				state := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{"file1.txt"},
+						Changed: []string{"file2.txt"},
+						Purged:  []string{},
+					},
+				}
+				finalState := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{"file1.txt", "file2.txt"},
+						Changed: []string{},
+						Purged:  []string{},
+					},
+				}
+
+				provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, env *templates.Env, prop *model.ScaffoldResourceProperties) (*model.ScaffoldState, error) {
+						Expect(env.Data).To(HaveKeyWithValue("custom_key", "custom_value"))
+						Expect(env.Data).ToNot(HaveKey("manager_key"))
+						return state, nil
+					},
+				)
+				provider.EXPECT().Scaffold(gomock.Any(), gomock.Any(), gomock.Any(), false).DoAndReturn(
+					func(ctx context.Context, env *templates.Env, prop *model.ScaffoldResourceProperties, noop bool) (*model.ScaffoldState, error) {
+						Expect(env.Data).To(HaveKeyWithValue("custom_key", "custom_value"))
+						return nil, nil
+					},
+				)
+				provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+				result, err := scaffold.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+			})
+
+			It("Should use manager data when properties.Data is empty", func(ctx context.Context) {
+				data["manager_key"] = "manager_value"
+				mgr, _ = modelmocks.NewManager(facts, data, false, mockctl)
+
+				runner := modelmocks.NewMockCommandRunner(mockctl)
+				mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
+
+				var err error
+				scaffold, err = New(ctx, mgr, model.ScaffoldResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name:     "/opt/app/scaffold",
+						Ensure:   model.EnsurePresent,
+						Provider: "test",
+					},
+					Source: "https://example.com/scaffold.tar.gz",
+					Engine: model.ScaffoldEngineGo,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				state := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{"file1.txt"},
+						Changed: []string{},
+						Purged:  []string{},
+					},
+				}
+
+				provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, env *templates.Env, prop *model.ScaffoldResourceProperties) (*model.ScaffoldState, error) {
+						Expect(env.Data).To(HaveKeyWithValue("manager_key", "manager_value"))
+						return state, nil
+					},
+				)
+
+				result, err := scaffold.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeFalse())
+
+				delete(data, "manager_key")
+			})
+
+			It("Should use manager data when properties.Data is nil", func(ctx context.Context) {
+				scaffold.prop.Data = nil
+
+				state := &model.ScaffoldState{
+					Metadata: &model.ScaffoldMetadata{
+						Stable:  []string{"file1.txt"},
+						Changed: []string{},
+						Purged:  []string{},
+					},
+				}
+
+				provider.EXPECT().Status(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, env *templates.Env, prop *model.ScaffoldResourceProperties) (*model.ScaffoldState, error) {
+						Expect(env.Data).To(Equal(data))
+						return state, nil
+					},
+				)
+
+				result, err := scaffold.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeFalse())
 			})
 		})
 
