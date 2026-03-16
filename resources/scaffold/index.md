@@ -61,6 +61,7 @@ This renders templates from the `templates/app` directory into `/etc/app` using 
 | `left_delimiter`  | Custom left template delimiter                                             |
 | `right_delimiter` | Custom right template delimiter                                            |
 | `purge`           | Remove files in target not present in source                               |
+| `data`            | Custom data map that replaces Hiera data for template rendering            |
 | `post`            | Post-processing commands: glob pattern to command mapping                  |
 | `provider`        | Force a specific provider (`choria` only)                                  |
 
@@ -185,8 +186,55 @@ The `source` property is resolved relative to the manager's working directory wh
 
 Templates receive the full template environment, which provides access to:
 - `facts` - System facts for the managed node
-- `data` - Hiera-resolved configuration data
+- `data` - Hiera-resolved configuration data, or custom data when the `data` property is set
 - Template helper functions
+
+## Custom Data
+
+The `data` property allows supplying a custom data map that completely replaces the Hiera-resolved data for template rendering. This is useful when a scaffold needs data that differs from or is unrelated to the global Hiera data.
+
+When `data` is set, templates see only the custom data through `data` — the Hiera data is not merged, it is replaced entirely. Facts remain available regardless.
+
+String values in the `data` map support template expressions that are resolved before rendering:
+
+{{< tabs >}}
+{{% tab title="Manifest" %}}
+```yaml
+- scaffold:
+    - /etc/app:
+        ensure: present
+        source: templates/app
+        engine: jet
+        data:
+          app_name: myapp
+          version: "{{ Facts.version }}"
+          port: 8080
+          debug: false
+```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "scaffold",
+  "properties": {
+    "name": "/etc/app",
+    "ensure": "present",
+    "source": "templates/app",
+    "engine": "jet",
+    "data": {
+      "app_name": "myapp",
+      "version": "v1.0.0",
+      "port": 8080,
+      "debug": false
+    }
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
+
+Non-string values (integers, booleans, lists, maps) are preserved as-is without template resolution.
 
 ## Creating Scaffolds
 
