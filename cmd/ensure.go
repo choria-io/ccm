@@ -14,11 +14,12 @@ import (
 )
 
 type ensureCommand struct {
-	session      string
-	sessionIsSet bool
-	hieraFile    string
-	readEnv      bool
-	natsContext  string
+	session            string
+	sessionIsSet       bool
+	hieraFile          string
+	readEnv            bool
+	natsContext        string
+	registrationStream string
 
 	healthCheckCommand string
 	healthCheckTries   int
@@ -75,7 +76,7 @@ func (cmd *ensureCommand) manager() (model.Manager, error) {
 		return nil, fmt.Errorf("session store should be set when using requires")
 	}
 
-	mgr, out, err := newManager(cmd.session, cmd.hieraFile, cmd.natsContext, cmd.readEnv, cmd.noop, nil)
+	mgr, out, err := newManager(cmd.session, cmd.hieraFile, cmd.natsContext, cmd.readEnv, cmd.noop, cmd.registrationStream, nil)
 	if err != nil {
 		return nil, err
 	}

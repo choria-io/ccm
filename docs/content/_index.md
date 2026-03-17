@@ -108,11 +108,3 @@ overrides:
 ```
 
 Here we define the inputs in `data` and the Hiera hierarchy along with OS-specific overrides. The data is referenced in the manifest using the `{{ Data.package_name }}` syntax.
-
-## Status
-
-This is a new project seeking contributors and early adopters. 
-
-Currently, only `archive`, `exec`, `file`, `service`, `scaffold` and `package` resources are implemented, with support limited to `dnf`, `apt` and `systemd`.
-
-The CLI and shell interaction have reached a mature state. Next, we're exploring network-related features and deeper monitoring integration.

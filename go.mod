@@ -3,7 +3,7 @@ module github.com/choria-io/ccm
 go 1.25.0
 
 require (
-	github.com/CloudyKit/jet/v6 v6.3.2-0.20260120165216-7cc3d1922b08
+	github.com/CloudyKit/jet/v6 v6.3.2
 	github.com/SladkyCitron/slogcolor v1.8.0
 	github.com/adrg/xdg v0.5.3
 	github.com/choria-io/appbuilder v0.14.1-0.20260223180406-bcf9a03a7272
@@ -21,6 +21,7 @@ require (
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shirou/gopsutil/v4 v4.26.2
 	github.com/sirupsen/logrus v1.9.4
+	github.com/synadia-io/orbit.go/jetstreamext v0.2.0
 	github.com/synadia-io/orbit.go/natscontext v0.1.1
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/mock v0.6.0
@@ -82,6 +83,7 @@ require (
 	github.com/samber/lo v1.53.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
+	github.com/synadia-io/orbit.go/natsext v0.1.1 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect

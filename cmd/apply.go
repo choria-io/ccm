@@ -17,16 +17,17 @@ import (
 )
 
 type applyCommand struct {
-	manifest    string
-	renderOnly  bool
-	report      bool
-	hieraFile   string
-	readEnv     bool
-	noop        bool
-	monitorOnly bool
-	natsContext string
-	facts       map[string]string
-	factsFile   string
+	manifest           string
+	renderOnly         bool
+	report             bool
+	hieraFile          string
+	readEnv            bool
+	noop               bool
+	monitorOnly        bool
+	natsContext        string
+	registrationStream string
+	facts              map[string]string
+	factsFile          string
 }
 
 func registerApplyCommand(ccm *fisk.Application) {
@@ -54,6 +55,7 @@ server urls and authentication parameters.
 	applyCmd.Flag("render", "Do not apply, only render the resolved manifest").UnNegatableBoolVar(&cmd.renderOnly)
 	applyCmd.Flag("report", "Generate a report").Default("true").BoolVar(&cmd.report)
 	applyCmd.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
+	applyCmd.Flag("registration", "The NATS Stream holding registration data").Default("REGISTRATION").Short('R').StringVar(&cmd.registrationStream)
 }
 
 func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
@@ -78,7 +80,7 @@ func (c *applyCommand) applyAction(_ *fisk.ParseContext) error {
 		finalFacts = iu.DeepMergeMap(finalFacts, facts)
 	}
 
-	mgr, userLogger, err := newManager("", "", c.natsContext, c.readEnv, c.noop, finalFacts)
+	mgr, userLogger, err := newManager("", "", c.natsContext, c.readEnv, c.noop, c.registrationStream, finalFacts)
 	if err != nil {
 		return err
 	}

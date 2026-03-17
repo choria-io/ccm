@@ -20,6 +20,22 @@ func WithNatsContext(nctx string) Option {
 	}
 }
 
+// WithRegistrationDestination sets the registration destination to use
+func WithRegistrationDestination(destination model.RegistrationDestination) Option {
+	return func(c *CCM) error {
+		c.regPublisherDest = destination
+		return nil
+	}
+}
+
+// WithRegistrationStream sets the registration stream to use
+func WithRegistrationStream(stream string) Option {
+	return func(c *CCM) error {
+		c.regPublisherStream = stream
+		return nil
+	}
+}
+
 // WithSessionDirectory sets the session store to use
 func WithSessionDirectory(path string) Option {
 	return func(c *CCM) error {

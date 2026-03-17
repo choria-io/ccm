@@ -5,7 +5,9 @@
 package templates
 
 import (
+	"bytes"
 	"testing"
+	"text/template"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -420,6 +422,65 @@ var _ = Describe("Templates", func() {
 			_, err := ResolveTemplateString("{{ template(123) }}", env)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("template requires a string argument"))
+		})
+	})
+
+	Describe("registrations function", func() {
+		type regEntry struct {
+			Cluster  string `json:"cluster"`
+			Protocol string `json:"protocol"`
+			Service  string `json:"service"`
+			IP       string `json:"ip"`
+			Port     int    `json:"port"`
+		}
+
+		BeforeEach(func() {
+			env.RegistrationsFunc = func(cluster, protocol, service, ip string) (any, error) {
+				return []*regEntry{
+					{Cluster: cluster, Protocol: protocol, Service: service, IP: "10.0.0.1", Port: 8080},
+					{Cluster: cluster, Protocol: protocol, Service: service, IP: "10.0.0.2", Port: 9090},
+				}, nil
+			}
+		})
+
+		It("Should call registrations from expr templates", func() {
+			result, err := ExprParse("registrations('prod', 'tcp', 'web', '*')", env)
+			Expect(err).ToNot(HaveOccurred())
+			entries, ok := result.([]*regEntry)
+			Expect(ok).To(BeTrue())
+			Expect(entries).To(HaveLen(2))
+			Expect(entries[0].IP).To(Equal("10.0.0.1"))
+			Expect(entries[1].IP).To(Equal("10.0.0.2"))
+		})
+
+		It("Should call registrations from jet templates", func() {
+			result, err := ResolveTemplateString("{{ jet('[[ range _, entry := registrations(\"prod\", \"tcp\", \"web\", \"*\") ]][[ entry.IP ]] [[ end ]]') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("10.0.0.1 10.0.0.2 "))
+		})
+
+		It("Should call registrations from go templates", func() {
+			goTpl := `{{ range registrations "prod" "tcp" "web" "*" }}{{ .IP }} {{ end }}`
+			tmpl, err := template.New("test").Funcs(env.GoFunctions()).Parse(goTpl)
+			Expect(err).ToNot(HaveOccurred())
+
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(buf.String()).To(Equal("10.0.0.1 10.0.0.2 "))
+		})
+
+		It("Should error when RegistrationsFunc is nil", func() {
+			env.RegistrationsFunc = nil
+			_, err := ExprParse("registrations('prod', 'tcp', 'web', '*')", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("registrations function not available"))
+		})
+
+		It("Should error with wrong number of arguments", func() {
+			_, err := ExprParse("registrations('prod', 'tcp')", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("registrations requires 4 string arguments"))
 		})
 	})
 

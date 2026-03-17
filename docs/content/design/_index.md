@@ -3,7 +3,7 @@ title = "Design Documents"
 description = "LLM generated design documents for resources"
 toc = true
 weight = 80
-pre = "<b>8. </b>"
+pre = "<b>9. </b>"
 +++
 
 Design documents provide detailed implementation guidance for CCM's resource types, providers, and internal components. They are intended for developers contributing to CCM or those seeking to understand specific implementation details.

@@ -29,6 +29,8 @@ type Env struct {
 	Environ    map[string]string `json:"environ" yaml:"environ"`
 	WorkingDir string            `json:"-" yaml:"-"`
 
+	RegistrationsFunc func(cluster, protocol, service, ip string) (any, error) `json:"-" yaml:"-"`
+
 	envJSON json.RawMessage
 	mu      sync.Mutex
 }
@@ -46,13 +48,15 @@ func (e *Env) JetVariables() jet.VarMap {
 
 func (e *Env) JetFunctions() map[string]jet.Func {
 	return map[string]jet.Func{
-		"lookup": e.jetLookup(),
+		"lookup":        e.jetLookup(),
+		"registrations": e.jetRegistrations(),
 	}
 }
 
 func (e *Env) GoFunctions() template.FuncMap {
 	return map[string]interface{}{
-		"lookup": e.lookup,
+		"lookup":        e.lookup,
+		"registrations": e.registrations,
 	}
 }
 
@@ -163,17 +167,8 @@ func (e *Env) jet(params ...any) (any, error) {
 		set.AddGlobalFunc(k, v)
 	}
 
-	variables := jet.VarMap{
-		"facts":   reflect.ValueOf(e.Facts),
-		"Facts":   reflect.ValueOf(e.Facts),
-		"data":    reflect.ValueOf(e.Data),
-		"Data":    reflect.ValueOf(e.Data),
-		"environ": reflect.ValueOf(e.Environ),
-		"Environ": reflect.ValueOf(e.Environ),
-	}
-
 	buff := bytes.NewBuffer([]byte{})
-	err = tpl.Execute(buff, variables, e)
+	err = tpl.Execute(buff, e.JetVariables(), e)
 	if err != nil {
 		return nil, err
 	}
@@ -209,12 +204,51 @@ func (e *Env) jetLookup() jet.Func {
 	}
 }
 
+func (e *Env) registrations(params ...any) (any, error) {
+	if len(params) != 4 {
+		return nil, fmt.Errorf("registrations requires 4 string arguments: cluster, protocol, service, ip")
+	}
+
+	args := make([]string, 4)
+	for i, p := range params {
+		s, ok := p.(string)
+		if !ok {
+			return nil, fmt.Errorf("registrations argument %d must be a string", i+1)
+		}
+		args[i] = s
+	}
+
+	if e.RegistrationsFunc == nil {
+		return nil, fmt.Errorf("registrations function not available")
+	}
+
+	return e.RegistrationsFunc(args[0], args[1], args[2], args[3])
+}
+
+func (e *Env) jetRegistrations() jet.Func {
+	return func(a jet.Arguments) reflect.Value {
+		a.RequireNumOfArguments("registrations", 4, 4)
+
+		var cluster, protocol, service, ip string
+		if err := a.ParseInto(&cluster, &protocol, &service, &ip); err != nil {
+			a.Panicf("registrations: arguments must be strings: %v", err)
+		}
+
+		val, err := e.registrations(cluster, protocol, service, ip)
+		if err != nil {
+			a.Panicf("registrations: %v", err)
+		}
+
+		return reflect.ValueOf(val)
+	}
+}
+
 func (e *Env) lookup(params ...any) (any, error) {
 	var key string
 	var defaultValue any
 	var ok bool
 
-	if len(params) == 0 && len(params) > 2 {
+	if len(params) == 0 || len(params) > 2 {
 		return nil, fmt.Errorf("lookup requires 1 or 2 arguments")
 	}
 
@@ -363,6 +397,7 @@ func ExprParse(query string, env *Env, opts ...expr.Option) (any, error) {
 		expr.Function("file", env.readFile),
 		expr.Function("template", env.template),
 		expr.Function("jet", env.jet),
+		expr.Function("registrations", env.registrations),
 	}
 	o = append(o, opts...)
 

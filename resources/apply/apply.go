@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -585,6 +586,11 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 				log.Error("Could not save event", "event", event.String())
 			}
 
+			err = publishRegistration(ctx, mgr, prop, event, log)
+			if err != nil {
+				return nil, err
+			}
+
 			if !healthCheckOnly && a.FailOnError() && event.Failed {
 				userLog.Warn("Terminating manifest execution due to failed resource")
 				terminate = true
@@ -597,4 +603,49 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 	}
 
 	return session, nil
+}
+
+func publishRegistration(ctx context.Context, mgr model.Manager, prop model.ResourceProperties, event *model.TransactionEvent, log model.Logger) error {
+	common := prop.CommonProperties()
+	regs := common.RegisterWhenStable
+	if len(regs) == 0 {
+		return nil
+	}
+	if mgr.NoopMode() {
+		log.Debug("Skipping registration in noop mode", "resource", common.Name)
+		return nil
+	}
+	if event.Failed {
+		log.Debug("Skipping registration due to failed event", "resource", common.Name)
+		return nil
+	}
+	if !allHealthChecksPassed(event) {
+		log.Debug("Skipping registration due to failed health checks", "resource", common.Name)
+		return nil
+	}
+
+	for _, reg := range regs {
+		log.Debug("Publishing registration", "resource", common.Name, "service", reg.Service)
+		err := mgr.PublishRegistration(ctx, reg)
+		if err != nil && !errors.Is(err, model.ErrNoRegistrationPublisher) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// allHealthChecksPassed returns true when the event has no health checks or and all checks have OK status
+func allHealthChecksPassed(event *model.TransactionEvent) bool {
+	if len(event.HealthChecks) == 0 {
+		return true
+	}
+
+	for _, hc := range event.HealthChecks {
+		if hc.Status != model.HealthCheckOK {
+			return false
+		}
+	}
+
+	return true
 }
