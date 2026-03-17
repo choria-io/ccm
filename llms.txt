@@ -11,6 +11,7 @@
 - [Shell Usage](https://choria-cm.dev/cli/index.md): How to use the ccm CLI tooling
 - [YAML Manifests](https://choria-cm.dev/yamlmanifests/index.md): Writing, Hosting and Executing YAML Manifests
 - [Agent](https://choria-cm.dev/agent/index.md): Introduces a method for automatically running manifests on a schedule
+- [Registration](https://choria-cm.dev/registration/index.md): service discovery through NATS-based registration of stable resources
 - [Monitoring](https://choria-cm.dev/monitoring/index.md): Integrating deep health knowledge into resources
 - [Design Documents](https://choria-cm.dev/design/index.md): LLM generated design documents for resources
 
