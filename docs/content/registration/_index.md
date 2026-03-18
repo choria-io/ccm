@@ -50,16 +50,16 @@ This manifest ensures Nginx is running, verifies it responds to health checks, a
 
 ### Entry Properties
 
-| Property                | Description                                                             |
-|-------------------------|-------------------------------------------------------------------------|
-| `cluster` (required)    | Logical cluster name, must match `[a-zA-Z][a-zA-Z\d_-]*`               |
-| `service` (required)    | Service name, must match `[a-zA-Z][a-zA-Z\d_-]*`                       |
-| `protocol` (required)   | Protocol identifier, must match `[a-zA-Z][a-zA-Z\d_-]*`                |
-| `address` (required)    | IP address or hostname of the service endpoint                          |
-| `port` (integer)        | Port number, between 1 and 65535                                        |
-| `priority` (required)   | Priority value between 1 and 255, lower values indicate higher priority |
-| `ttl` (duration)        | Time-to-live duration (e.g., `10m`, `1h`), sets the `Nats-TTL` header   |
-| `annotations` (map)     | Arbitrary key-value metadata published with the entry                   |
+| Property              | Template Key  | Description                                                             |
+|-----------------------|---------------|-------------------------------------------------------------------------|
+| `cluster` (required)  | `Cluster`     | Logical cluster name, must match `[a-zA-Z][a-zA-Z\d_-]*`                |
+| `service` (required)  | `Service`     | Service name, must match `[a-zA-Z][a-zA-Z\d_-]*`                        |
+| `protocol` (required) | `Protocol`    | Protocol identifier, must match `[a-zA-Z][a-zA-Z\d_-]*`                 |
+| `address` (required)  | `Address`     | IP address or hostname of the service endpoint                          |
+| `port` (integer)      | `Port`        | Port number, between 1 and 65535                                        |
+| `priority` (required) | `Priority`    | Priority value between 1 and 255, lower values indicate higher priority |
+| `ttl` (duration)      | `TTL`         | Time-to-live duration (e.g., `10m`, `1h`), sets the `Nats-TTL` header   |
+| `annotations` (map)   | `Annotations` | Arbitrary key-value metadata published with the entry                   |
 
 The `cluster`, `address`, `port`, and `annotations` fields support template expressions for dynamic values resolved at apply time.
 
@@ -117,7 +117,7 @@ Valid values for `registration` are `nats` (core NATS, fire-and-forget) and `jet
 
 Other resources can query the registration registry using the `registrations()` function in templates. This enables dynamic configuration based on what services are currently registered.
 
-The function takes four string arguments and returns an array of matching registration entries:
+The function takes four string arguments and returns an array of matching registration entries. Each entry exposes the struct fields listed in the Template Key column of the [Entry Properties](#entry-properties) table (e.g., `Address`, `Port`, `Priority`).
 
 ```nohighlight
 registrations(cluster, protocol, service, address)
