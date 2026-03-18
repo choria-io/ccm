@@ -40,7 +40,7 @@ var _ = Describe("Registration/JetStreamPublisher", func() {
 			Cluster:  "prod",
 			Service:  "web",
 			Protocol: "tcp",
-			IP:       "10.0.0.1",
+			Address:  "10.0.0.1",
 			Port:     int64(8080),
 			Priority: 1,
 		}

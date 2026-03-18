@@ -43,17 +43,17 @@ type RegistrationEntry struct {
 	Cluster     string            `json:"cluster" yaml:"cluster"`
 	Service     string            `json:"service" yaml:"service"`
 	Protocol    string            `json:"protocol" yaml:"protocol"`
-	IP          string            `json:"address" yaml:"address"`
+	Address     string            `json:"address" yaml:"address"`
 	Port        any               `json:"port" yaml:"port"`
 	Priority    int64             `json:"priority" yaml:"priority"`
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	TTL         time.Duration     `json:"ttl,omitempty" yaml:"ttl,omitempty"`
 }
 
-// SubjectAddress returns the IP address with dots replaced by underscores,
+// SubjectAddress returns the Address address with dots replaced by underscores,
 // making it safe to use as a single NATS subject token
 func (e *RegistrationEntry) SubjectAddress() string {
-	return strings.ReplaceAll(e.IP, ".", "_")
+	return strings.ReplaceAll(e.Address, ".", "_")
 }
 
 func (e *RegistrationEntry) InstanceId() string {
@@ -61,18 +61,18 @@ func (e *RegistrationEntry) InstanceId() string {
 	h.Write([]byte(e.Cluster))
 	h.Write([]byte(e.Service))
 	h.Write([]byte(e.Protocol))
-	h.Write([]byte(e.IP))
+	h.Write([]byte(e.Address))
 	h.Write([]byte(fmt.Sprintf("%d", e.Port)))
 
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func NewRegistrationEntry(cluster string, service string, protocol string, ip string, port int64, priority int, ttl time.Duration) (*RegistrationEntry, error) {
+func NewRegistrationEntry(cluster string, service string, protocol string, address string, port int64, priority int, ttl time.Duration) (*RegistrationEntry, error) {
 	return &RegistrationEntry{
 		Cluster:  cluster,
 		Service:  service,
 		Protocol: protocol,
-		IP:       ip,
+		Address:  address,
 		Port:     port,
 		Priority: int64(priority),
 		TTL:      ttl,
@@ -82,7 +82,7 @@ func NewRegistrationEntry(cluster string, service string, protocol string, ip st
 func (e *RegistrationEntry) ResolveTemplates(env *templates.Env) error {
 	var err error
 
-	e.IP, err = templates.ResolveTemplateString(e.IP, env)
+	e.Address, err = templates.ResolveTemplateString(e.Address, env)
 	if err != nil {
 		return err
 	}
@@ -142,13 +142,13 @@ func (e *RegistrationEntry) Validate() error {
 		return fmt.Errorf("%w: service %q is not a valid name", ErrRegistrationInvalid, e.Service)
 	}
 
-	if e.IP == "" {
+	if e.Address == "" {
 		return fmt.Errorf("%w: address is required", ErrRegistrationInvalid)
 	}
 
-	ip := net.ParseIP(e.IP)
+	ip := net.ParseIP(e.Address)
 	if ip == nil {
-		return fmt.Errorf("%w: address %q is not a valid IP address", ErrRegistrationInvalid, e.IP)
+		return fmt.Errorf("%w: address %q is not a valid Address address", ErrRegistrationInvalid, e.Address)
 	}
 
 	switch port := e.Port.(type) {

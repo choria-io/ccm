@@ -97,7 +97,7 @@ func (c *registrationQueryCommand) queryAction(_ *fisk.ParseContext) error {
 		fmt.Printf("       Cluster: %s\n", r.Cluster)
 		fmt.Printf("      Protocol: %s\n", r.Protocol)
 		fmt.Printf("       Service: %s\n", r.Service)
-		fmt.Printf("            IP: %s\n", r.IP)
+		fmt.Printf("       Address: %s\n", r.Address)
 		fmt.Printf("          Port: %v\n", r.Port)
 		fmt.Printf("      Priority: %d\n", r.Priority)
 		if len(r.Annotations) > 0 {

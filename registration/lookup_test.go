@@ -108,7 +108,7 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 				Cluster:  "prod",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     int64(8080),
 				Priority: 1,
 			}
@@ -124,11 +124,11 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 			entries, err := JetStreamLookup(ctx, mgr, "prod", "tcp", "web", "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
-			Expect(entries[0].IP).To(Equal("10.0.0.1"))
+			Expect(entries[0].Address).To(Equal("10.0.0.1"))
 			Expect(entries[0].Port).To(Equal(float64(8080)))
 		})
 
-		It("should sort entries by IP then port", func() {
+		It("should sort entries by Address then port", func() {
 			mgr.EXPECT().JetStream().Return(mockJS, nil)
 
 			mkEntry := func(ip string, port int64) []byte {
@@ -136,7 +136,7 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 					Cluster:  "prod",
 					Service:  "web",
 					Protocol: "tcp",
-					IP:       ip,
+					Address:  ip,
 					Port:     port,
 					Priority: 1,
 				}
@@ -162,11 +162,11 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 			entries, err := JetStreamLookup(ctx, mgr, "*", "*", "*", "*")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(entries).To(HaveLen(3))
-			Expect(entries[0].IP).To(Equal("10.0.0.1"))
+			Expect(entries[0].Address).To(Equal("10.0.0.1"))
 			Expect(entries[0].Port).To(Equal(float64(80)))
-			Expect(entries[1].IP).To(Equal("10.0.0.1"))
+			Expect(entries[1].Address).To(Equal("10.0.0.1"))
 			Expect(entries[1].Port).To(Equal(float64(443)))
-			Expect(entries[2].IP).To(Equal("10.0.0.2"))
+			Expect(entries[2].Address).To(Equal("10.0.0.2"))
 			Expect(entries[2].Port).To(Equal(float64(80)))
 		})
 
@@ -242,7 +242,7 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 				Cluster:  "prod",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     int64(8080),
 				Priority: 1,
 			}
@@ -264,7 +264,7 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 			entries, err := JetStreamLookup(ctx, mgr, "prod", "tcp", "web", "*")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(entries).To(HaveLen(1))
-			Expect(entries[0].IP).To(Equal("10.0.0.1"))
+			Expect(entries[0].Address).To(Equal("10.0.0.1"))
 		})
 
 		It("should return empty list when all messages are markers", func() {

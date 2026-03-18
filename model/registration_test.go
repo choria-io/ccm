@@ -16,17 +16,17 @@ import (
 var _ = Describe("RegistrationEntry", func() {
 	Describe("SubjectAddress", func() {
 		It("should replace dots with underscores for IPv4", func() {
-			entry := &RegistrationEntry{IP: "10.0.0.1"}
+			entry := &RegistrationEntry{Address: "10.0.0.1"}
 			Expect(entry.SubjectAddress()).To(Equal("10_0_0_1"))
 		})
 
 		It("should return IPv6 addresses unchanged", func() {
-			entry := &RegistrationEntry{IP: "::1"}
+			entry := &RegistrationEntry{Address: "::1"}
 			Expect(entry.SubjectAddress()).To(Equal("::1"))
 		})
 
 		It("should handle full IPv6 addresses", func() {
-			entry := &RegistrationEntry{IP: "2001:db8::1"}
+			entry := &RegistrationEntry{Address: "2001:db8::1"}
 			Expect(entry.SubjectAddress()).To(Equal("2001:db8::1"))
 		})
 	})
@@ -38,7 +38,7 @@ var _ = Describe("RegistrationEntry", func() {
 			Expect(entry.Cluster).To(Equal("production"))
 			Expect(entry.Service).To(Equal("web"))
 			Expect(entry.Protocol).To(Equal("tcp"))
-			Expect(entry.IP).To(Equal("192.168.1.1"))
+			Expect(entry.Address).To(Equal("192.168.1.1"))
 			Expect(entry.Port).To(Equal(int64(8080)))
 			Expect(entry.Priority).To(Equal(int64(1)))
 			Expect(entry.TTL).To(Equal(30 * time.Second))
@@ -66,19 +66,19 @@ var _ = Describe("RegistrationEntry", func() {
 			}
 		})
 
-		It("should resolve IP templates", func() {
+		It("should resolve Address templates", func() {
 			entry := &RegistrationEntry{
 				Cluster:  "production",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "{{ Facts.ip }}",
+				Address:  "{{ Facts.ip }}",
 				Port:     int64(8080),
 				Priority: 1,
 			}
 
 			err := entry.ResolveTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(entry.IP).To(Equal("10.0.0.1"))
+			Expect(entry.Address).To(Equal("10.0.0.1"))
 		})
 
 		It("should resolve cluster templates", func() {
@@ -86,7 +86,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "{{ Facts.cluster }}",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     int64(8080),
 				Priority: 1,
 			}
@@ -101,7 +101,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "production",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     int64(8080),
 				Priority: 1,
 				Annotations: map[string]string{
@@ -119,7 +119,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "production",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     "{{ Facts.port }}",
 				Priority: 1,
 			}
@@ -134,7 +134,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "production",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     int64(8080),
 				Priority: 1,
 			}
@@ -149,7 +149,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "production",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     nil,
 				Priority: 1,
 			}
@@ -164,7 +164,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "production",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     "{{ Facts.hostname }}",
 				Priority: 1,
 			}
@@ -179,7 +179,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "production",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     float64(8080),
 				Priority: 1,
 			}
@@ -194,7 +194,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "{{ Facts.cluster }}",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "{{ Facts.ip }}",
+				Address:  "{{ Facts.ip }}",
 				Port:     "{{ Facts.port }}",
 				Priority: 1,
 				Annotations: map[string]string{
@@ -205,7 +205,7 @@ var _ = Describe("RegistrationEntry", func() {
 			err := entry.ResolveTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(entry.Cluster).To(Equal("production"))
-			Expect(entry.IP).To(Equal("10.0.0.1"))
+			Expect(entry.Address).To(Equal("10.0.0.1"))
 			Expect(entry.Port).To(Equal(int64(9090)))
 			Expect(entry.Annotations["host"]).To(Equal("web01"))
 		})
@@ -219,7 +219,7 @@ var _ = Describe("RegistrationEntry", func() {
 				Cluster:  "production",
 				Protocol: "tcp",
 				Service:  "web",
-				IP:       "192.168.1.1",
+				Address:  "192.168.1.1",
 				Port:     int64(8080),
 				Priority: 1,
 			}
@@ -241,7 +241,7 @@ var _ = Describe("RegistrationEntry", func() {
 			Entry("empty cluster", func(e *RegistrationEntry) { e.Cluster = "" }, "cluster is required"),
 			Entry("empty protocol", func(e *RegistrationEntry) { e.Protocol = "" }, "protocol is required"),
 			Entry("empty service", func(e *RegistrationEntry) { e.Service = "" }, "service is required"),
-			Entry("empty address", func(e *RegistrationEntry) { e.IP = "" }, "address is required"),
+			Entry("empty address", func(e *RegistrationEntry) { e.Address = "" }, "address is required"),
 			Entry("zero port", func(e *RegistrationEntry) { e.Port = int64(0) }, "port"),
 			Entry("zero priority", func(e *RegistrationEntry) { e.Priority = 0 }, "priority"),
 		)
@@ -270,9 +270,9 @@ var _ = Describe("RegistrationEntry", func() {
 			Entry("contains special chars", "my@service", "not a valid name"),
 		)
 
-		DescribeTable("IP address validation",
+		DescribeTable("Address address validation",
 			func(ip, errorText string) {
-				valid.IP = ip
+				valid.Address = ip
 				err := valid.Validate()
 
 				if errorText != "" {
@@ -288,9 +288,9 @@ var _ = Describe("RegistrationEntry", func() {
 			Entry("valid IPv4 all zeros", "0.0.0.0", ""),
 			Entry("valid IPv6", "::1", ""),
 			Entry("valid IPv6 full", "2001:db8::1", ""),
-			Entry("invalid IP", "not-an-ip", "not a valid IP address"),
-			Entry("invalid IP with port", "192.168.1.1:8080", "not a valid IP address"),
-			Entry("hostname", "example.com", "not a valid IP address"),
+			Entry("invalid Address", "not-an-ip", "not a valid Address address"),
+			Entry("invalid Address with port", "192.168.1.1:8080", "not a valid Address address"),
+			Entry("hostname", "example.com", "not a valid Address address"),
 		)
 
 		DescribeTable("port validation",

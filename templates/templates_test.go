@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -430,15 +430,15 @@ var _ = Describe("Templates", func() {
 			Cluster  string `json:"cluster"`
 			Protocol string `json:"protocol"`
 			Service  string `json:"service"`
-			IP       string `json:"ip"`
+			Address  string `json:"address"`
 			Port     int    `json:"port"`
 		}
 
 		BeforeEach(func() {
 			env.RegistrationsFunc = func(cluster, protocol, service, ip string) (any, error) {
 				return []*regEntry{
-					{Cluster: cluster, Protocol: protocol, Service: service, IP: "10.0.0.1", Port: 8080},
-					{Cluster: cluster, Protocol: protocol, Service: service, IP: "10.0.0.2", Port: 9090},
+					{Cluster: cluster, Protocol: protocol, Service: service, Address: "10.0.0.1", Port: 8080},
+					{Cluster: cluster, Protocol: protocol, Service: service, Address: "10.0.0.2", Port: 9090},
 				}, nil
 			}
 		})
@@ -449,18 +449,18 @@ var _ = Describe("Templates", func() {
 			entries, ok := result.([]*regEntry)
 			Expect(ok).To(BeTrue())
 			Expect(entries).To(HaveLen(2))
-			Expect(entries[0].IP).To(Equal("10.0.0.1"))
-			Expect(entries[1].IP).To(Equal("10.0.0.2"))
+			Expect(entries[0].Address).To(Equal("10.0.0.1"))
+			Expect(entries[1].Address).To(Equal("10.0.0.2"))
 		})
 
 		It("Should call registrations from jet templates", func() {
-			result, err := ResolveTemplateString("{{ jet('[[ range _, entry := registrations(\"prod\", \"tcp\", \"web\", \"*\") ]][[ entry.IP ]] [[ end ]]') }}", env)
+			result, err := ResolveTemplateString("{{ jet('[[ range _, entry := registrations(\"prod\", \"tcp\", \"web\", \"*\") ]][[ entry.Address ]] [[ end ]]') }}", env)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal("10.0.0.1 10.0.0.2 "))
 		})
 
 		It("Should call registrations from go templates", func() {
-			goTpl := `{{ range registrations "prod" "tcp" "web" "*" }}{{ .IP }} {{ end }}`
+			goTpl := `{{ range registrations "prod" "tcp" "web" "*" }}{{ .Address }} {{ end }}`
 			tmpl, err := template.New("test").Funcs(env.GoFunctions()).Parse(goTpl)
 			Expect(err).ToNot(HaveOccurred())
 

@@ -26,7 +26,7 @@ var getLastMsgsFor = func(ctx context.Context, js jetstream.JetStream, stream st
 
 // JetStreamLookup queries registration entries from a JetStream stream.
 // Any of cluster, protocol, service, ip can be "*" or "" to wildcard that position.
-// Returns entries sorted by IP (string compare), then by port (numeric).
+// Returns entries sorted by Address (string compare), then by port (numeric).
 func JetStreamLookup(ctx context.Context, mgr model.Manager, cluster, protocol, service, ip string) ([]*model.RegistrationEntry, error) {
 	js, err := mgr.JetStream()
 	if err != nil {
@@ -67,8 +67,8 @@ func JetStreamLookup(ctx context.Context, mgr model.Manager, cluster, protocol, 
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
-		if entries[i].IP != entries[j].IP {
-			return entries[i].IP < entries[j].IP
+		if entries[i].Address != entries[j].Address {
+			return entries[i].Address < entries[j].Address
 		}
 		return portInt(entries[i].Port) < portInt(entries[j].Port)
 	})

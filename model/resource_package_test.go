@@ -1,4 +1,4 @@
-// Copyright (c) 2025, R.I. Pienaar and the Choria Project contributors
+// Copyright (c) 2025-2026, R.I. Pienaar and the Choria Project contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -223,7 +223,7 @@ var _ = Describe("CommonResourceProperties", func() {
 							Cluster:  "production",
 							Protocol: "tcp",
 							Service:  "web",
-							IP:       "192.168.1.1",
+							Address:  "192.168.1.1",
 							Port:     int64(8080),
 							Priority: 1,
 						},
@@ -243,7 +243,7 @@ var _ = Describe("CommonResourceProperties", func() {
 							Cluster:  "production",
 							Protocol: "",
 							Service:  "web",
-							IP:       "192.168.1.1",
+							Address:  "192.168.1.1",
 							Port:     8080,
 							Priority: 1,
 						},
@@ -265,7 +265,7 @@ var _ = Describe("CommonResourceProperties", func() {
 							Cluster:  "",
 							Protocol: "tcp",
 							Service:  "web",
-							IP:       "192.168.1.1",
+							Address:  "192.168.1.1",
 							Port:     int64(8080),
 							Priority: 1,
 						},

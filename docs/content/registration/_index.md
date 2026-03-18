@@ -55,7 +55,7 @@ This manifest ensures Nginx is running, verifies it responds to health checks, a
 | `cluster` (required)    | Logical cluster name, must match `[a-zA-Z][a-zA-Z\d_-]*`               |
 | `service` (required)    | Service name, must match `[a-zA-Z][a-zA-Z\d_-]*`                       |
 | `protocol` (required)   | Protocol identifier, must match `[a-zA-Z][a-zA-Z\d_-]*`                |
-| `address` (required)    | IPv4 or IPv6 address of the service endpoint                            |
+| `address` (required)    | IP address or hostname of the service endpoint                          |
 | `port` (integer)        | Port number, between 1 and 65535                                        |
 | `priority` (required)   | Priority value between 1 and 255, lower values indicate higher priority |
 | `ttl` (duration)        | Time-to-live duration (e.g., `10m`, `1h`), sets the `Nats-TTL` header   |
@@ -120,7 +120,7 @@ Other resources can query the registration registry using the `registrations()` 
 The function takes four string arguments and returns an array of matching registration entries:
 
 ```nohighlight
-registrations(cluster, protocol, service, ip)
+registrations(cluster, protocol, service, address)
 ```
 
 Any argument can be `"*"` to wildcard that position.
@@ -182,7 +182,7 @@ Jet templates iterate over the returned entries:
 
 ```
 [[ range _, entry := registrations("production", "http", "web", "*") ]]
-  server [[ entry.IP ]]:[[ entry.Port ]] weight [[ 256 - entry.Priority ]]
+  server [[ entry.Address ]]:[[ entry.Port ]] weight [[ 256 - entry.Priority ]]
 [[ end ]]
 ```
 
@@ -192,7 +192,7 @@ Go templates use space-separated arguments:
 
 ```
 {{ range $entry := registrations "production" "http" "web" "*" }}
-  server {{ $entry.IP }}:{{ $entry.Port }}
+  server {{ $entry.Address }}:{{ $entry.Port }}
 {{ end }}
 ```
 
@@ -210,7 +210,7 @@ Lookup a specific service across all clusters:
 registrations("*", "http", "web", "*")
 ```
 
-Results are sorted by IP address, then by port number.
+Results are sorted by address, then by port number.
 
 ## Full Example
 
@@ -266,7 +266,7 @@ With a `backends.cfg.jet` template:
 backend web_servers
   balance roundrobin
 [[ range _, entry := registrations("production", "http", "web", "*") ]]
-  server [[ entry.IP ]] [[ entry.IP ]]:[[ entry.Port ]] check weight [[ 256 - entry.Priority ]]
+  server [[ entry.Address ]] [[ entry.Address ]]:[[ entry.Port ]] check weight [[ 256 - entry.Priority ]]
 [[ end ]]
 ```
 
@@ -276,7 +276,7 @@ Each time the agent runs on the load balancer, it queries the registry for all `
 
 The `ccm registration` command (aliases: `reg`, `r`) provides tools for inspecting and monitoring registration data from the command line.
 
-Both subcommands accept the same positional arguments for filtering: `cluster`, `protocol`, `service`, and `ip`. All default to `*` (wildcard). The `--context` flag (env: `NATS_CONTEXT`) controls NATS authentication and defaults to `CCM`. The `--registration` (`-R`) flag sets the JetStream stream name and defaults to `REGISTRATION`.
+Both subcommands accept the same positional arguments for filtering: `cluster`, `protocol`, `service`, and `address`. All default to `*` (wildcard). The `--context` flag (env: `NATS_CONTEXT`) controls NATS authentication and defaults to `CCM`. The `--registration` (`-R`) flag sets the JetStream stream name and defaults to `REGISTRATION`.
 
 ### Query
 
