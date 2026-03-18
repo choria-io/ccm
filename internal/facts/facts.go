@@ -7,6 +7,8 @@ package facts
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -17,7 +19,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
-	"github.com/shirou/gopsutil/v4/net"
+	gnet "github.com/shirou/gopsutil/v4/net"
 
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/metrics"
@@ -97,6 +99,7 @@ func standardFacts(ctx context.Context) (map[string]any, error) {
 		"info": map[string]any{},
 	}
 	networkFacts := map[string]any{
+		"addresses":  []any{},
 		"interfaces": []any{},
 	}
 
@@ -144,9 +147,39 @@ func standardFacts(ctx context.Context) (map[string]any, error) {
 		hostFacts["info"] = hostInfo
 	}
 
-	interfaces, err := net.InterfacesWithContext(ctx)
+	interfaces, err := gnet.InterfacesWithContext(ctx)
 	if err == nil {
 		networkFacts["interfaces"] = interfaces
+
+		dflt, _ := getDefaultInterface()
+
+		addresses := []any{}
+		for _, i := range interfaces {
+			for _, a := range i.Addrs {
+				parsed, _, err := net.ParseCIDR(a.Addr)
+				if err != nil || parsed.String() == "" || parsed.IsLinkLocalMulticast() || parsed.IsLinkLocalUnicast() || parsed.IsLoopback() || parsed.IsMulticast() || parsed.IsUnspecified() {
+					continue
+				}
+
+				isDefault := dflt == i.Name
+
+				if parsed.To4() != nil {
+					addresses = append(addresses, map[string]any{
+						"interface": i.Name,
+						"address":   parsed.String(),
+						"ipv4":      true,
+						"default":   isDefault,
+					})
+				} else if parsed.To16() != nil {
+					addresses = append(addresses, map[string]any{
+						"interface": i.Name,
+						"address":   parsed.String(),
+						"ipv4":      false,
+					})
+				}
+			}
+		}
+		networkFacts["addresses"] = addresses
 	}
 
 	return map[string]any{
@@ -156,4 +189,35 @@ func standardFacts(ctx context.Context) (map[string]any, error) {
 		"cpu":       cpuFacts,
 		"memory":    memoryFacts,
 	}, nil
+}
+
+func getDefaultInterface() (string, error) {
+	conn, err := net.Dial("udp", "1.1.1.1:53")
+	if err != nil {
+		return "", fmt.Errorf("could not determine default route: %w", err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", fmt.Errorf("could not list network interfaces: %w", err)
+	}
+
+	for _, iface := range ifaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, a := range addrs {
+			ipNet, ok := a.(*net.IPNet)
+			if ok && ipNet.IP.Equal(localAddr.IP) {
+				return iface.Name, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("could not find interface for address %s", localAddr.IP)
 }
