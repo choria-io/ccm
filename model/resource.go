@@ -86,12 +86,12 @@ func (p *CommonResourceProperties) ResolveTemplates(env *templates.Env) error {
 	}
 	p.Provider = val
 
-	for _, hc := range p.HealthChecks {
-		val, err = templates.ResolveTemplateString(hc.Command, env)
+	for i := range p.HealthChecks {
+		val, err = templates.ResolveTemplateString(p.HealthChecks[i].Command, env)
 		if err != nil {
 			return err
 		}
-		hc.Command = val
+		p.HealthChecks[i].Command = val
 	}
 
 	for _, reg := range p.RegisterWhenStable {
