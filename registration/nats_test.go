@@ -64,7 +64,7 @@ var _ = Describe("Registration", func() {
 		It("should construct the correct subject", func() {
 			p := &natsPublisher{}
 			subject := p.natsSubject(entry, instanceID)
-			Expect(subject).To(Equal(fmt.Sprintf("ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", instanceID)))
+			Expect(subject).To(Equal(fmt.Sprintf("choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", instanceID)))
 		})
 	})
 
@@ -73,7 +73,7 @@ var _ = Describe("Registration", func() {
 			p := &natsPublisher{}
 			msg, err := p.message(entry)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(msg.Subject).To(Equal(fmt.Sprintf("ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", instanceID)))
+			Expect(msg.Subject).To(Equal(fmt.Sprintf("choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", instanceID)))
 
 			var decoded model.RegistrationEntry
 			err = json.Unmarshal(msg.Data, &decoded)
@@ -146,7 +146,7 @@ var _ = Describe("Registration", func() {
 
 			mockJS.EXPECT().PublishMsg(ctx, gomock.Any()).DoAndReturn(
 				func(_ context.Context, msg *nats.Msg, _ ...jetstream.PublishOpt) (*jetstream.PubAck, error) {
-					Expect(msg.Subject).To(Equal(fmt.Sprintf("ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", instanceID)))
+					Expect(msg.Subject).To(Equal(fmt.Sprintf("choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", instanceID)))
 					return &jetstream.PubAck{Stream: "REG", Sequence: 42}, nil
 				},
 			)

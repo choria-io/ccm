@@ -12,21 +12,21 @@ import (
 )
 
 const (
-	natsSubjectPrefix = "ccm.registration.v1"
+	natsSubjectPrefix = "choria.ccm.registration.v1"
 
 	// Token positions within a split subject
-	tokenCluster  = 3
-	tokenProtocol = 4
-	tokenService  = 5
-	tokenAddress  = 6
+	tokenCluster  = 4
+	tokenProtocol = 5
+	tokenService  = 6
+	tokenAddress  = 7
 
 	// Minimum number of tokens in a valid subject
 	// prefix(3) + cluster + protocol + service + address + instance
-	minSubjectTokens = 8
+	minSubjectTokens = 9
 )
 
 // publishSubject returns the full publish subject for an entry with the given instance ID.
-// Format: ccm.registration.v1.<cluster>.<protocol>.<service>.<address>.<instance>
+// Format: choria.ccm.registration.v1.<cluster>.<protocol>.<service>.<address>.<instance>
 func publishSubject(e *model.RegistrationEntry, instanceID string) string {
 	return fmt.Sprintf("%s.%s.%s.%s.%s.%s", natsSubjectPrefix, e.Cluster, e.Protocol, e.Service, e.SubjectAddress(), instanceID)
 }

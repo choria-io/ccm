@@ -75,10 +75,10 @@ Registration entries are published after a resource is applied. The following co
 Each entry is published to a NATS subject with the structure:
 
 ```nohighlight
-ccm.registration.v1.<cluster>.<protocol>.<service>.<address>.<instance-id>
+choria.ccm.registration.v1.<cluster>.<protocol>.<service>.<address>.<instance-id>
 ```
 
-Dots in IP addresses are replaced with underscores in the subject to keep the address as a single NATS token. For example, `10.0.0.1` becomes `10_0_0_1` in the subject, producing `ccm.registration.v1.prod.http.web.10_0_0_1.438f6ce5e7505bff`. The JSON message body retains the original dotted IP address.
+Dots in IP addresses are replaced with underscores in the subject to keep the address as a single NATS token. For example, `10.0.0.1` becomes `10_0_0_1` in the subject, producing `choria.ccm.registration.v1.prod.http.web.10_0_0_1.438f6ce5e7505bff`. The JSON message body retains the original dotted IP address.
 
 The `instance-id` is a deterministic FNV-64a hash derived from the cluster, service, protocol, address, and port fields. This ensures each unique service endpoint maintains a consistent subject.
 
