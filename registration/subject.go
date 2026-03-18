@@ -51,7 +51,7 @@ func filterSubject(cluster, protocol, service, ip string) string {
 }
 
 // ParseSubject extracts registration fields from a NATS subject.
-// Returns a partially populated entry; only Cluster, Protocol, Service, and IP are set.
+// Returns a partially populated entry; only Cluster, Protocol, Service, and Address are set.
 // Returns an empty entry if the subject does not have enough tokens.
 func parseSubject(subject string) *model.RegistrationEntry {
 	parts := strings.Split(subject, ".")
@@ -64,6 +64,6 @@ func parseSubject(subject string) *model.RegistrationEntry {
 		Cluster:  parts[tokenCluster],
 		Protocol: parts[tokenProtocol],
 		Service:  parts[tokenService],
-		IP:       strings.ReplaceAll(parts[tokenAddress], "_", "."),
+		Address:  strings.ReplaceAll(parts[tokenAddress], "_", "."),
 	}
 }

@@ -46,9 +46,9 @@ func (c *registrationWatchCommand) watchAction(_ *fisk.ParseContext) error {
 		r := entry.Entry
 		switch entry.Action {
 		case registration.Remove:
-			userlog.Warn("Removed entry", "cluster", r.Cluster, "service", r.Service, "protocol", r.Protocol, "ip", r.IP, "reason", entry.Reason)
+			userlog.Warn("Removed entry", "cluster", r.Cluster, "service", r.Service, "protocol", r.Protocol, "address", r.Address, "reason", entry.Reason)
 		case registration.Register:
-			userlog.Info("Updated entry", "cluster", r.Cluster, "service", r.Service, "protocol", r.Protocol, "ip", r.IP, "port", r.Port)
+			userlog.Info("Updated entry", "cluster", r.Cluster, "service", r.Service, "protocol", r.Protocol, "address", r.Address, "port", r.Port)
 		}
 	}
 

@@ -45,7 +45,7 @@ var _ = Describe("Registration/Watch", func() {
 				Cluster:  "prod",
 				Service:  "web",
 				Protocol: "tcp",
-				IP:       "10.0.0.1",
+				Address:  "10.0.0.1",
 				Port:     int64(8080),
 				Priority: 1,
 			}
@@ -61,7 +61,7 @@ var _ = Describe("Registration/Watch", func() {
 			Expect(event.Action).To(Equal(Register))
 			Expect(event.Entry.Cluster).To(Equal("prod"))
 			Expect(event.Entry.Service).To(Equal("web"))
-			Expect(event.Entry.IP).To(Equal("10.0.0.1"))
+			Expect(event.Entry.Address).To(Equal("10.0.0.1"))
 			Expect(event.Reason).To(BeEmpty())
 		})
 
@@ -81,7 +81,7 @@ var _ = Describe("Registration/Watch", func() {
 				Expect(event.Entry.Cluster).To(Equal("prod"))
 				Expect(event.Entry.Protocol).To(Equal("tcp"))
 				Expect(event.Entry.Service).To(Equal("web"))
-				Expect(event.Entry.IP).To(Equal("10.0.0.1"))
+				Expect(event.Entry.Address).To(Equal("10.0.0.1"))
 			},
 			Entry("MaxAge", "MaxAge"),
 			Entry("Remove", "Remove"),
@@ -119,13 +119,13 @@ var _ = Describe("Registration/Watch", func() {
 			Expect(entry.Cluster).To(Equal("prod"))
 			Expect(entry.Protocol).To(Equal("tcp"))
 			Expect(entry.Service).To(Equal("web"))
-			Expect(entry.IP).To(Equal("10.0.0.1"))
+			Expect(entry.Address).To(Equal("10.0.0.1"))
 		})
 
 		It("should handle IPv6 addresses without dots", func() {
 			entry := parseSubject("ccm.registration.v1.prod.tcp.web.::1.abc123")
 			Expect(entry.Cluster).To(Equal("prod"))
-			Expect(entry.IP).To(Equal("::1"))
+			Expect(entry.Address).To(Equal("::1"))
 		})
 
 		It("should return empty entry for short subjects", func() {

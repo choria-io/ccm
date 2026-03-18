@@ -49,7 +49,7 @@ var _ = Describe("Registration", func() {
 			Cluster:  "prod",
 			Service:  "web",
 			Protocol: "tcp",
-			IP:       "10.0.0.1",
+			Address:  "10.0.0.1",
 			Port:     int64(8080),
 			Priority: 1,
 		}
@@ -81,7 +81,7 @@ var _ = Describe("Registration", func() {
 			Expect(decoded.Cluster).To(Equal("prod"))
 			Expect(decoded.Service).To(Equal("web"))
 			Expect(decoded.Protocol).To(Equal("tcp"))
-			Expect(decoded.IP).To(Equal("10.0.0.1"))
+			Expect(decoded.Address).To(Equal("10.0.0.1"))
 			Expect(decoded.Port).To(Equal(float64(8080)))
 		})
 
