@@ -100,9 +100,11 @@ func (c *registrationQueryCommand) queryAction(_ *fisk.ParseContext) error {
 		fmt.Printf("            IP: %s\n", r.IP)
 		fmt.Printf("          Port: %v\n", r.Port)
 		fmt.Printf("      Priority: %d\n", r.Priority)
-		fmt.Printf("   Annotations:\n")
-		for k, v := range r.Annotations {
-			fmt.Printf("                %s: %s\n", k, v)
+		if len(r.Annotations) > 0 {
+			fmt.Printf("   Annotations:\n")
+			for k, v := range r.Annotations {
+				fmt.Printf("                %s: %s\n", k, v)
+			}
 		}
 		fmt.Println()
 	}
