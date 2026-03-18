@@ -5,7 +5,7 @@ The registration system publishes service discovery entries to NATS when managed
 > [!info] Note
 > Registration requires a NATS connection. The [Agent](../agent/) must be configured with a `nats_context` and a `registration` destination. The CLI commands `ccm apply` and `ccm ensure file` support lookups via the `--registration` flag.
 
-> [!tip] Supported Version
+> [!note] Supported Version
 > Added in version `0.0.20`
 
 ## Use Cases
@@ -122,6 +122,30 @@ Any argument can be `"*"` to wildcard that position.
 > [!info] Note
 > The `registrations()` function queries JetStream and requires a NATS connection and a configured registration stream.
 
+The `registrations()` function is available in all three template engines.
+
+{{< tabs >}}
+{{% tab title="Expr" %}}
+```
+registrations('production', 'http', 'web', '*')
+```
+{{% /tab %}}
+{{% tab title="Jet" %}}
+```
+[[ range _, entry := registrations("production", "http", "web", "*") ]]
+  server [[ entry.Address ]]:[[ entry.Port ]] weight [[ 256 - entry.Priority ]]
+[[ end ]]
+```
+{{% /tab %}}
+{{% tab title="Go Templates" %}}
+```
+{{ range $entry := registrations "production" "http" "web" "*" }}
+  server {{ $entry.Address }}:{{ $entry.Port }}
+{{ end }}
+```
+{{% /tab %}}
+{{< /tabs >}}
+
 ### CLI Usage
 
 The `ccm apply` and `ccm ensure file` commands can query the registration registry by passing the `--registration` flag with the name of the JetStream stream holding registration data.
@@ -158,36 +182,6 @@ resources:
         ensure: present
         content: |
           {{ template("backends.cfg.jet") }}
-```
-
-The `registrations()` function is available in all three template engines.
-
-### Expr Templates
-
-Expr templates call the function with parentheses and single-quoted arguments:
-
-```
-registrations('production', 'http', 'web', '*')
-```
-
-### Jet Templates
-
-Jet templates iterate over the returned entries:
-
-```
-[[ range _, entry := registrations("production", "http", "web", "*") ]]
-  server [[ entry.Address ]]:[[ entry.Port ]] weight [[ 256 - entry.Priority ]]
-[[ end ]]
-```
-
-### Go Templates
-
-Go templates use space-separated arguments:
-
-```
-{{ range $entry := registrations "production" "http" "web" "*" }}
-  server {{ $entry.Address }}:{{ $entry.Port }}
-{{ end }}
 ```
 
 ### Wildcard Queries
@@ -265,6 +259,57 @@ backend web_servers
 ```
 
 Each time the agent runs on the load balancer, it queries the registry for all `web` services and regenerates the HAProxy configuration. The `exec` resource reloads HAProxy when the configuration file changes.
+
+## Format Transformers
+
+The result of `registrations()` supports transformation methods that convert entries into formats consumed by other systems. These methods are callable from all three template engines.
+
+### Prometheus File Service Discovery
+
+The `PrometheusFileSD()` method converts registration entries into the [Prometheus file-based service discovery](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config) JSON format. Entries are grouped by cluster, service, and protocol into target groups.
+
+Entries without a port are excluded from the output. Entries with a `prometheus.io/scrape` annotation set to any value other than `"true"` are also excluded. Entries without this annotation are included by default.
+
+Labels on each target group include `cluster`, `service`, `protocol`, and all annotations from the entries.
+
+{{< tabs >}}
+{{% tab title="Expr" %}}
+```
+registrations('production', 'http', 'web', '*').PrometheusFileSD()
+```
+{{% /tab %}}
+{{% tab title="Jet" %}}
+```
+[[ registrations("production", "http", "web", "*").PrometheusFileSD() ]]
+```
+{{% /tab %}}
+{{% tab title="Go Templates" %}}
+```
+{{ $r := registrations "production" "http" "web" "*" }}{{ $r.PrometheusFileSD }}
+```
+{{% /tab %}}
+{{< /tabs >}}
+
+#### Example Output
+
+Given two registered web servers in the `production` cluster with a `prometheus.io/scrape: "true"` annotation:
+
+```json
+[
+  {
+    "labels": {
+      "cluster": "production",
+      "service": "web",
+      "protocol": "http",
+      "prometheus.io/scrape": "true"
+    },
+    "targets": [
+      "10.0.0.1:8080",
+      "10.0.0.2:8080"
+    ]
+  }
+]
+```
 
 ## Querying and Watching
 

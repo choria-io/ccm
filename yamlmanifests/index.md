@@ -4,7 +4,7 @@ A manifest is a YAML file that combines data, hierarchy configuration, and resou
 
 Manifests support template expressions but not procedural logic. Think of them as declarative configuration similar to multi-resource shell scripts.
 
-> [!tip] CCM Studio
+> [!note] CCM Studio
 > An experimental visual editor for manifests is available at [CCM Studio](https://studio.choria-cm.dev/).
 
 ## Manifest Structure
