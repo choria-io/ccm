@@ -45,7 +45,7 @@ ccm ensure scaffold /etc/app templates/app --engine jet --purge
 
 This renders templates from the `templates/app` directory into `/etc/app` using the Jet template engine, removing any files in the target not present in the source.
 
-> [!tip] Tip
+> [!note] Tip
 > This is implemented using the [github.com/choria-io/scaffold](https://github.com/choria-io/scaffold) Go library, you can use this in your own projects or use the included `scaffold` CLI tool.
 
 ## Ensure Values

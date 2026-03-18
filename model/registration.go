@@ -7,6 +7,7 @@ package model
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -37,6 +38,97 @@ const (
 
 type RegistrationPublisher interface {
 	Publish(ctx context.Context, entry *RegistrationEntry) error
+}
+
+// RegistrationEntries is a collection of registration entries with transformation helpers
+type RegistrationEntries []*RegistrationEntry
+
+type prometheusTargetGroup struct {
+	Labels  map[string]string `json:"labels"`
+	Targets []string          `json:"targets"`
+}
+
+// PrometheusFileSD converts registration entries to Prometheus file service discovery JSON format.
+//
+// Entries are grouped by cluster, service, and protocol. Each group becomes a target group
+// with targets formatted as "address:port". Entries without a port are skipped. Entries with
+// an annotation "prometheus.io/scrape" set to anything other than "true" are skipped.
+//
+// Labels include cluster, service, protocol, and all annotations from the first entry in the group.
+func (entries RegistrationEntries) PrometheusFileSD() (string, error) {
+	type groupKey struct {
+		cluster  string
+		service  string
+		protocol string
+	}
+
+	groups := map[groupKey]*prometheusTargetGroup{}
+	var order []groupKey
+
+	for _, entry := range entries {
+		port := registrationPortInt(entry.Port)
+		if port == 0 {
+			continue
+		}
+
+		if v, ok := entry.Annotations["prometheus.io/scrape"]; ok && v != "true" {
+			continue
+		}
+
+		key := groupKey{
+			cluster:  entry.Cluster,
+			service:  entry.Service,
+			protocol: entry.Protocol,
+		}
+
+		group, exists := groups[key]
+		if !exists {
+			labels := map[string]string{
+				"cluster":  entry.Cluster,
+				"service":  entry.Service,
+				"protocol": entry.Protocol,
+			}
+			for k, v := range entry.Annotations {
+				labels[k] = v
+			}
+
+			group = &prometheusTargetGroup{
+				Labels: labels,
+			}
+			groups[key] = group
+			order = append(order, key)
+		}
+
+		group.Targets = append(group.Targets, fmt.Sprintf("%s:%d", entry.Address, port))
+	}
+
+	result := make([]prometheusTargetGroup, 0, len(order))
+	for _, key := range order {
+		result = append(result, *groups[key])
+	}
+
+	j, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("could not marshal prometheus file SD: %w", err)
+	}
+
+	return string(j), nil
+}
+
+func registrationPortInt(v any) int64 {
+	switch p := v.(type) {
+	case int64:
+		return p
+	case uint64:
+		return int64(p)
+	case float64:
+		return int64(p)
+	case json.Number:
+		n, _ := p.Int64()
+		return n
+	default:
+		return 0
+	}
 }
 
 type RegistrationEntry struct {

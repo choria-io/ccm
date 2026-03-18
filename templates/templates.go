@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -157,7 +158,9 @@ func (e *Env) jet(params ...any) (any, error) {
 		body = f.(string)
 	}
 
-	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims(lpat, rpat))
+	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims(lpat, rpat), jet.WithSafeWriter(func(w io.Writer, b []byte) {
+		w.Write(b)
+	}))
 	tpl, err := set.Parse("input", body)
 	if err != nil {
 		return nil, err
