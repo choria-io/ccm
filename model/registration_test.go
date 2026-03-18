@@ -5,6 +5,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -208,6 +209,105 @@ var _ = Describe("RegistrationEntry", func() {
 			Expect(entry.Address).To(Equal("10.0.0.1"))
 			Expect(entry.Port).To(Equal(int64(9090)))
 			Expect(entry.Annotations["host"]).To(Equal("web01"))
+		})
+	})
+
+	Describe("PrometheusFileSD", func() {
+		It("should produce valid file SD JSON", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080)},
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.2", Port: int64(8080)},
+				{Cluster: "dev", Service: "api", Protocol: "tcp", Address: "10.0.0.3", Port: int64(9090)},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed).To(HaveLen(2))
+
+			Expect(parsed[0]["labels"]).To(Equal(map[string]any{
+				"cluster": "dev", "service": "web", "protocol": "tcp",
+			}))
+			Expect(parsed[0]["targets"]).To(Equal([]any{"10.0.0.1:8080", "10.0.0.2:8080"}))
+
+			Expect(parsed[1]["labels"]).To(Equal(map[string]any{
+				"cluster": "dev", "service": "api", "protocol": "tcp",
+			}))
+			Expect(parsed[1]["targets"]).To(Equal([]any{"10.0.0.3:9090"}))
+		})
+
+		It("should skip entries without a port", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080)},
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.2", Port: nil},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed).To(HaveLen(1))
+			Expect(parsed[0]["targets"]).To(Equal([]any{"10.0.0.1:8080"}))
+		})
+
+		It("should skip entries with prometheus.io/scrape not set to true", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080),
+					Annotations: map[string]string{"prometheus.io/scrape": "false"}},
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.2", Port: int64(8080),
+					Annotations: map[string]string{"prometheus.io/scrape": "true"}},
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.3", Port: int64(8080)},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed).To(HaveLen(1))
+			Expect(parsed[0]["targets"]).To(Equal([]any{"10.0.0.2:8080", "10.0.0.3:8080"}))
+		})
+
+		It("should include annotations as labels", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080),
+					Annotations: map[string]string{"env": "staging", "team": "platform"}},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed[0]["labels"]).To(Equal(map[string]any{
+				"cluster": "dev", "service": "web", "protocol": "tcp",
+				"env": "staging", "team": "platform",
+			}))
+		})
+
+		It("should group by protocol separately", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080)},
+				{Cluster: "dev", Service: "web", Protocol: "udp", Address: "10.0.0.1", Port: int64(8080)},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed).To(HaveLen(2))
+		})
+
+		It("should return an empty array for no entries", func() {
+			entries := RegistrationEntries{}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("[]"))
 		})
 	})
 

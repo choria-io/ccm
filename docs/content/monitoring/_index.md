@@ -72,9 +72,6 @@ Health checks using `goss_rules` embed [Goss](https://goss.readthedocs.io) valid
 
 The check result is OK when all Goss rules pass, or CRITICAL when any rule fails. See the [Goss documentation](https://goss.readthedocs.io) for the full list of supported resource types and matchers.
 
-> [!tip]Supported Version 
-> Added in version `0.1.0`
-
 ### Example
 
 ```yaml
