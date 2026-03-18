@@ -72,7 +72,7 @@ var _ = Describe("Registration/Watch", func() {
 
 				msg := modelmocks.NewMockMsg(mockctl)
 				msg.EXPECT().Headers().Return(header)
-				msg.EXPECT().Subject().Return("ccm.registration.v1.prod.tcp.web.10_0_0_1.abc123")
+				msg.EXPECT().Subject().Return("choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.abc123")
 
 				event, err := parseWatchMessage(msg)
 				Expect(err).ToNot(HaveOccurred())
@@ -94,7 +94,7 @@ var _ = Describe("Registration/Watch", func() {
 
 			msg := modelmocks.NewMockMsg(mockctl)
 			msg.EXPECT().Headers().Return(header)
-			msg.EXPECT().Subject().Return("ccm.registration.v1")
+			msg.EXPECT().Subject().Return("choria.ccm.registration.v1")
 
 			event, err := parseWatchMessage(msg)
 			Expect(err).ToNot(HaveOccurred())
@@ -115,7 +115,7 @@ var _ = Describe("Registration/Watch", func() {
 
 	Describe("parseSubject", func() {
 		It("should parse a valid subject", func() {
-			entry := parseSubject("ccm.registration.v1.prod.tcp.web.10_0_0_1.abc123")
+			entry := parseSubject("choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.abc123")
 			Expect(entry.Cluster).To(Equal("prod"))
 			Expect(entry.Protocol).To(Equal("tcp"))
 			Expect(entry.Service).To(Equal("web"))
@@ -123,13 +123,13 @@ var _ = Describe("Registration/Watch", func() {
 		})
 
 		It("should handle IPv6 addresses without dots", func() {
-			entry := parseSubject("ccm.registration.v1.prod.tcp.web.::1.abc123")
+			entry := parseSubject("choria.ccm.registration.v1.prod.tcp.web.::1.abc123")
 			Expect(entry.Cluster).To(Equal("prod"))
 			Expect(entry.Address).To(Equal("::1"))
 		})
 
 		It("should return empty entry for short subjects", func() {
-			entry := parseSubject("ccm.registration.v1")
+			entry := parseSubject("choria.ccm.registration.v1")
 			Expect(entry.Cluster).To(BeEmpty())
 		})
 	})
@@ -161,7 +161,7 @@ var _ = Describe("Registration/Watch", func() {
 			mockJS.EXPECT().OrderedConsumer(gomock.Any(), "REGISTRATION", gomock.Any()).
 				DoAndReturn(func(_ interface{}, stream string, cfg jetstream.OrderedConsumerConfig) (jetstream.Consumer, error) {
 					Expect(cfg.DeliverPolicy).To(Equal(jetstream.DeliverLastPerSubjectPolicy))
-					Expect(cfg.FilterSubjects).To(Equal([]string{"ccm.registration.v1.*.*.*.*.*"}))
+					Expect(cfg.FilterSubjects).To(Equal([]string{"choria.ccm.registration.v1.*.*.*.*.*"}))
 					return nil, fmt.Errorf("stream not found")
 				})
 

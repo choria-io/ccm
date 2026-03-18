@@ -68,7 +68,7 @@ var _ = Describe("Registration/JetStreamPublisher", func() {
 				},
 			}
 
-			expectedSubject := fmt.Sprintf("ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", entry.InstanceId())
+			expectedSubject := fmt.Sprintf("choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.%s", entry.InstanceId())
 			mockJS.EXPECT().PublishMsg(ctx, gomock.Any()).DoAndReturn(
 				func(_ context.Context, msg *nats.Msg, _ ...jetstream.PublishOpt) (*jetstream.PubAck, error) {
 					Expect(msg.Subject).To(Equal(expectedSubject))

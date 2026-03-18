@@ -49,19 +49,19 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 
 	Describe("filterSubject", func() {
 		It("should use all provided values", func() {
-			Expect(filterSubject("prod", "tcp", "web", "10.0.0.1")).To(Equal("ccm.registration.v1.prod.tcp.web.10_0_0_1.*"))
+			Expect(filterSubject("prod", "tcp", "web", "10.0.0.1")).To(Equal("choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.*"))
 		})
 
 		It("should wildcard empty strings", func() {
-			Expect(filterSubject("", "", "", "")).To(Equal("ccm.registration.v1.*.*.*.*.*"))
+			Expect(filterSubject("", "", "", "")).To(Equal("choria.ccm.registration.v1.*.*.*.*.*"))
 		})
 
 		It("should wildcard star strings", func() {
-			Expect(filterSubject("*", "*", "*", "*")).To(Equal("ccm.registration.v1.*.*.*.*.*"))
+			Expect(filterSubject("*", "*", "*", "*")).To(Equal("choria.ccm.registration.v1.*.*.*.*.*"))
 		})
 
 		It("should handle mixed values and wildcards", func() {
-			Expect(filterSubject("prod", "", "web", "*")).To(Equal("ccm.registration.v1.prod.*.web.*.*"))
+			Expect(filterSubject("prod", "", "web", "*")).To(Equal("choria.ccm.registration.v1.prod.*.web.*.*"))
 		})
 	})
 
@@ -91,7 +91,7 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 
 			getLastMsgsFor = func(_ context.Context, _ jetstream.JetStream, stream string, subjects []string) (iter.Seq2[*jetstream.RawStreamMsg, error], error) {
 				Expect(stream).To(Equal("REGISTRATIONS"))
-				Expect(subjects).To(Equal([]string{"ccm.registration.v1.prod.tcp.web.10_0_0_1.*"}))
+				Expect(subjects).To(Equal([]string{"choria.ccm.registration.v1.prod.tcp.web.10_0_0_1.*"}))
 
 				return func(yield func(*jetstream.RawStreamMsg, error) bool) {}, nil
 			}
