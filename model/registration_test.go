@@ -288,6 +288,68 @@ var _ = Describe("RegistrationEntry", func() {
 			}))
 		})
 
+		It("should skip annotations with empty values", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080),
+					Annotations: map[string]string{"env": "staging", "empty": ""}},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed[0]["labels"]).To(Equal(map[string]any{
+				"cluster": "dev", "service": "web", "protocol": "tcp",
+				"env": "staging",
+			}))
+		})
+
+		It("should skip annotations with __ prefix", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080),
+					Annotations: map[string]string{"env": "staging", "__internal": "hidden", "__meta_role": "worker"}},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed[0]["labels"]).To(Equal(map[string]any{
+				"cluster": "dev", "service": "web", "protocol": "tcp",
+				"env": "staging",
+			}))
+		})
+
+		It("should skip annotations with invalid label names", func() {
+			entries := RegistrationEntries{
+				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080),
+					Annotations: map[string]string{
+						"valid_label":          "ok",
+						"_also_valid":          "ok",
+						"prometheus.io/scrape": "true",
+						"1starts_with_digit":   "bad",
+						"has-hyphen":           "bad",
+						"has space":            "bad",
+						"has.dot":              "bad",
+					}},
+			}
+
+			result, err := entries.PrometheusFileSD()
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed []map[string]any
+			Expect(json.Unmarshal([]byte(result), &parsed)).To(Succeed())
+			Expect(parsed[0]["labels"]).To(Equal(map[string]any{
+				"cluster":     "dev",
+				"service":     "web",
+				"protocol":    "tcp",
+				"valid_label": "ok",
+				"_also_valid": "ok",
+			}))
+		})
+
 		It("should group by protocol separately", func() {
 			entries := RegistrationEntries{
 				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080)},
