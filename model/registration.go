@@ -26,6 +26,7 @@ const (
 
 var (
 	validServiceRegex      = regexp.MustCompile(`^` + validBasicName + `$`)
+	validPromLabelRegex    = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	ErrRegistrationInvalid = errors.New("registration is invalid")
 )
 
@@ -54,7 +55,9 @@ type prometheusTargetGroup struct {
 // with targets formatted as "address:port". Entries without a port are skipped. Entries with
 // an annotation "prometheus.io/scrape" set to anything other than "true" are skipped.
 //
-// Labels include cluster, service, protocol, and all annotations from the first entry in the group.
+// Labels include cluster, service, protocol, and valid annotations from the first entry in the group.
+// Annotations are only included as labels if the key matches [a-zA-Z_][a-zA-Z0-9_]*, does not
+// start with __ (reserved for Prometheus internals), and has a non-empty value.
 func (entries RegistrationEntries) PrometheusFileSD() (string, error) {
 	type groupKey struct {
 		cluster  string
@@ -89,6 +92,15 @@ func (entries RegistrationEntries) PrometheusFileSD() (string, error) {
 				"protocol": entry.Protocol,
 			}
 			for k, v := range entry.Annotations {
+				if v == "" {
+					continue
+				}
+				if strings.HasPrefix(k, "__") {
+					continue
+				}
+				if !validPromLabelRegex.MatchString(k) {
+					continue
+				}
 				labels[k] = v
 			}
 
