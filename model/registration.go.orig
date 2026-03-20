@@ -62,12 +62,8 @@ type prometheusTargetGroup struct {
 // PrometheusFileSD converts registration entries to Prometheus file service discovery JSON format.
 //
 // Entries are grouped by cluster, service, and protocol. Each group becomes a target group
-// with targets formatted as "address:port". Entries without a port are skipped.
-//
-// For entries where service or protocol is "prometheus", entries are included by default and
-// only skipped if the annotation "prometheus.io/scrape" is explicitly set to something other
-// than "true". For all other entries, the annotation "prometheus.io/scrape" must be explicitly
-// set to "true" for the entry to be included.
+// with targets formatted as "address:port". Entries without a port are skipped. Entries with
+// an annotation "prometheus.io/scrape" set to anything other than "true" are skipped.
 //
 // Labels include cluster, service, protocol, and valid annotations from the first entry in the group.
 // Annotations are only included as labels if the key matches [a-zA-Z_][a-zA-Z0-9_]*, does not
@@ -88,26 +84,8 @@ func (entries RegistrationEntries) PrometheusFileSD() (string, error) {
 			continue
 		}
 
-		scrapeVal, scrapeSet := entry.Annotations["prometheus.io/scrape"]
-		isPrometheusEntry := entry.Service == "prometheus" || entry.Protocol == "prometheus"
-
-		// we need this because often metrics and app is on the same port, the registry entry would be
-		// that of the app, not dedicated to prometheus. Without it we'd end up with a problem case where
-		// some apps have prometheus and some not, so this makes it so those apps must be tagged rather than
-		// all other apps must be set to be skipped
-		//
-		// but if the service or protocol tells us this is prometheus - well we can assume all are prometheus
-		// so we allow skipping if required
-		if isPrometheusEntry {
-			// prometheus services are included by default, skip only if explicitly opted out
-			if scrapeSet && scrapeVal != "true" {
-				continue
-			}
-		} else {
-			// non-prometheus services require explicit opt-in
-			if !scrapeSet || scrapeVal != "true" {
-				continue
-			}
+		if v, ok := entry.Annotations["prometheus.io/scrape"]; ok && v != "true" {
+			continue
 		}
 
 		key := groupKey{

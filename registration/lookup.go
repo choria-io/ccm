@@ -83,6 +83,35 @@ func isMarkerMessage(msg *jetstream.RawStreamMsg) bool {
 	return reason == "MaxAge" || reason == "Remove" || reason == "Purge"
 }
 
+// purgeSubject is the function used to purge messages by subject from a JetStream stream.
+// It is a variable to allow replacement in tests.
+var purgeSubject = func(ctx context.Context, js jetstream.JetStream, streamName string, subject string) error {
+	stream, err := js.Stream(ctx, streamName)
+	if err != nil {
+		return err
+	}
+
+	return stream.Purge(ctx, jetstream.WithPurgeSubject(subject))
+}
+
+// JetStreamRemove purges a specific registration entry from the JetStream stream.
+func JetStreamRemove(ctx context.Context, mgr model.Manager, entry *model.RegistrationEntry) error {
+	js, err := mgr.JetStream()
+	if err != nil {
+		return fmt.Errorf("could not connect to JetStream: %w", err)
+	}
+
+	instanceID := entry.InstanceId()
+	subject := publishSubject(entry, instanceID)
+
+	err = purgeSubject(ctx, js, mgr.RegistrationStream(), subject)
+	if err != nil {
+		return fmt.Errorf("could not purge registration entry: %w", err)
+	}
+
+	return nil
+}
+
 func portInt(v any) int64 {
 	switch p := v.(type) {
 	case int64:

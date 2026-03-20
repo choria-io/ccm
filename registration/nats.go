@@ -111,7 +111,7 @@ func (n *natsPublisher) Publish(ctx context.Context, entry *model.RegistrationEn
 func (n *natsPublisher) message(e *model.RegistrationEntry) (*nats.Msg, error) {
 	msg := nats.NewMsg(n.natsSubject(e, e.InstanceId()))
 	if n.reliable {
-		if e.TTL > 0 {
+		if e.TTL != nil {
 			msg.Header.Add(natsTTLHeader, e.TTL.String())
 		}
 		msg.Header.Add(natsRollupHeader, natsSubRollup)

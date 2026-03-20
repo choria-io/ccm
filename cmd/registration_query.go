@@ -33,7 +33,7 @@ func registerRegistrationQueryCommand(reg *fisk.CmdClause, parent *registrationC
 	q.Arg("cluster", "The cluster to query").Default("*").StringVar(&cmd.cluster)
 	q.Arg("protocol", "the protocol to query").Default("*").StringVar(&cmd.protocol)
 	q.Arg("service", "The service to query").Default("*").StringVar(&cmd.service)
-	q.Arg("ip", "The ip or host to query").Default("*").StringVar(&cmd.ip)
+	q.Arg("address", "The ip or host to query").Default("*").StringVar(&cmd.ip)
 	q.Flag("json", "Render results in JSON format").Default("false").UnNegatableBoolVar(&cmd.json)
 	q.Flag("yaml", "Render results in YAML format").Default("false").UnNegatableBoolVar(&cmd.yaml)
 	q.Flag("registration", "The NATS Stream holding registration data").Default("REGISTRATION").Short('R').StringVar(&cmd.parent.registrationStream)
