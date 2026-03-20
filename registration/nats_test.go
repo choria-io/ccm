@@ -86,13 +86,22 @@ var _ = Describe("Registration", func() {
 		})
 
 		It("should set TTL and rollup headers when reliable and TTL is set", func() {
-			entry.TTL = 30 * time.Second
+			entry.TTL = model.NewRegistrationTTL(30 * time.Second)
 			p := &natsPublisher{reliable: true}
 			msg, err := p.message(entry)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(msg.Header.Get(natsTTLHeader)).To(Equal("30s"))
 			Expect(msg.Header.Get(natsRollupHeader)).To(Equal(natsSubRollup))
 			Expect(msg.Header.Get(natsExpectedStreamHeader)).To(BeEmpty())
+		})
+
+		It("should set TTL header to never when reliable and TTL is never", func() {
+			entry.TTL = model.NeverExpire()
+			p := &natsPublisher{reliable: true}
+			msg, err := p.message(entry)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(msg.Header.Get(natsTTLHeader)).To(Equal("never"))
+			Expect(msg.Header.Get(natsRollupHeader)).To(Equal(natsSubRollup))
 		})
 
 		It("should set rollup header but not TTL header when reliable and TTL is zero", func() {

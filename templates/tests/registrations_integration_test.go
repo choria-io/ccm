@@ -32,15 +32,15 @@ var _ = Describe("RegistrationEntries in templates", func() {
 		}
 		env.RegistrationsFunc = func(cluster, protocol, service, ip string) (any, error) {
 			return model.RegistrationEntries{
-				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080)},
-				{Cluster: "dev", Service: "web", Protocol: "tcp", Address: "10.0.0.2", Port: int64(9090)},
+				{Cluster: "dev", Service: "prometheus", Protocol: "tcp", Address: "10.0.0.1", Port: int64(8080)},
+				{Cluster: "dev", Service: "prometheus", Protocol: "tcp", Address: "10.0.0.2", Port: int64(9090)},
 			}, nil
 		}
 	})
 
 	Describe("PrometheusFileSD", func() {
 		It("should be callable from expr templates", func() {
-			result, err := templates.ExprParse("registrations('dev', 'tcp', 'web', '*').PrometheusFileSD()", env)
+			result, err := templates.ExprParse("registrations('dev', 'tcp', 'prometheus', '*').PrometheusFileSD()", env)
 			Expect(err).ToNot(HaveOccurred())
 
 			sd, ok := result.(string)
@@ -53,7 +53,7 @@ var _ = Describe("RegistrationEntries in templates", func() {
 		})
 
 		It("should be callable from jet templates", func() {
-			result, err := templates.ResolveTemplateString(`{{ jet('[[ registrations("dev", "tcp", "web", "*").PrometheusFileSD() ]]') }}`, env)
+			result, err := templates.ResolveTemplateString(`{{ jet('[[ registrations("dev", "tcp", "prometheus", "*").PrometheusFileSD() ]]') }}`, env)
 			Expect(err).ToNot(HaveOccurred())
 
 			var parsed []map[string]any
@@ -63,7 +63,7 @@ var _ = Describe("RegistrationEntries in templates", func() {
 		})
 
 		It("should be callable from go templates", func() {
-			goTpl := `{{ $r := registrations "dev" "tcp" "web" "*" }}{{ $r.PrometheusFileSD }}`
+			goTpl := `{{ $r := registrations "dev" "tcp" "prometheus" "*" }}{{ $r.PrometheusFileSD }}`
 			tmpl, err := template.New("test").Funcs(env.GoFunctions()).Parse(goTpl)
 			Expect(err).ToNot(HaveOccurred())
 

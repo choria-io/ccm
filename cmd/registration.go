@@ -18,8 +18,10 @@ func registerRegistrationCommand(ccm *fisk.Application) {
 
 	reg := ccm.Command("registration", "Node Registration system").Alias("reg").Alias("r")
 
+	registerRegistrationCreateCommand(reg, cmd)
 	registerRegistrationInitCommand(reg, cmd)
 	registerRegistrationQueryCommand(reg, cmd)
+	registerRegistrationRmCommand(reg, cmd)
 	registerRegistrationWatchCommand(reg, cmd)
 
 	reg.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)

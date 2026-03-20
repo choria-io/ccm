@@ -35,11 +35,11 @@ externalLinkTargetc= "_self"
     identifier = 'zen-auto'
     name = 'Auto Theme'
 
-  [[params.themeVariant]]
+[[params.themeVariant]]
     identifier = 'zen-light'
     name = 'Light'
 
-  [[params.themeVariant]]
+[[params.themeVariant]]
     identifier = 'ccm'
     name = 'Dark'
 

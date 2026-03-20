@@ -24,11 +24,12 @@ import (
 
 var _ = Describe("Registration/JetStreamLookup", func() {
 	var (
-		mockctl     *gomock.Controller
-		mgr         *modelmocks.MockManager
-		mockJS      *modelmocks.MockJetStream
-		ctx         context.Context
-		origGetLast func(context.Context, jetstream.JetStream, string, []string) (iter.Seq2[*jetstream.RawStreamMsg, error], error)
+		mockctl      *gomock.Controller
+		mgr          *modelmocks.MockManager
+		mockJS       *modelmocks.MockJetStream
+		ctx          context.Context
+		origGetLast  func(context.Context, jetstream.JetStream, string, []string) (iter.Seq2[*jetstream.RawStreamMsg, error], error)
+		origPurgeSub func(context.Context, jetstream.JetStream, string, string) error
 	)
 
 	BeforeEach(func() {
@@ -38,12 +39,14 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 		ctx = context.Background()
 
 		origGetLast = getLastMsgsFor
+		origPurgeSub = purgeSubject
 
 		mgr.EXPECT().RegistrationStream().Return("REGISTRATIONS").AnyTimes()
 	})
 
 	AfterEach(func() {
 		getLastMsgsFor = origGetLast
+		purgeSubject = origPurgeSub
 		mockctl.Finish()
 	})
 
@@ -282,6 +285,51 @@ var _ = Describe("Registration/JetStreamLookup", func() {
 			entries, err := JetStreamLookup(ctx, mgr, "prod", "tcp", "web", "*")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(entries).To(BeEmpty())
+		})
+	})
+
+	Describe("JetStreamRemove", func() {
+		It("should purge the correct subject", func() {
+			mgr.EXPECT().JetStream().Return(mockJS, nil)
+
+			entry, err := model.NewRegistrationEntry("prod", "web", "tcp", "10.0.0.1", 8080, 1, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedSubject := publishSubject(entry, entry.InstanceId())
+
+			purgeSubject = func(_ context.Context, js jetstream.JetStream, streamName string, subject string) error {
+				Expect(js).To(Equal(mockJS))
+				Expect(streamName).To(Equal("REGISTRATIONS"))
+				Expect(subject).To(Equal(expectedSubject))
+				return nil
+			}
+
+			err = JetStreamRemove(ctx, mgr, entry)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should return error when JetStream connection fails", func() {
+			mgr.EXPECT().JetStream().Return(nil, fmt.Errorf("connection refused"))
+
+			entry, err := model.NewRegistrationEntry("prod", "web", "tcp", "10.0.0.1", 8080, 1, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = JetStreamRemove(ctx, mgr, entry)
+			Expect(err).To(MatchError(ContainSubstring("could not connect to JetStream")))
+		})
+
+		It("should return error when purge fails", func() {
+			mgr.EXPECT().JetStream().Return(mockJS, nil)
+
+			entry, err := model.NewRegistrationEntry("prod", "web", "tcp", "10.0.0.1", 8080, 1, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			purgeSubject = func(_ context.Context, _ jetstream.JetStream, _ string, _ string) error {
+				return fmt.Errorf("purge failed")
+			}
+
+			err = JetStreamRemove(ctx, mgr, entry)
+			Expect(err).To(MatchError(ContainSubstring("could not purge registration entry")))
 		})
 	})
 
