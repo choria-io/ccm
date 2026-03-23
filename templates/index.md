@@ -13,7 +13,7 @@ Data can be used for:
 CCM supports various data sources:
 
  * **System Facts** - Operating system, networking, and disk configuration
- * **Custom Facts** - From `/etc/choria/ccm/facts.{yaml,json}` and `~/.config/choria/ccm/facts.{yaml,json}`
+ * **Custom Facts** - From `facts.{yaml,json}` and `facts.d/*.{yaml,json}` in system and user config directories
  * **Environment** - Variables from the shell environment and `./.env` files
  * **Hiera Data** - Hierarchical data with overrides based on facts
 
@@ -71,6 +71,26 @@ $ ccm facts --yaml                       # Output as YAML
 ```
 
 Access facts in expressions using `{{ Facts.host.info.platformFamily }}` or `{{ lookup('facts.host.info.platformFamily') }}`.
+
+### Custom Facts
+
+Custom facts are loaded from the system (`/etc/choria/ccm/`) and user (`~/.config/choria/ccm/`) configuration directories. Within each directory, facts are loaded in this order:
+
+ 1. `facts.json`
+ 2. `facts.yaml`
+ 3. `facts.d/*.{json,yaml}` - files sorted by filename
+
+Later sources override earlier ones, and user directory facts override system directory facts. This makes `facts.d/` useful for modular or drop-in facts from other tools.
+
+Files in `facts.d/` are processed in lexicographic filename order, so `01-base.json` is loaded before `02-override.json`. Only files with `.json` or `.yaml` extensions are read; all other files (including `.yml`) are ignored.
+
+### Security
+
+Facts directories are subject to the following security constraints:
+
+ * **Absolute paths only** - configuration directories must be absolute paths; relative paths are rejected
+ * **Path cleaning** - paths are normalized to remove traversal components (e.g., `/../`)
+ * **Symlinks ignored** - symlinked files, symlinked `facts.d/` directories, and symlinked entries within `facts.d/` are all skipped
 
 ## Hiera Data for CLI
 
