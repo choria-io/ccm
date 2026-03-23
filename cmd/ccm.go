@@ -27,12 +27,12 @@ var (
 	ctx     context.Context
 	debug   bool
 	info    bool
-	Version = "development"
+	version = "development"
 )
 
 func main() {
 	app := fisk.New("ccm", "Choria Configuration Management")
-	app.Version(Version)
+	app.Version(version)
 	app.Author("https://choria.io")
 
 	app.Flag("debug", "Enable debug logging").UnNegatableBoolVar(&debug)
