@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/facts"
 	"github.com/goccy/go-yaml"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/choria-io/ccm/internal/backoff"
 	"github.com/choria-io/ccm/internal/cmdrunner"
-	"github.com/choria-io/ccm/internal/facts"
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/registration"
@@ -466,7 +466,9 @@ func (m *CCM) SystemFacts(ctx context.Context) (map[string]any, error) {
 		defer cancel()
 	}
 
-	return facts.StandardFacts(to, m.log)
+	cfg := model.NewFactsConfig()
+
+	return facts.Gather(to, *cfg, m.log)
 }
 
 // Facts gather system facts, cache them, and return them, if already cached return the cache

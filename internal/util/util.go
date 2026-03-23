@@ -66,6 +66,16 @@ func IsDirectory(path string) bool {
 	return stat.IsDir()
 }
 
+// IsSymlink checks if path is a symbolic link
+func IsSymlink(path string) bool {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return false
+	}
+
+	return fi.Mode()&os.ModeSymlink != 0
+}
+
 // LookupUserID looks up a user by name and returns the numeric UID.
 func LookupUserID(name string) (int, error) {
 	if name == "" {

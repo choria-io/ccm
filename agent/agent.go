@@ -16,7 +16,6 @@ import (
 
 	"github.com/choria-io/ccm/hiera"
 	"github.com/choria-io/ccm/internal/backoff"
-	"github.com/choria-io/ccm/internal/facts"
 	"github.com/choria-io/ccm/manager"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
@@ -277,7 +276,7 @@ func (a *Agent) getFacts(ctx context.Context) {
 		}
 
 		log.Info("Refreshing facts")
-		f, err := facts.StandardFacts(ctx, a.log)
+		f, err := a.mgr.SystemFacts(ctx)
 		if err != nil {
 			log.Error("Could not get system facts", "error", err)
 			metrics.AgentFactsResolveFailureCount.WithLabelValues().Inc()
