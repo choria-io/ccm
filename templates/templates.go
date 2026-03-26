@@ -5,21 +5,15 @@
 package templates
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"slices"
 	"strings"
 	"sync"
-	"text/template"
 
-	"github.com/CloudyKit/jet/v6"
-	"github.com/expr-lang/expr"
 	"github.com/tidwall/gjson"
 )
 
@@ -34,31 +28,6 @@ type Env struct {
 
 	envJSON json.RawMessage
 	mu      sync.Mutex
-}
-
-func (e *Env) JetVariables() jet.VarMap {
-	return jet.VarMap{
-		"facts":   reflect.ValueOf(e.Facts),
-		"Facts":   reflect.ValueOf(e.Facts),
-		"data":    reflect.ValueOf(e.Data),
-		"Data":    reflect.ValueOf(e.Data),
-		"environ": reflect.ValueOf(e.Environ),
-		"Environ": reflect.ValueOf(e.Environ),
-	}
-}
-
-func (e *Env) JetFunctions() map[string]jet.Func {
-	return map[string]jet.Func{
-		"lookup":        e.jetLookup(),
-		"registrations": e.jetRegistrations(),
-	}
-}
-
-func (e *Env) GoFunctions() template.FuncMap {
-	return map[string]interface{}{
-		"lookup":        e.lookup,
-		"registrations": e.registrations,
-	}
 }
 
 func (e *Env) readFile(params ...any) (any, error) {
@@ -118,95 +87,6 @@ func (e *Env) template(params ...any) (any, error) {
 	return ResolveTemplateTyped(contents, e)
 }
 
-func (e *Env) jet(params ...any) (any, error) {
-	lpat := "[["
-	rpat := "]]"
-	body := ""
-	var ok bool
-
-	switch len(params) {
-	case 1:
-		body, ok = params[0].(string)
-		if !ok {
-			return "", fmt.Errorf("jet requires a string argument for template body")
-		}
-
-	case 3:
-		body, ok = params[0].(string)
-		if !ok {
-			return "", fmt.Errorf("jet requires a string argument for template body")
-		}
-
-		lpat, ok = params[1].(string)
-		if !ok {
-			return "", fmt.Errorf("jet requires a string argument for left delimiter")
-		}
-
-		rpat, ok = params[2].(string)
-		if !ok {
-			return "", fmt.Errorf("jet requires a string argument for right delimiter")
-		}
-	default:
-		return "", fmt.Errorf("jet requires 1 or 3 arguments")
-	}
-
-	if strings.HasSuffix(body, ".jet") {
-		f, err := e.readFile(body)
-		if err != nil {
-			return nil, err
-		}
-		body = f.(string)
-	}
-
-	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims(lpat, rpat), jet.WithSafeWriter(func(w io.Writer, b []byte) {
-		w.Write(b)
-	}))
-	tpl, err := set.Parse("input", body)
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range e.JetFunctions() {
-		set.AddGlobalFunc(k, v)
-	}
-
-	buff := bytes.NewBuffer([]byte{})
-	err = tpl.Execute(buff, e.JetVariables(), e)
-	if err != nil {
-		return nil, err
-	}
-
-	return buff.String(), nil
-}
-
-func (e *Env) jetLookup() jet.Func {
-	return func(a jet.Arguments) reflect.Value {
-		// 1–2 arguments, same as your original intent
-		a.RequireNumOfArguments("lookup", 1, 2)
-
-		// First arg: key (string)
-		var key string
-		if err := a.ParseInto(&key); err != nil {
-			a.Panicf("lookup: first argument must be a string: %v", err)
-		}
-
-		// Optional second arg: default value (any)
-		var defaultValue any
-		if a.NumOfArguments() == 2 {
-			defaultValue = a.Get(1).Interface()
-		} else {
-			defaultValue = nil
-		}
-
-		val, err := e.lookup(key, defaultValue)
-		if err != nil {
-			a.Panicf("lookup: failed: %v", err)
-		}
-
-		return reflect.ValueOf(val)
-	}
-}
-
 func (e *Env) registrations(params ...any) (any, error) {
 	if len(params) != 4 {
 		return nil, fmt.Errorf("registrations requires 4 string arguments: cluster, protocol, service, ip")
@@ -226,24 +106,6 @@ func (e *Env) registrations(params ...any) (any, error) {
 	}
 
 	return e.RegistrationsFunc(args[0], args[1], args[2], args[3])
-}
-
-func (e *Env) jetRegistrations() jet.Func {
-	return func(a jet.Arguments) reflect.Value {
-		a.RequireNumOfArguments("registrations", 4, 4)
-
-		var cluster, protocol, service, ip string
-		if err := a.ParseInto(&cluster, &protocol, &service, &ip); err != nil {
-			a.Panicf("registrations: arguments must be strings: %v", err)
-		}
-
-		val, err := e.registrations(cluster, protocol, service, ip)
-		if err != nil {
-			a.Panicf("registrations: %v", err)
-		}
-
-		return reflect.ValueOf(val)
-	}
 }
 
 func (e *Env) lookup(params ...any) (any, error) {
@@ -390,24 +252,4 @@ func applyFactsString(template string, env *Env) (string, bool, error) {
 	result.WriteString(out[lastIndex:])
 
 	return result.String(), slices.Contains(matched, true), nil
-}
-
-func ExprParse(query string, env *Env, opts ...expr.Option) (any, error) {
-	o := []expr.Option{
-		expr.Env(env),
-		expr.Function("lookup", env.lookup),
-		expr.Function("readFile", env.readFile),
-		expr.Function("file", env.readFile),
-		expr.Function("template", env.template),
-		expr.Function("jet", env.jet),
-		expr.Function("registrations", env.registrations),
-	}
-	o = append(o, opts...)
-
-	program, err := expr.Compile(query, o...)
-	if err != nil {
-		return "", fmt.Errorf("expr compile error for '%s': %w", query, err)
-	}
-
-	return expr.Run(program, env)
 }
