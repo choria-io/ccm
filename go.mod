@@ -7,14 +7,14 @@ require (
 	github.com/CloudyKit/jet/v6 v6.3.2
 	github.com/SladkyCitron/slogcolor v1.8.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.14.1-0.20260223180406-bcf9a03a7272
-	github.com/choria-io/fisk v0.7.2
+	github.com/choria-io/appbuilder v0.15.0
+	github.com/choria-io/fisk v0.8.0
 	github.com/choria-io/scaffold v0.0.10
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goss-org/goss v0.4.9
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/nats-io/nats.go v1.49.0
+	github.com/nats-io/nats.go v1.50.0
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/prometheus/client_golang v1.23.2
@@ -22,8 +22,8 @@ require (
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shirou/gopsutil/v4 v4.26.2
 	github.com/sirupsen/logrus v1.9.4
-	github.com/synadia-io/orbit.go/jetstreamext v0.2.0
-	github.com/synadia-io/orbit.go/natscontext v0.1.1
+	github.com/synadia-io/orbit.go/jetstreamext v0.2.1
+	github.com/synadia-io/orbit.go/natscontext v0.1.2
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/term v0.41.0
@@ -41,11 +41,11 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
-	github.com/choria-io/goform v0.0.3 // indirect
+	github.com/choria-io/goform v0.0.4 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
-	github.com/fatih/color v1.18.0 // indirect
+	github.com/fatih/color v1.19.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
@@ -60,8 +60,8 @@ require (
 	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/itchyny/timefmt-go v0.1.7 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.7.8 // indirect
-	github.com/klauspost/compress v1.18.4 // indirect
-	github.com/lufia/plan9stats v0.0.0-20260216142805-b3301c5f2a88 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/lufia/plan9stats v0.0.0-20260324052639-156f7da3f749 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.21 // indirect
@@ -83,7 +83,7 @@ require (
 	github.com/samber/lo v1.53.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/synadia-io/orbit.go/natsext v0.1.1 // indirect
+	github.com/synadia-io/orbit.go/natsext v0.1.2 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
