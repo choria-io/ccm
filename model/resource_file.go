@@ -121,8 +121,15 @@ func (p *FileResourceProperties) ResolveTemplates(env *templates.Env) error {
 	}
 	p.Mode = val
 
+	return nil
+}
+
+// ResolveDeferredTemplates resolves content and source templates after control evaluation.
+// This allows controls like if/unless to prevent template errors in content when the
+// resource would be skipped.
+func (p *FileResourceProperties) ResolveDeferredTemplates(env *templates.Env) error {
 	if p.Contents != "" {
-		val, err = templates.ResolveTemplateString(p.Contents, env)
+		val, err := templates.ResolveTemplateString(p.Contents, env)
 		if err != nil {
 			return err
 		}
@@ -130,7 +137,7 @@ func (p *FileResourceProperties) ResolveTemplates(env *templates.Env) error {
 	}
 
 	if p.Source != "" {
-		val, err = templates.ResolveTemplateString(p.Source, env)
+		val, err := templates.ResolveTemplateString(p.Source, env)
 		if err != nil {
 			return err
 		}

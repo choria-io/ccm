@@ -97,6 +97,15 @@ func (b *Base) applyOrHealthCheck(ctx context.Context, healthCheckOnly bool) (*m
 		return event, nil
 	}
 
+	env, err := b.Manager.TemplateEnvironment(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = b.ResourceProperties.ResolveDeferredTemplates(env)
+	if err != nil {
+		return nil, err
+	}
+
 	var unmet []string
 	for _, r := range b.CommonProperties.Require {
 		parts := strings.SplitN(r, "#", 2)

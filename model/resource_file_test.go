@@ -116,6 +116,10 @@ var _ = Describe("FileResourceProperties", func() {
 			Expect(prop.Owner).To(Equal("root"))
 			Expect(prop.Group).To(Equal("wheel"))
 			Expect(prop.Mode).To(Equal("0644"))
+			Expect(prop.Contents).To(Equal("Hello {{ Facts.name }}!"))
+
+			err = prop.ResolveDeferredTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(prop.Contents).To(Equal("Hello World!"))
 		})
 
@@ -198,7 +202,7 @@ var _ = Describe("FileResourceProperties", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("Should return error for invalid template in contents", func() {
+		It("Should not resolve contents template in ResolveTemplates", func() {
 			prop := &FileResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/tmp/test.txt",
@@ -213,6 +217,66 @@ var _ = Describe("FileResourceProperties", func() {
 			env := &templates.Env{Facts: map[string]any{}}
 
 			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Contents).To(Equal("{{ invalid syntax }}"))
+		})
+
+		It("Should return error for invalid template in deferred contents", func() {
+			prop := &FileResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/tmp/test.txt",
+					Ensure: EnsurePresent,
+				},
+				Owner:    "root",
+				Group:    "root",
+				Mode:     "0644",
+				Contents: "{{ invalid syntax }}",
+			}
+
+			env := &templates.Env{Facts: map[string]any{}}
+
+			err := prop.ResolveDeferredTemplates(env)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should resolve source in deferred templates", func() {
+			prop := &FileResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/tmp/test.txt",
+					Ensure: EnsurePresent,
+				},
+				Owner:  "root",
+				Group:  "root",
+				Mode:   "0644",
+				Source: "/etc/{{ Facts.app }}/config",
+			}
+
+			env := &templates.Env{Facts: map[string]any{"app": "myapp"}}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Source).To(Equal("/etc/{{ Facts.app }}/config"))
+
+			err = prop.ResolveDeferredTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Source).To(Equal("/etc/myapp/config"))
+		})
+
+		It("Should return error for invalid template in deferred source", func() {
+			prop := &FileResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/tmp/test.txt",
+					Ensure: EnsurePresent,
+				},
+				Owner:  "root",
+				Group:  "root",
+				Mode:   "0644",
+				Source: "{{ invalid syntax }}",
+			}
+
+			env := &templates.Env{Facts: map[string]any{}}
+
+			err := prop.ResolveDeferredTemplates(env)
 			Expect(err).To(HaveOccurred())
 		})
 	})
