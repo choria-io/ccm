@@ -68,5 +68,5 @@ Use `--content` or `--content-file` to parse content through the template engine
 | `source`   | Copy contents from another local file                          |
 | `owner`    | File owner (username)                                          |
 | `group`    | File group (group name)                                        |
-| `mode`     | File permissions in octal notation (e.g., `"0644"`)            |
+| `mode`     | File permissions in octal notation (e.g., `"0644"`). For directories, the execute bit is added automatically to any permission triad that has read or write bits (e.g., `"0644"` becomes `"0755"`) |
 | `provider` | Force a specific provider (`posix` only)                       |

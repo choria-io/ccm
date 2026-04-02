@@ -521,6 +521,22 @@ func HttpGet(ctx context.Context, rawUrl string, timeout time.Duration) (*HttpGe
 	}, nil
 }
 
+// DirectoryMode adds the execute bit to any permission triad that has read or write bits set.
+// Directories need the execute bit to be traversable, so when a user specifies a file mode
+// like 0600 for a directory this converts it to 0700.
+func DirectoryMode(mode os.FileMode) os.FileMode {
+	if mode&0600 != 0 {
+		mode |= 0100
+	}
+	if mode&060 != 0 {
+		mode |= 010
+	}
+	if mode&06 != 0 {
+		mode |= 01
+	}
+	return mode
+}
+
 // IsEmptyDirectory checks if a directory is empty, if it does not exist or some error occurs its not reported as empty
 func IsEmptyDirectory(dir string) bool {
 	if !IsDirectory(dir) {

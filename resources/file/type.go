@@ -214,8 +214,16 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 		return false, contentChecksum, nil
 	}
 
-	if meta.Mode != properties.Mode {
-		t.log.Debug("Mode does not match", "state", meta.Mode, "requested", properties.Mode)
+	desiredMode := properties.Mode
+	if properties.Ensure == model.FileEnsureDirectory {
+		parsed, err := strconv.ParseUint(desiredMode, 8, 32)
+		if err == nil {
+			desiredMode = fmt.Sprintf("%04o", iu.DirectoryMode(os.FileMode(parsed)))
+		}
+	}
+
+	if meta.Mode != desiredMode {
+		t.log.Debug("Mode does not match", "state", meta.Mode, "requested", desiredMode)
 		return false, contentChecksum, nil
 	}
 

@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
 )
@@ -300,6 +301,26 @@ var _ = Describe("Posix Provider", func() {
 		})
 	})
 
+	Describe("DirectoryMode", func() {
+		DescribeTable("Should add execute bit where read or write bits exist",
+			func(input os.FileMode, expected os.FileMode) {
+				Expect(iu.DirectoryMode(input)).To(Equal(expected))
+			},
+			Entry("0600 becomes 0700", os.FileMode(0600), os.FileMode(0700)),
+			Entry("0660 becomes 0770", os.FileMode(0660), os.FileMode(0770)),
+			Entry("0644 becomes 0755", os.FileMode(0644), os.FileMode(0755)),
+			Entry("0640 becomes 0750", os.FileMode(0640), os.FileMode(0750)),
+			Entry("0400 becomes 0500", os.FileMode(0400), os.FileMode(0500)),
+			Entry("0666 becomes 0777", os.FileMode(0666), os.FileMode(0777)),
+			Entry("0755 stays 0755", os.FileMode(0755), os.FileMode(0755)),
+			Entry("0777 stays 0777", os.FileMode(0777), os.FileMode(0777)),
+			Entry("0000 stays 0000", os.FileMode(0000), os.FileMode(0000)),
+			Entry("0200 becomes 0300", os.FileMode(0200), os.FileMode(0300)),
+			Entry("0020 becomes 0030", os.FileMode(0020), os.FileMode(0030)),
+			Entry("0002 becomes 0003", os.FileMode(0002), os.FileMode(0003)),
+		)
+	})
+
 	Describe("CreateDirectory", func() {
 		var (
 			currentUser  *user.User
@@ -314,6 +335,26 @@ var _ = Describe("Posix Provider", func() {
 			currentGroup, err = user.LookupGroupId(currentUser.Gid)
 			Expect(err).ToNot(HaveOccurred())
 		})
+
+		DescribeTable("Should add execute bit for directory modes",
+			func(inputMode string, expectedPerm os.FileMode) {
+				tmpDir := GinkgoT().TempDir()
+				testDir := filepath.Join(tmpDir, "dirmode")
+
+				err := provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, inputMode)
+				Expect(err).ToNot(HaveOccurred())
+
+				stat, err := os.Stat(testDir)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(stat.Mode().Perm()).To(Equal(expectedPerm))
+			},
+			Entry("0600 becomes 0700", "0600", os.FileMode(0700)),
+			Entry("0660 becomes 0770", "0660", os.FileMode(0770)),
+			Entry("0644 becomes 0755", "0644", os.FileMode(0755)),
+			Entry("0640 becomes 0750", "0640", os.FileMode(0750)),
+			Entry("0755 stays 0755", "0755", os.FileMode(0755)),
+			Entry("0000 stays 0000", "0000", os.FileMode(0000)),
+		)
 
 		It("Should create a directory with correct permissions", func() {
 			tmpDir := GinkgoT().TempDir()

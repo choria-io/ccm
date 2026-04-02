@@ -327,7 +327,7 @@ var _ = Describe("File Type", func() {
 					Metadata: &model.FileMetadata{
 						Owner:    "root",
 						Group:    "root",
-						Mode:     "0644",
+						Mode:     "0755",
 						Checksum: checksum(""),
 					},
 				}
@@ -563,7 +563,7 @@ var _ = Describe("File Type", func() {
 						Metadata: &model.FileMetadata{
 							Owner:    "root",
 							Group:    "root",
-							Mode:     "0644",
+							Mode:     "0755",
 							Checksum: checksum(""),
 						},
 					}
@@ -585,7 +585,7 @@ var _ = Describe("File Type", func() {
 						Metadata: &model.FileMetadata{
 							Owner:    "root",
 							Group:    "root",
-							Mode:     "0644",
+							Mode:     "0755",
 							Checksum: checksum(""),
 						},
 					}
