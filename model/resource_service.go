@@ -89,26 +89,13 @@ func (p *ServiceResourceProperties) Validate() error {
 	return nil
 }
 
-// ResolveTemplates resolves template expressions in the package resource properties
+// ResolveTemplates resolves template expressions in the service resource properties
 func (p *ServiceResourceProperties) ResolveTemplates(env *templates.Env) error {
-	err := p.CommonResourceProperties.ResolveTemplates(env)
-	if err != nil {
+	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
 		return err
 	}
 
-	if len(p.Subscribe) > 0 {
-		subscribe := make([]string, len(p.Subscribe))
-		for i, s := range p.Subscribe {
-			val, err := templates.ResolveTemplateString(s, env)
-			if err != nil {
-				return err
-			}
-			subscribe[i] = val
-		}
-		p.Subscribe = subscribe
-	}
-
-	return nil
+	return p.resolveRegistrations(env)
 }
 
 // ToYamlManifest returns the service resource properties as a yaml document

@@ -56,9 +56,9 @@ type CommonResourceProperties struct {
 	Ensure             string                 `json:"ensure,omitempty" yaml:"ensure,omitempty"`
 	Provider           string                 `json:"provider,omitempty" yaml:"provider,omitempty"`
 	HealthChecks       []CommonHealthCheck    `json:"health_checks,omitempty" yaml:"health_checks,omitempty"`
-	Require            []string               `json:"require,omitempty" yaml:"require,omitempty"`
-	Control            *CommonResourceControl `json:"control,omitempty" yaml:"control,omitempty"`
-	RegisterWhenStable []*RegistrationEntry   `json:"register_when_stable,omitempty" yaml:"register_when_stable,omitempty"`
+	Require            []string               `json:"require,omitempty" yaml:"require,omitempty" template:"-"`
+	Control            *CommonResourceControl `json:"control,omitempty" yaml:"control,omitempty" template:"-"`
+	RegisterWhenStable []*RegistrationEntry   `json:"register_when_stable,omitempty" yaml:"register_when_stable,omitempty" template:"-"`
 	SkipValidate       bool                   `json:"-" yaml:"-"`
 }
 
@@ -69,35 +69,18 @@ type CommonResourceControl struct {
 
 // ResolveTemplates resolves template expressions in common resource properties
 func (p *CommonResourceProperties) ResolveTemplates(env *templates.Env) error {
-	val, err := templates.ResolveTemplateString(p.Ensure, env)
-	if err != nil {
+	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
 		return err
 	}
-	p.Ensure = val
 
-	val, err = templates.ResolveTemplateString(p.Name, env)
-	if err != nil {
-		return err
-	}
-	p.Name = val
+	return p.resolveRegistrations(env)
+}
 
-	val, err = templates.ResolveTemplateString(p.Provider, env)
-	if err != nil {
-		return err
-	}
-	p.Provider = val
-
-	for i := range p.HealthChecks {
-		val, err = templates.ResolveTemplateString(p.HealthChecks[i].Command, env)
-		if err != nil {
-			return err
-		}
-		p.HealthChecks[i].Command = val
-	}
-
+// resolveRegistrations resolves templates in registration entries which need
+// special handling for the typed Port field
+func (p *CommonResourceProperties) resolveRegistrations(env *templates.Env) error {
 	for _, reg := range p.RegisterWhenStable {
-		err = reg.ResolveTemplates(env)
-		if err != nil {
+		if err := reg.ResolveTemplates(env); err != nil {
 			return err
 		}
 	}

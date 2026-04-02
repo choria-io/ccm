@@ -27,11 +27,11 @@ const (
 // FileResourceProperties defines the properties for a file resource
 type FileResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
-	Contents                 string `json:"content,omitempty" yaml:"content,omitempty"` // Contents specifies the desired file contents as a string; mutually exclusive with Source
-	Source                   string `json:"source,omitempty" yaml:"source,omitempty"`   // Source specifies a local file path to use as the source for the file contents; mutually exclusive with Contents
-	Owner                    string `json:"owner" yaml:"owner"`                         // Owner specifies the user that should own the file
-	Group                    string `json:"group" yaml:"group"`                         // Group specifies the group that should own the file
-	Mode                     string `json:"mode" yaml:"mode"`                           // Mode specifies the file permissions in octal notation (e.g., "0644")
+	Contents                 string `json:"content,omitempty" yaml:"content,omitempty" template:"deferred"` // Contents specifies the desired file contents as a string; mutually exclusive with Source
+	Source                   string `json:"source,omitempty" yaml:"source,omitempty" template:"deferred"`   // Source specifies a local file path to use as the source for the file contents; mutually exclusive with Contents
+	Owner                    string `json:"owner" yaml:"owner"`                                             // Owner specifies the user that should own the file
+	Group                    string `json:"group" yaml:"group"`                                             // Group specifies the group that should own the file
+	Mode                     string `json:"mode" yaml:"mode"`                                               // Mode specifies the file permissions in octal notation (e.g., "0644")
 }
 
 // FileMetadata contains detailed metadata about a file
@@ -96,52 +96,25 @@ func (p *FileResourceProperties) Validate() error {
 	return nil
 }
 
-// ResolveTemplates resolves template expressions in the package resource properties
+// ResolveTemplates resolves template expressions in the file resource properties
 func (p *FileResourceProperties) ResolveTemplates(env *templates.Env) error {
-	err := p.CommonResourceProperties.ResolveTemplates(env)
-	if err != nil {
+	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
 		return err
 	}
 
-	val, err := templates.ResolveTemplateString(p.Owner, env)
-	if err != nil {
-		return err
-	}
-	p.Owner = val
-
-	val, err = templates.ResolveTemplateString(p.Group, env)
-	if err != nil {
-		return err
-	}
-	p.Group = val
-
-	val, err = templates.ResolveTemplateString(p.Mode, env)
-	if err != nil {
-		return err
-	}
-	p.Mode = val
-
-	return nil
+	return p.resolveRegistrations(env)
 }
 
 // ResolveDeferredTemplates resolves content and source templates after control evaluation.
 // This allows controls like if/unless to prevent template errors in content when the
 // resource would be skipped.
 func (p *FileResourceProperties) ResolveDeferredTemplates(env *templates.Env) error {
-	if p.Contents != "" {
-		val, err := templates.ResolveTemplateString(p.Contents, env)
-		if err != nil {
-			return err
-		}
-		p.Contents = val
+	if err := templates.ResolveStructTemplates(p, env, true); err != nil {
+		return err
 	}
 
 	if p.Source != "" {
-		val, err := templates.ResolveTemplateString(p.Source, env)
-		if err != nil {
-			return err
-		}
-		p.Source = filepath.Clean(val)
+		p.Source = filepath.Clean(p.Source)
 	}
 
 	return nil
