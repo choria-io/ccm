@@ -63,6 +63,7 @@ type ResourceProperties interface {
     CommonProperties() *CommonResourceProperties
     Validate() error
     ResolveTemplates(*templates.Env) error
+    ResolveDeferredTemplates(*templates.Env) error
     ToYamlManifest() (yaml.RawMessage, error)
 }
 ```
@@ -85,6 +86,7 @@ Key points:
 - Use JSON and YAML struct tags for serialization
 - In `Validate()`, call `p.CommonResourceProperties.Validate()` first, then add type-specific validation
 - In `ResolveTemplates()`, call `p.CommonResourceProperties.ResolveTemplates(env)` first, then resolve type-specific fields
+- `ResolveDeferredTemplates()` is called after control evaluation (`if`/`unless`). Override it to defer resolution of fields that may fail due to chicken-and-egg problems when controls would skip the resource. The default no-op from `CommonResourceProperties` is sufficient for most types. See the file resource for an example where `Contents` and `Source` are deferred
 
 ### State Struct
 
@@ -660,6 +662,10 @@ if err != nil {
 ### Template Resolution
 
 The `ResolveTemplates` method (part of `model.ResourceProperties`) should resolve all user-facing string fields using `templates.ResolveTemplateString()`. Always call the embedded `CommonResourceProperties.ResolveTemplates(env)` first.
+
+Fields needed for resource identification, logging, and validation (such as `Name`, `Owner`, `Group`, `Mode`) should be resolved in `ResolveTemplates()`.
+
+Fields whose template evaluation may fail when the resource would be skipped by a control (`if`/`unless`) should be resolved in `ResolveDeferredTemplates()` instead. This method is called by `base.Base` after control evaluation passes, so templates are only evaluated for resources that will actually be applied. Because deferred resolution happens at apply time rather than during manifest parsing, templates using functions like `file()` can access content created by earlier resources in the same run. The default no-op implementation inherited from `CommonResourceProperties` is sufficient for types that do not need deferred resolution.
 
 ### Provider Selection
 
