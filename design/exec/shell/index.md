@@ -95,6 +95,33 @@ Each line of stdout is logged as a separate `Info` message.
 | Command execution fails | Return error from runner                           |
 | Non-zero exit code      | Return exit code (not an error by itself)          |
 
+### EvaluateGuard
+
+**Process:**
+
+1. Validate command is not empty
+2. Execute via `CommandRunner.ExecuteWithOptions()` with `/bin/sh -c "<command>"` using the same `cwd`, `environment`, `path`, and `timeout` from the exec properties
+3. Return `true` if exit code is 0, `false` if non-zero
+
+The shell provider is well-suited for guard commands that use shell features:
+
+```yaml
+- exec:
+    - add-repo:
+        command: /usr/bin/add-apt-repository ppa:example/ppa
+        provider: shell
+        unless: grep -q example /etc/apt/sources.list.d/*.list
+```
+
+**Error Handling:**
+
+| Condition               | Behavior                                         |
+|-------------------------|--------------------------------------------------|
+| Empty command string    | Return error: "empty guard command"              |
+| Runner not configured   | Return error: "no command runner configured"     |
+| Command execution fails | Return error from runner                         |
+| Non-zero exit code      | Return `false` (not an error)                    |
+
 ### Status
 
 **Process:**
@@ -172,6 +199,18 @@ If `creates` is specified and the file exists, the command does not run:
         command: cd /opt && tar -xzf /tmp/app.tar.gz
         provider: shell
         creates: /opt/app/bin/app
+```
+
+### Guard Commands
+
+If `onlyif` is specified, the command only runs when the guard exits 0. If `unless` is specified, the command only runs when the guard exits non-zero. Guard commands are executed via `/bin/sh -c` and can use shell features:
+
+```yaml
+- exec:
+    - configure-firewall:
+        command: /usr/sbin/iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+        provider: shell
+        unless: /usr/sbin/iptables -C INPUT -p tcp --dport 8080 -j ACCEPT 2>/dev/null
 ```
 
 ### RefreshOnly Mode
