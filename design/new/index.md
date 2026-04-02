@@ -74,9 +74,16 @@ Structure:
 type <Type>ResourceProperties struct {
     CommonResourceProperties `yaml:",inline"`
 
-    // Add type-specific fields here
+    // All string fields are automatically template-resolved by default.
+    // Use struct tags to control resolution behavior.
     Url      string `json:"url" yaml:"url"`
     Checksum string `json:"checksum,omitempty" yaml:"checksum,omitempty"`
+
+    // Fields that must not be template-resolved
+    Delimiter string `json:"delimiter,omitempty" yaml:"delimiter,omitempty" template:"-"`
+
+    // Fields deferred until after control evaluation
+    Content string `json:"content,omitempty" yaml:"content,omitempty" template:"deferred"`
     // ...
 }
 ```
@@ -85,8 +92,8 @@ Key points:
 - Embed `CommonResourceProperties` with `yaml:",inline"` tag
 - Use JSON and YAML struct tags for serialization
 - In `Validate()`, call `p.CommonResourceProperties.Validate()` first, then add type-specific validation
-- In `ResolveTemplates()`, call `p.CommonResourceProperties.ResolveTemplates(env)` first, then resolve type-specific fields
-- `ResolveDeferredTemplates()` is called after control evaluation (`if`/`unless`). Override it to defer resolution of fields that may fail due to chicken-and-egg problems when controls would skip the resource. The default no-op from `CommonResourceProperties` is sufficient for most types. See the file resource for an example where `Contents` and `Source` are deferred
+- Template resolution is handled automatically via reflection - see the [Template Resolution](#template-resolution) section for details
+- `ResolveDeferredTemplates()` is called after control evaluation (`if`/`unless`). Override it only if you have `template:"deferred"` fields that need post-processing (e.g. `filepath.Clean`). The default no-op from `CommonResourceProperties` is sufficient for most types. See the file resource for an example where `Contents` and `Source` are deferred
 
 ### State Struct
 
@@ -661,11 +668,63 @@ if err != nil {
 
 ### Template Resolution
 
-The `ResolveTemplates` method (part of `model.ResourceProperties`) should resolve all user-facing string fields using `templates.ResolveTemplateString()`. Always call the embedded `CommonResourceProperties.ResolveTemplates(env)` first.
+Template resolution uses a reflection-based struct walker (`templates.ResolveStructTemplates`) that automatically resolves `{{ expression }}` placeholders in all string-typed fields. The walker recurses into all composite types including slices, maps, nested structs, and pointer fields.
 
-Fields needed for resource identification, logging, and validation (such as `Name`, `Owner`, `Group`, `Mode`) should be resolved in `ResolveTemplates()`.
+**By default, all fields are template-resolved.** You control behavior with the `template` struct tag:
 
-Fields whose template evaluation may fail when the resource would be skipped by a control (`if`/`unless`) should be resolved in `ResolveDeferredTemplates()` instead. This method is called by `base.Base` after control evaluation passes, so templates are only evaluated for resources that will actually be applied. Because deferred resolution happens at apply time rather than during manifest parsing, templates using functions like `file()` can access content created by earlier resources in the same run. The default no-op implementation inherited from `CommonResourceProperties` is sufficient for types that do not need deferred resolution.
+| Tag | Behavior |
+|-----|----------|
+| *(none)* | Resolved during `ResolveTemplates()` (phase 1) |
+| `template:"-"` | Never resolved - use for enum values, literal delimiters, resource references, or fields evaluated separately (like control expressions) |
+| `template:"deferred"` | Skipped in phase 1, resolved during `ResolveDeferredTemplates()` (phase 2, after control evaluation) |
+| `template:"resolve_keys"` | For map fields, also resolve map keys (rebuilds the map). By default only map values are resolved |
+
+Fields tagged `json:"-"` are automatically skipped (these are internal computed fields like `ParsedTimeout`).
+
+**Supported types** (resolved recursively):
+
+- `string` and named string types (e.g. `type MyType string`)
+- `[]string`, `[]any`
+- `map[string]string`, `map[string]any`, `map[string][]string`, and other map variants with string keys
+- `[]map[string]string`, `[]map[string]any`
+- Nested and embedded structs, `*struct` pointers
+- `any` / `interface{}` fields holding any of the above
+- Arbitrary nesting depth
+
+Types that are **not** resolved: `bool`, `int`, `float`, `time.Duration`, `[]byte` / `yaml.RawMessage`, nil pointers.
+
+**Implementation pattern** - most resource types need only:
+
+```go
+func (p *<Type>ResourceProperties) ResolveTemplates(env *templates.Env) error {
+    if err := templates.ResolveStructTemplates(p, env, false); err != nil {
+        return err
+    }
+
+    return p.resolveRegistrations(env)
+}
+```
+
+The `resolveRegistrations` call (inherited from `CommonResourceProperties`) handles `RegisterWhenStable` entries which need special typed resolution for the `Port` field.
+
+**Deferred resolution** is used for fields whose template evaluation may fail when the resource would be skipped by a control (`if`/`unless`). Tag these fields with `template:"deferred"` and override `ResolveDeferredTemplates()`:
+
+```go
+func (p *<Type>ResourceProperties) ResolveDeferredTemplates(env *templates.Env) error {
+    if err := templates.ResolveStructTemplates(p, env, true); err != nil {
+        return err
+    }
+
+    // Optional post-processing, e.g.:
+    if p.Source != "" {
+        p.Source = filepath.Clean(p.Source)
+    }
+
+    return nil
+}
+```
+
+This method is called by `base.Base` after control evaluation passes, so templates are only evaluated for resources that will actually be applied. Because deferred resolution happens at apply time rather than during manifest parsing, templates using functions like `file()` can access content created by earlier resources in the same run. The default no-op implementation inherited from `CommonResourceProperties` is sufficient for types that have no `template:"deferred"` fields.
 
 ### Provider Selection
 
