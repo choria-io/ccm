@@ -44,6 +44,7 @@ type ResourceProperties interface {
 	CommonProperties() *CommonResourceProperties
 	Validate() error
 	ResolveTemplates(*templates.Env) error
+	ResolveDeferredTemplates(*templates.Env) error
 	ToYamlManifest() (yaml.RawMessage, error)
 }
 
@@ -101,6 +102,12 @@ func (p *CommonResourceProperties) ResolveTemplates(env *templates.Env) error {
 		}
 	}
 
+	return nil
+}
+
+// ResolveDeferredTemplates is a no-op default for resources that do not need deferred template resolution.
+// File resources override this to defer content/source template resolution until after control evaluation.
+func (p *CommonResourceProperties) ResolveDeferredTemplates(_ *templates.Env) error {
 	return nil
 }
 

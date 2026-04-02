@@ -805,6 +805,66 @@ var _ = Describe("Base", func() {
 			Expect(err.Error()).To(ContainSubstring("expr compile error"))
 		})
 
+		It("Should not resolve deferred templates when control skips the resource", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Contents = "{{ Facts.missing_key }}"
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "false",
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(props.Contents).To(Equal("{{ Facts.missing_key }}"))
+		})
+
+		It("Should resolve deferred templates when control allows the resource", func(ctx context.Context) {
+			facts["greeting"] = "hello"
+			props.HealthChecks = nil
+			props.Contents = "{{ Facts.greeting }}"
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "true",
+			}
+			state := &model.FileState{
+				CommonResourceState: model.CommonResourceState{
+					Ensure:  model.EnsurePresent,
+					Changed: true,
+				},
+				Metadata: &model.FileMetadata{},
+			}
+
+			mockRes.EXPECT().ApplyResource(gomock.Any()).Return(state, nil)
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeFalse())
+			Expect(props.Contents).To(Equal("hello"))
+		})
+
+		It("Should return error when deferred template resolution fails", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Contents = "{{ invalid syntax }}"
+			props.Control = &model.CommonResourceControl{
+				ManageIf: "true",
+			}
+
+			_, err := b.Apply(ctx)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should not resolve deferred templates when unless skips the resource", func(ctx context.Context) {
+			props.HealthChecks = nil
+			props.Contents = "{{ invalid syntax }}"
+			props.Control = &model.CommonResourceControl{
+				ManageUnless: "true",
+			}
+
+			result, err := b.Apply(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Skipped).To(BeTrue())
+			Expect(props.Contents).To(Equal("{{ invalid syntax }}"))
+		})
+
 		It("Should skip healthcheck when control skips the resource", func(ctx context.Context) {
 			props.HealthChecks = []model.CommonHealthCheck{{
 				Command: "/usr/bin/test -f /tmp/testfile",
