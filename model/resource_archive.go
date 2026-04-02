@@ -171,59 +171,13 @@ func archiveTypeFromFilename(filename string) string {
 	return "unknown"
 }
 
-// ResolveTemplates resolves template expressions in the package resource properties
+// ResolveTemplates resolves template expressions in the archive resource properties
 func (p *ArchiveResourceProperties) ResolveTemplates(env *templates.Env) error {
-	err := p.CommonResourceProperties.ResolveTemplates(env)
-	if err != nil {
+	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
 		return err
 	}
 
-	val, err := templates.ResolveTemplateString(p.Url, env)
-	if err != nil {
-		return err
-	}
-	p.Url = val
-
-	val, err = templates.ResolveTemplateString(p.Username, env)
-	if err != nil {
-		return err
-	}
-	p.Username = val
-
-	val, err = templates.ResolveTemplateString(p.Password, env)
-	if err != nil {
-		return err
-	}
-	p.Password = val
-
-	val, err = templates.ResolveTemplateString(p.Owner, env)
-	if err != nil {
-		return err
-	}
-	p.Owner = val
-
-	val, err = templates.ResolveTemplateString(p.Group, env)
-	if err != nil {
-		return err
-	}
-	p.Group = val
-
-	if len(p.Checksum) > 0 {
-		val, err = templates.ResolveTemplateString(p.Checksum, env)
-		if err != nil {
-			return err
-		}
-		p.Checksum = val
-	}
-
-	if len(p.Creates) > 0 {
-		val, err = templates.ResolveTemplateString(p.Creates, env)
-		if err != nil {
-			return err
-		}
-		p.Creates = val
-	}
-	return nil
+	return p.resolveRegistrations(env)
 }
 
 // ToYamlManifest returns the package resource properties as a yaml document

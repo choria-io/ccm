@@ -95,7 +95,11 @@ func (p *PackageResourceProperties) Validate() error {
 
 // ResolveTemplates resolves template expressions in the package resource properties
 func (p *PackageResourceProperties) ResolveTemplates(env *templates.Env) error {
-	return p.CommonResourceProperties.ResolveTemplates(env)
+	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
+		return err
+	}
+
+	return p.resolveRegistrations(env)
 }
 
 // ToYamlManifest returns the package resource properties as a yaml document

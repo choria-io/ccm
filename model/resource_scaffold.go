@@ -33,10 +33,10 @@ type ScaffoldResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
 	Source                   string                 `json:"source" yaml:"source"`
 	SkipEmpty                bool                   `json:"skip_empty,omitempty" yaml:"skip_empty,omitempty"`
-	LeftDelimiter            string                 `json:"left_delimiter,omitempty" yaml:"left_delimiter,omitempty"`
-	RightDelimiter           string                 `json:"right_delimiter,omitempty" yaml:"right_delimiter,omitempty"`
-	Engine                   ScaffoldResourceEngine `json:"engine,omitempty" yaml:"engine,omitempty"`
-	Data                     map[string]any         `json:"data,omitempty" yaml:"data,omitempty"`
+	LeftDelimiter            string                 `json:"left_delimiter,omitempty" yaml:"left_delimiter,omitempty" template:"-"`
+	RightDelimiter           string                 `json:"right_delimiter,omitempty" yaml:"right_delimiter,omitempty" template:"-"`
+	Engine                   ScaffoldResourceEngine `json:"engine,omitempty" yaml:"engine,omitempty" template:"-"`
+	Data                     map[string]any         `json:"data,omitempty" yaml:"data,omitempty" template:"resolve_keys"`
 	Purge                    bool                   `json:"purge,omitempty" yaml:"purge,omitempty"`
 	Post                     []map[string]string    `json:"post,omitempty" yaml:"post,omitempty"`
 }
@@ -112,41 +112,13 @@ func (p *ScaffoldResourceProperties) Validate() error {
 	return nil
 }
 
-// ResolveTemplates resolves template expressions in the package resource properties
+// ResolveTemplates resolves template expressions in the scaffold resource properties
 func (p *ScaffoldResourceProperties) ResolveTemplates(env *templates.Env) error {
-	err := p.CommonResourceProperties.ResolveTemplates(env)
-	if err != nil {
+	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
 		return err
 	}
 
-	val, err := templates.ResolveTemplateString(p.Source, env)
-	if err != nil {
-		return err
-	}
-	p.Source = val
-
-	if len(p.Data) > 0 {
-		data := make(map[string]any)
-		for k, v := range p.Data {
-			key, err := templates.ResolveTemplateString(k, env)
-			if err != nil {
-				return err
-			}
-
-			val := v
-			if vals, ok := v.(string); ok {
-				val, err = templates.ResolveTemplateString(vals, env)
-				if err != nil {
-					return err
-				}
-			}
-
-			data[key] = val
-		}
-		p.Data = data
-	}
-
-	return nil
+	return p.resolveRegistrations(env)
 }
 
 // ToYamlManifest returns the file resource properties as a yaml document

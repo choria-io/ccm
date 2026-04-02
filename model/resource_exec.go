@@ -121,50 +121,13 @@ func (p *ExecResourceProperties) Validate() error {
 	return nil
 }
 
-// ResolveTemplates resolves template expressions in the package resource properties
+// ResolveTemplates resolves template expressions in the exec resource properties
 func (p *ExecResourceProperties) ResolveTemplates(env *templates.Env) error {
-	err := p.CommonResourceProperties.ResolveTemplates(env)
-	if err != nil {
+	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
 		return err
 	}
 
-	val, err := templates.ResolveTemplateString(p.Cwd, env)
-	if err != nil {
-		return err
-	}
-	p.Cwd = val
-
-	if len(p.Subscribe) > 0 {
-		subscribe := make([]string, len(p.Subscribe))
-		for i, s := range p.Subscribe {
-			val, err := templates.ResolveTemplateString(s, env)
-			if err != nil {
-				return err
-			}
-			subscribe[i] = val
-		}
-		p.Subscribe = subscribe
-	}
-
-	for k, v := range p.Environment {
-		val, err := templates.ResolveTemplateString(v, env)
-		if err != nil {
-			return err
-		}
-		p.Environment[k] = val
-	}
-
-	p.Command, err = templates.ResolveTemplateString(p.Command, env)
-	if err != nil {
-		return err
-	}
-
-	p.Creates, err = templates.ResolveTemplateString(p.Creates, env)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return p.resolveRegistrations(env)
 }
 
 func (p *ExecResourceProperties) CommonProperties() *CommonResourceProperties {

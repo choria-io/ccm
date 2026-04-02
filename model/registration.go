@@ -45,7 +45,7 @@ type RegistrationEntry struct {
 	Service     string            `json:"service" yaml:"service"`
 	Protocol    string            `json:"protocol" yaml:"protocol"`
 	Address     string            `json:"address" yaml:"address"`
-	Port        any               `json:"port" yaml:"port"`
+	Port        any               `json:"port" yaml:"port" template:"-"`
 	Priority    int64             `json:"priority" yaml:"priority"`
 	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	TTL         *RegistrationTTL  `json:"ttl,omitempty" yaml:"ttl,omitempty"`
@@ -205,26 +205,11 @@ func NewRegistrationEntry(cluster string, service string, protocol string, addre
 }
 
 func (e *RegistrationEntry) ResolveTemplates(env *templates.Env) error {
-	var err error
-
-	e.Address, err = templates.ResolveTemplateString(e.Address, env)
-	if err != nil {
+	if err := templates.ResolveStructTemplates(e, env, false); err != nil {
 		return err
 	}
 
-	e.Cluster, err = templates.ResolveTemplateString(e.Cluster, env)
-	if err != nil {
-		return err
-	}
-
-	for k, v := range e.Annotations {
-		resolved, err := templates.ResolveTemplateString(v, env)
-		if err != nil {
-			return err
-		}
-		e.Annotations[k] = resolved
-	}
-
+	// Port is typed as any and needs ResolveTemplateTyped for type-preserving resolution
 	if e.Port != nil {
 		switch p := e.Port.(type) {
 		case string:
@@ -242,6 +227,7 @@ func (e *RegistrationEntry) ResolveTemplates(env *templates.Env) error {
 			return fmt.Errorf("%w: port must be an integer number not %T", ErrRegistrationInvalid, e.Port)
 		}
 	}
+
 	return nil
 }
 
