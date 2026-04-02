@@ -278,6 +278,73 @@ var _ = Describe("ExecResourceProperties", func() {
 			Expect(prop.Ensure).To(Equal("present"))
 		})
 
+		It("Should resolve templates in Environment", func() {
+			prop := &ExecResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/bin/echo hello",
+					Ensure: EnsurePresent,
+				},
+				Environment: []string{
+					"HOME=/home/{{ Facts.username }}",
+					"APP_ENV={{ Facts.environment }}",
+				},
+			}
+
+			env := &templates.Env{
+				Facts: map[string]any{
+					"username":    "testuser",
+					"environment": "production",
+				},
+			}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Environment).To(HaveLen(2))
+			Expect(prop.Environment[0]).To(Equal("HOME=/home/testuser"))
+			Expect(prop.Environment[1]).To(Equal("APP_ENV=production"))
+		})
+
+		It("Should resolve templates in Command", func() {
+			prop := &ExecResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/bin/echo hello",
+					Ensure: EnsurePresent,
+				},
+				Command: "/usr/bin/{{ Facts.tool }} --config {{ Facts.config_path }}",
+			}
+
+			env := &templates.Env{
+				Facts: map[string]any{
+					"tool":        "myapp",
+					"config_path": "/etc/myapp.conf",
+				},
+			}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Command).To(Equal("/usr/bin/myapp --config /etc/myapp.conf"))
+		})
+
+		It("Should resolve templates in Creates", func() {
+			prop := &ExecResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/bin/echo hello",
+					Ensure: EnsurePresent,
+				},
+				Creates: "/tmp/{{ Facts.marker_file }}",
+			}
+
+			env := &templates.Env{
+				Facts: map[string]any{
+					"marker_file": "setup.done",
+				},
+			}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Creates).To(Equal("/tmp/setup.done"))
+		})
+
 		It("Should handle non-template strings", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
@@ -338,6 +405,51 @@ var _ = Describe("ExecResourceProperties", func() {
 					Ensure: EnsurePresent,
 				},
 				Subscribe: []string{"{{ invalid syntax }}"},
+			}
+
+			env := &templates.Env{Facts: map[string]any{}}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should return error for invalid template in Environment", func() {
+			prop := &ExecResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/bin/echo hello",
+					Ensure: EnsurePresent,
+				},
+				Environment: []string{"FOO={{ invalid syntax }}"},
+			}
+
+			env := &templates.Env{Facts: map[string]any{}}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should return error for invalid template in Command", func() {
+			prop := &ExecResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/bin/echo hello",
+					Ensure: EnsurePresent,
+				},
+				Command: "{{ invalid syntax }}",
+			}
+
+			env := &templates.Env{Facts: map[string]any{}}
+
+			err := prop.ResolveTemplates(env)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should return error for invalid template in Creates", func() {
+			prop := &ExecResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/bin/echo hello",
+					Ensure: EnsurePresent,
+				},
+				Creates: "{{ invalid syntax }}",
 			}
 
 			env := &templates.Env{Facts: map[string]any{}}

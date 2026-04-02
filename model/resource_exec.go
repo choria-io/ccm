@@ -146,6 +146,24 @@ func (p *ExecResourceProperties) ResolveTemplates(env *templates.Env) error {
 		p.Subscribe = subscribe
 	}
 
+	for k, v := range p.Environment {
+		val, err := templates.ResolveTemplateString(v, env)
+		if err != nil {
+			return err
+		}
+		p.Environment[k] = val
+	}
+
+	p.Command, err = templates.ResolveTemplateString(p.Command, env)
+	if err != nil {
+		return err
+	}
+
+	p.Creates, err = templates.ResolveTemplateString(p.Creates, env)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
