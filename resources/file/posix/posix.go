@@ -31,6 +31,7 @@ func (p *Provider) CreateDirectory(ctx context.Context, dir string, owner string
 	if err != nil {
 		return err
 	}
+	parsedMode = iu.DirectoryMode(parsedMode)
 
 	// Check if path is a symlink - if so, remove it first to ensure
 	// we create an actual directory rather than following the symlink
