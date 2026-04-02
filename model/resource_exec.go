@@ -34,6 +34,8 @@ type ExecResourceProperties struct {
 	Returns                  []int    `json:"returns,omitempty" yaml:"returns,omitempty"`         // Returns specify the expected exit codes indicating success; defaults to 0 if not specified
 	Timeout                  string   `json:"timeout,omitempty" yaml:"timeout,omitempty"`         // Timeout specifies the maximum time the command is allowed to run; if exceeded the command will be terminated, the timeout is a duration like 10s
 	Creates                  string   `json:"creates,omitempty" yaml:"creates,omitempty"`         // Creates specifies a file that the command creates; if this file exists the command will not run
+	OnlyIf                   string   `json:"onlyif,omitempty" yaml:"onlyif,omitempty"`           // OnlyIf specifies a guard command; the exec runs only if this command exits 0
+	Unless                   string   `json:"unless,omitempty" yaml:"unless,omitempty"`           // Unless specifies a guard command; the exec runs only if this command exits non-zero
 	RefreshOnly              bool     `json:"refreshonly,omitempty" yaml:"refreshonly,omitempty"` // RefreshOnly determines whether the command should only run when notified by a subscribed resource
 	Subscribe                []string `json:"subscribe,omitempty" yaml:"subscribe,omitempty"`     // Subscribe specifies resources to subscribe to for refresh notifications in the format "type#name"
 	LogOutput                bool     `json:"logoutput,omitempty" yaml:"logoutput,omitempty"`     // LogOutput determines whether to log the command's output
@@ -55,6 +57,8 @@ type ExecState struct {
 
 	ExitCode         *int `json:"exitcode,omitempty" yaml:"exitcode"`
 	CreatesSatisfied bool `json:"creates_satisfied,omitempty" yaml:"creates_satisfied"`
+	OnlyIfSatisfied  bool `json:"onlyif_satisfied,omitempty" yaml:"onlyif_satisfied"`
+	UnlessSatisfied  bool `json:"unless_satisfied,omitempty" yaml:"unless_satisfied"`
 }
 
 func (f *ExecState) CommonState() *CommonResourceState {

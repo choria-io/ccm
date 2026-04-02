@@ -43,6 +43,21 @@ func (m *MockExecProvider) EXPECT() *MockExecProviderMockRecorder {
 	return m.recorder
 }
 
+// EvaluateGuard mocks base method.
+func (m *MockExecProvider) EvaluateGuard(ctx context.Context, command string, properties *model.ExecResourceProperties) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EvaluateGuard", ctx, command, properties)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EvaluateGuard indicates an expected call of EvaluateGuard.
+func (mr *MockExecProviderMockRecorder) EvaluateGuard(ctx, command, properties any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateGuard", reflect.TypeOf((*MockExecProvider)(nil).EvaluateGuard), ctx, command, properties)
+}
+
 // Execute mocks base method.
 func (m *MockExecProvider) Execute(ctx context.Context, properties *model.ExecResourceProperties, log model.Logger) (int, error) {
 	m.ctrl.T.Helper()

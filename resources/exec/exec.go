@@ -21,5 +21,6 @@ type ExecProvider interface {
 	model.Provider
 
 	Execute(ctx context.Context, properties *model.ExecResourceProperties, log model.Logger) (int, error)
+	EvaluateGuard(ctx context.Context, command string, properties *model.ExecResourceProperties) (bool, error)
 	Status(ctx context.Context, properties *model.ExecResourceProperties) (*model.ExecState, error)
 }

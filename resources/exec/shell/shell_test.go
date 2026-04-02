@@ -480,6 +480,128 @@ var _ = Describe("Shell Provider", func() {
 		})
 	})
 
+	Describe("EvaluateGuard", func() {
+		It("Should return true when guard command exits 0", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "my-exec",
+				},
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+				Command: "/bin/sh",
+				Args:    []string{"-c", "test -f /tmp/ready"},
+			}).Return([]byte{}, []byte{}, 0, nil)
+
+			result, err := provider.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
+		It("Should return false when guard command exits non-zero", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "my-exec",
+				},
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+				Command: "/bin/sh",
+				Args:    []string{"-c", "test -f /tmp/ready"},
+			}).Return([]byte{}, []byte{}, 1, nil)
+
+			result, err := provider.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should propagate execution errors", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "my-exec",
+				},
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), gomock.Any()).Return(nil, nil, -1, errors.New("command not found"))
+
+			result, err := provider.EvaluateGuard(context.Background(), "/nonexistent/cmd", properties)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("command not found"))
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should pass cwd, environment, and path from properties", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "my-exec",
+				},
+				Cwd:           "/opt/app",
+				Environment:   []string{"FOO=bar"},
+				Path:          "/usr/local/bin:/usr/bin",
+				ParsedTimeout: 30 * time.Second,
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+				Command:     "/bin/sh",
+				Args:        []string{"-c", "test -f /tmp/ready"},
+				Cwd:         "/opt/app",
+				Environment: []string{"FOO=bar"},
+				Path:        "/usr/local/bin:/usr/bin",
+				Timeout:     30 * time.Second,
+			}).Return([]byte{}, []byte{}, 0, nil)
+
+			result, err := provider.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
+		It("Should return error when runner is nil", func() {
+			p, err := NewShellProvider(logger, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "my-exec",
+				},
+			}
+
+			result, err := p.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no command runner configured"))
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should return error for empty guard command", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "my-exec",
+				},
+			}
+
+			result, err := provider.EvaluateGuard(context.Background(), "", properties)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("empty guard command"))
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should support shell expressions with pipes", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "my-exec",
+				},
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+				Command: "/bin/sh",
+				Args:    []string{"-c", "grep -q myapp /etc/services | head -1"},
+			}).Return([]byte{}, []byte{}, 0, nil)
+
+			result, err := provider.EvaluateGuard(context.Background(), "grep -q myapp /etc/services | head -1", properties)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+	})
+
 	Describe("Constants", func() {
 		It("Should have correct provider name", func() {
 			Expect(ProviderName).To(Equal("shell"))

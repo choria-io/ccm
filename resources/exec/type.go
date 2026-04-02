@@ -97,6 +97,22 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
+	if properties.OnlyIf != "" {
+		initialStatus.OnlyIfSatisfied, err = p.EvaluateGuard(ctx, properties.OnlyIf, properties)
+		if err != nil {
+			return nil, err
+		}
+		t.log.Debug("Evaluated onlyif guard", "command", properties.OnlyIf, "satisfied", initialStatus.OnlyIfSatisfied)
+	}
+
+	if properties.Unless != "" {
+		initialStatus.UnlessSatisfied, err = p.EvaluateGuard(ctx, properties.Unless, properties)
+		if err != nil {
+			return nil, err
+		}
+		t.log.Debug("Evaluated unless guard", "command", properties.Unless, "satisfied", initialStatus.UnlessSatisfied)
+	}
+
 	shouldRefreshViaSubscribe, refreshResource, err = t.ShouldRefresh(properties.Subscribe)
 	if err != nil {
 		return nil, err
@@ -168,6 +184,16 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 func (t *Type) isDesiredState(properties *model.ExecResourceProperties, status *model.ExecState) bool {
 	if properties.Creates != "" && status.CreatesSatisfied {
 		return true
+	}
+
+	if status.ExitCode == nil {
+		if properties.OnlyIf != "" && !status.OnlyIfSatisfied {
+			return true
+		}
+
+		if properties.Unless != "" && status.UnlessSatisfied {
+			return true
+		}
 	}
 
 	if status.ExitCode == nil && properties.RefreshOnly {
