@@ -93,6 +93,25 @@ Each line of stdout is logged as a separate `Info` message.
 | Command execution fails | Return error from runner                                 |
 | Non-zero exit code      | Return exit code (not an error by itself)                |
 
+### EvaluateGuard
+
+**Process:**
+
+1. Parse guard command string into words using `shellquote.Split()`
+2. Extract command (first word) and arguments (remaining words)
+3. Execute via `CommandRunner.ExecuteWithOptions()` using the same `cwd`, `environment`, `path`, and `timeout` from the exec properties
+4. Return `true` if exit code is 0, `false` if non-zero
+
+**Error Handling:**
+
+| Condition               | Behavior                                         |
+|-------------------------|--------------------------------------------------|
+| Empty command string    | Return error: "empty guard command"              |
+| Invalid shell quoting   | Return error: "invalid guard command: ..."       |
+| Runner not configured   | Return error: "no command runner configured"     |
+| Command execution fails | Return error from runner                         |
+| Non-zero exit code      | Return `false` (not an error)                    |
+
 ### Status
 
 **Process:**
@@ -124,6 +143,21 @@ If `creates` is specified and the file exists, the command does not run:
     - /usr/bin/tar -xzf app.tar.gz:
         creates: /opt/app/bin/app
         cwd: /opt
+```
+
+### Guard Commands
+
+If `onlyif` is specified, the command only runs when the guard exits 0. If `unless` is specified, the command only runs when the guard exits non-zero:
+
+```yaml
+- exec:
+    - install-app:
+        command: /usr/local/bin/install-app.sh
+        onlyif: test -f /tmp/app-package.tar.gz
+
+    - configure-firewall:
+        command: /usr/sbin/iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+        unless: /usr/sbin/iptables -C INPUT -p tcp --dport 8080 -j ACCEPT
 ```
 
 ### RefreshOnly Mode
@@ -169,16 +203,24 @@ The `returns` property specifies acceptable exit codes (default: `[0]`):
                       ┌─────────┴─────────┐
                       │ Yes               │ No
                       ▼                   ▼
-              ┌───────────────┐   ┌───────────────────┐
-              │ Skip (stable) │   │ RefreshOnly mode? │
-              └───────────────┘   └─────────┬─────────┘
+              ┌───────────────┐   ┌───────────────────────┐
+              │ Skip (stable) │   │ Guard commands pass?  │
+              └───────────────┘   │ (onlyif=0, unless≠0) │
+                                  └─────────┬─────────────┘
                                             │
                                   ┌─────────┴─────────┐
-                                  │ Yes               │ No
+                                  │ No                │ Yes
                                   ▼                   ▼
-                          ┌───────────────┐   ┌───────────────┐
-                          │ Skip (stable) │   │ Execute       │
-                          └───────────────┘   └───────────────┘
+                          ┌───────────────┐   ┌───────────────────┐
+                          │ Skip (stable) │   │ RefreshOnly mode? │
+                          └───────────────┘   └─────────┬─────────┘
+                                                        │
+                                              ┌─────────┴─────────┐
+                                              │ Yes               │ No
+                                              ▼                   ▼
+                                      ┌───────────────┐   ┌───────────────┐
+                                      │ Skip (stable) │   │ Execute       │
+                                      └───────────────┘   └───────────────┘
 ```
 
 ## Properties Validation

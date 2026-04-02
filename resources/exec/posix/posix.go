@@ -76,6 +76,46 @@ func (p *Provider) Execute(ctx context.Context, properties *model.ExecResourcePr
 	return exitCode, err
 }
 
+func (p *Provider) EvaluateGuard(ctx context.Context, command string, properties *model.ExecResourceProperties) (bool, error) {
+	if p.runner == nil {
+		return false, fmt.Errorf("no command runner configured")
+	}
+
+	words, err := shellquote.Split(command)
+	if err != nil {
+		return false, fmt.Errorf("invalid guard command: %w", err)
+	}
+
+	if len(words) == 0 {
+		return false, fmt.Errorf("empty guard command")
+	}
+
+	var cmd string
+	var args []string
+
+	switch len(words) {
+	case 1:
+		cmd = words[0]
+	default:
+		cmd = words[0]
+		args = words[1:]
+	}
+
+	_, _, exitCode, err := p.runner.ExecuteWithOptions(ctx, model.ExtendedExecOptions{
+		Command:     cmd,
+		Args:        args,
+		Cwd:         properties.Cwd,
+		Environment: properties.Environment,
+		Path:        properties.Path,
+		Timeout:     properties.ParsedTimeout,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return exitCode == 0, nil
+}
+
 func (p *Provider) Status(ctx context.Context, properties *model.ExecResourceProperties) (*model.ExecState, error) {
 	res := &model.ExecState{
 		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusExecProtocol, model.ExecTypeName, properties.Name, model.EnsurePresent),

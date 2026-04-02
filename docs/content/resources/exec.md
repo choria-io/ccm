@@ -5,7 +5,7 @@ toc = true
 weight = 20
 +++
 
-The exec resource executes commands to bring the system into the desired state. It is idempotent when used with the `creates` property or `refreshonly` mode.
+The exec resource executes commands to bring the system into the desired state. It is idempotent when used with the `creates`, `onlyif`, or `unless` properties, or `refreshonly` mode.
 
 > [!info] Warning
 > Specify commands with their full path, or use the `path` property to set the search path.
@@ -95,7 +95,28 @@ The `posix` provider is the default and is suitable for most commands. Use the `
 | `returns` (array)       | Exit codes indicating success (default: `[0]`)                                    |
 | `timeout`               | Maximum execution time (e.g., `30s`, `5m`); command is killed if exceeded         |
 | `creates`               | File path; if this file exists, the command does not run                          |
+| `onlyif`                | Guard command; the exec runs only if this command exits 0                        |
+| `unless`                | Guard command; the exec runs only if this command exits non-zero                 |
 | `refreshonly` (boolean) | Only run when notified by a subscribed resource                                   |
 | `subscribe` (array)     | Resources to subscribe to for refresh notifications (`type#name` or `type#alias`) |
 | `logoutput` (boolean)   | Log the command output                                                            |
 | `provider`              | Force a specific provider (`posix` or `shell`)                                    |
+
+## Guard Commands
+
+The `onlyif` and `unless` properties act as guard commands that control whether the exec runs. They are evaluated before execution and share the exec's `cwd`, `environment`, and `path` settings. Guard commands run even in noop mode to accurately report what would happen.
+
+When `creates` is also set, it takes precedence: if the creates file exists, the command is skipped regardless of guard results. Subscribe-triggered refreshes override all guards.
+
+```yaml
+- exec:
+    - install-app:
+        command: /usr/local/bin/install-app.sh
+        onlyif: test -f /tmp/app-package.tar.gz
+        # Runs only if the package file exists
+
+    - configure-firewall:
+        command: /usr/sbin/iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+        unless: /usr/sbin/iptables -C INPUT -p tcp --dport 8080 -j ACCEPT
+        # Runs only if the iptables rule does not already exist
+```

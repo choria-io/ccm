@@ -606,6 +606,111 @@ var _ = Describe("Posix Provider", func() {
 		})
 	})
 
+	Describe("EvaluateGuard", func() {
+		It("Should return true when guard command exits 0", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "/bin/echo hello",
+				},
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+				Command: "test",
+				Args:    []string{"-f", "/tmp/ready"},
+			}).Return([]byte{}, []byte{}, 0, nil)
+
+			result, err := provider.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
+		It("Should return false when guard command exits non-zero", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "/bin/echo hello",
+				},
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+				Command: "test",
+				Args:    []string{"-f", "/tmp/ready"},
+			}).Return([]byte{}, []byte{}, 1, nil)
+
+			result, err := provider.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should propagate execution errors", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "/bin/echo hello",
+				},
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), gomock.Any()).Return(nil, nil, -1, errors.New("command not found"))
+
+			result, err := provider.EvaluateGuard(context.Background(), "/nonexistent/cmd", properties)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("command not found"))
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should pass cwd, environment, and path from properties", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "/bin/echo hello",
+				},
+				Cwd:           "/opt/app",
+				Environment:   []string{"FOO=bar"},
+				Path:          "/usr/local/bin:/usr/bin",
+				ParsedTimeout: 30 * time.Second,
+			}
+
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), model.ExtendedExecOptions{
+				Command:     "test",
+				Args:        []string{"-f", "/tmp/ready"},
+				Cwd:         "/opt/app",
+				Environment: []string{"FOO=bar"},
+				Path:        "/usr/local/bin:/usr/bin",
+				Timeout:     30 * time.Second,
+			}).Return([]byte{}, []byte{}, 0, nil)
+
+			result, err := provider.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
+		It("Should return error when runner is nil", func() {
+			p, err := NewPosixProvider(logger, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "/bin/echo hello",
+				},
+			}
+
+			result, err := p.EvaluateGuard(context.Background(), "test -f /tmp/ready", properties)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no command runner configured"))
+			Expect(result).To(BeFalse())
+		})
+
+		It("Should return error for invalid shell quotes", func() {
+			properties := &model.ExecResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "/bin/echo hello",
+				},
+			}
+
+			result, err := provider.EvaluateGuard(context.Background(), "test -f '/tmp/un", properties)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid guard command"))
+			Expect(result).To(BeFalse())
+		})
+	})
+
 	Describe("Constants", func() {
 		It("Should have correct provider name", func() {
 			Expect(ProviderName).To(Equal("posix"))

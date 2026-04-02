@@ -205,6 +205,55 @@ var _ = Describe("Exec Type", func() {
 			})
 		})
 
+		Context("with OnlyIf property", func() {
+			It("Should return true when OnlyIf set and not satisfied", func() {
+				exec.prop.OnlyIf = "test -f /tmp/ready"
+				status := &model.ExecState{OnlyIfSatisfied: false}
+				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+			})
+
+			It("Should return false when OnlyIf set and satisfied", func() {
+				exec.prop.OnlyIf = "test -f /tmp/ready"
+				status := &model.ExecState{OnlyIfSatisfied: true}
+				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+			})
+
+			It("Should not check OnlyIf when ExitCode is set", func() {
+				exec.prop.OnlyIf = "test -f /tmp/ready"
+				status := &model.ExecState{OnlyIfSatisfied: false, ExitCode: intPtr(0)}
+				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+			})
+		})
+
+		Context("with Unless property", func() {
+			It("Should return true when Unless set and satisfied", func() {
+				exec.prop.Unless = "pgrep myapp"
+				status := &model.ExecState{UnlessSatisfied: true}
+				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+			})
+
+			It("Should return false when Unless set and not satisfied", func() {
+				exec.prop.Unless = "pgrep myapp"
+				status := &model.ExecState{UnlessSatisfied: false}
+				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+			})
+
+			It("Should not check Unless when ExitCode is set", func() {
+				exec.prop.Unless = "pgrep myapp"
+				status := &model.ExecState{UnlessSatisfied: true, ExitCode: intPtr(0)}
+				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+			})
+		})
+
+		Context("with Creates and OnlyIf", func() {
+			It("Should return true when Creates is satisfied regardless of OnlyIf", func() {
+				exec.prop.Creates = "/tmp/marker"
+				exec.prop.OnlyIf = "test -f /tmp/ready"
+				status := &model.ExecState{CreatesSatisfied: true, OnlyIfSatisfied: true}
+				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+			})
+		})
+
 		Context("without exit code", func() {
 			It("Should return false when no exit code and not RefreshOnly", func() {
 				exec.prop.RefreshOnly = false
@@ -321,6 +370,97 @@ var _ = Describe("Exec Type", func() {
 					event, err := exec.Apply(ctx)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(event.Errors).To(ContainElement(ContainSubstring("execution failed")))
+				})
+			})
+
+			Context("with OnlyIf", func() {
+				It("Should not execute when OnlyIf is not satisfied", func(ctx context.Context) {
+					exec.prop.OnlyIf = "test -f /tmp/ready"
+					initialState := &model.ExecState{ExitCode: nil}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().EvaluateGuard(gomock.Any(), "test -f /tmp/ready", gomock.Any()).Return(false, nil)
+
+					result, err := exec.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+				})
+
+				It("Should execute when OnlyIf is satisfied", func(ctx context.Context) {
+					exec.prop.OnlyIf = "test -f /tmp/ready"
+					initialState := &model.ExecState{ExitCode: nil}
+					finalState := &model.ExecState{ExitCode: intPtr(0)}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().EvaluateGuard(gomock.Any(), "test -f /tmp/ready", gomock.Any()).Return(true, nil)
+					provider.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(0, nil)
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+					result, err := exec.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+
+				It("Should fail when OnlyIf guard evaluation fails", func(ctx context.Context) {
+					exec.prop.OnlyIf = "test -f /tmp/ready"
+					initialState := &model.ExecState{ExitCode: nil}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().EvaluateGuard(gomock.Any(), "test -f /tmp/ready", gomock.Any()).Return(false, fmt.Errorf("guard failed"))
+
+					event, err := exec.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Errors).To(ContainElement(ContainSubstring("guard failed")))
+				})
+			})
+
+			Context("with Unless", func() {
+				It("Should not execute when Unless is satisfied", func(ctx context.Context) {
+					exec.prop.Unless = "pgrep myapp"
+					initialState := &model.ExecState{ExitCode: nil}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().EvaluateGuard(gomock.Any(), "pgrep myapp", gomock.Any()).Return(true, nil)
+
+					result, err := exec.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+				})
+
+				It("Should execute when Unless is not satisfied", func(ctx context.Context) {
+					exec.prop.Unless = "pgrep myapp"
+					initialState := &model.ExecState{ExitCode: nil}
+					finalState := &model.ExecState{ExitCode: intPtr(0)}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().EvaluateGuard(gomock.Any(), "pgrep myapp", gomock.Any()).Return(false, nil)
+					provider.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(0, nil)
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+					result, err := exec.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+			})
+
+			Context("with Subscribe and OnlyIf", func() {
+				It("Should execute via subscribe even when OnlyIf is not satisfied", func(ctx context.Context) {
+					exec.prop.OnlyIf = "test -f /tmp/ready"
+					exec.prop.Subscribe = []string{"file#/etc/app.conf"}
+					mgr.EXPECT().ShouldRefresh("file", "/etc/app.conf").Return(true, nil)
+
+					initialState := &model.ExecState{ExitCode: nil}
+					finalState := &model.ExecState{ExitCode: intPtr(0)}
+
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+					provider.EXPECT().EvaluateGuard(gomock.Any(), "test -f /tmp/ready", gomock.Any()).Return(false, nil)
+					provider.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any()).Return(0, nil)
+					provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(finalState, nil)
+
+					result, err := exec.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.Refreshed).To(BeTrue())
 				})
 			})
 
@@ -472,6 +612,33 @@ var _ = Describe("Exec Type", func() {
 				Expect(result.Noop).To(BeTrue())
 				Expect(result.NoopMessage).To(Equal("Would have executed via subscribe"))
 				Expect(result.Refreshed).To(BeTrue())
+			})
+
+			It("Should not execute in noop mode when OnlyIf is not satisfied", func(ctx context.Context) {
+				noopExec.prop.OnlyIf = "test -f /tmp/ready"
+				initialState := &model.ExecState{ExitCode: nil}
+
+				noopProvider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+				noopProvider.EXPECT().EvaluateGuard(gomock.Any(), "test -f /tmp/ready", gomock.Any()).Return(false, nil)
+
+				result, err := noopExec.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeFalse())
+				Expect(result.Noop).To(BeTrue())
+			})
+
+			It("Should report would have executed in noop mode when OnlyIf is satisfied", func(ctx context.Context) {
+				noopExec.prop.OnlyIf = "test -f /tmp/ready"
+				initialState := &model.ExecState{ExitCode: nil}
+
+				noopProvider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
+				noopProvider.EXPECT().EvaluateGuard(gomock.Any(), "test -f /tmp/ready", gomock.Any()).Return(true, nil)
+
+				result, err := noopExec.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.Changed).To(BeTrue())
+				Expect(result.Noop).To(BeTrue())
+				Expect(result.NoopMessage).To(Equal("Would have executed"))
 			})
 
 			It("Should not change when already in desired state", func(ctx context.Context) {

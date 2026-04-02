@@ -470,6 +470,14 @@
           "type": "string",
           "description": "A file that the command creates. If this file exists, the command will not run."
         },
+        "onlyif": {
+          "type": "string",
+          "description": "A guard command. The exec runs only if this command exits 0."
+        },
+        "unless": {
+          "type": "string",
+          "description": "A guard command. The exec runs only if this command exits non-zero."
+        },
         "refreshonly": {
           "type": "boolean",
           "description": "If true, the command only runs when notified by a subscribed resource",
@@ -935,6 +943,14 @@
         "creates": {
           "type": "string",
           "description": "A file that the command creates. If this file exists, the command will not run."
+        },
+        "onlyif": {
+          "type": "string",
+          "description": "A guard command. The exec runs only if this command exits 0."
+        },
+        "unless": {
+          "type": "string",
+          "description": "A guard command. The exec runs only if this command exits non-zero."
         },
         "refreshonly": {
           "type": "boolean",
