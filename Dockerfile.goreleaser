@@ -1,0 +1,5 @@
+FROM almalinux
+ARG TARGETPLATFORM
+ENTRYPOINT ["/usr/bin/ccm"]
+COPY $TARGETPLATFORM/ccm /usr/bin/
+
