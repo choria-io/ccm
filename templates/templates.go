@@ -43,11 +43,7 @@ func (e *Env) readFile(params ...any) (any, error) {
 		return "", fmt.Errorf("readFile requires a string argument")
 	}
 
-	if filepath.IsAbs(file) {
-		return "", fmt.Errorf("readFile can only read files in the working directory")
-	}
-
-	if e.WorkingDir != "" {
+	if !filepath.IsAbs(file) && e.WorkingDir != "" {
 		file = filepath.Join(e.WorkingDir, filepath.Clean(file))
 	}
 
