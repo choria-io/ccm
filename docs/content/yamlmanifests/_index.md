@@ -1,6 +1,6 @@
 +++
 title = "YAML Manifests"
-description = "Writing, Hosting and Executing YAML Manifests"
+description = "Write, host and execute YAML manifests"
 toc = true
 weight = 50
 pre = "<b>5. </b>"
@@ -10,10 +10,10 @@ A manifest is a YAML file that combines data, hierarchy configuration, and resou
 
 Manifests support template expressions but not procedural logic. Think of them as declarative configuration similar to multi-resource shell scripts.
 
-> [!note] CCM Studio
+> [!info] CCM Studio
 > An experimental visual editor for manifests is available at [CCM Studio](https://studio.choria-cm.dev/).
 
-## Manifest Structure
+## Manifest structure
 
 A manifest contains these top-level sections:
 
@@ -29,9 +29,9 @@ A manifest contains these top-level sections:
 
 The manifest is resolved using the [Choria Hierarchical Data Resolver](../hiera/).
 
-## Full Example
+## Full example
 
-### Input Data
+### Input data
 
 Define input data like parameters for a module:
 
@@ -52,7 +52,7 @@ ccm:
             ensure: latest
 ```
 
-### Configure Hierarchy
+### Configure hierarchy
 
 Configure a hierarchy to vary data by dimensions like OS platform:
 
@@ -74,7 +74,7 @@ overrides:
     package_name: apache2
 ```
 
-## Applying Manifests
+## Applying manifests
 
 The complete manifest:
 
@@ -121,7 +121,7 @@ resources:
         ensure: latest
 ```
 
-## Pre and Post Messages
+## Pre and post messages
 
 Display messages before and after manifest execution:
 
@@ -137,7 +137,7 @@ ccm:
 
 Both are optional.
 
-## Overriding Data
+## Overriding data
 
 Override or augment manifest data with an external Hiera source:
 
@@ -147,7 +147,7 @@ ccm apply manifest.yaml --hiera kv://CCM/common
 
 Supported sources include local files, KV stores (`kv://`), and HTTP(S) URLs.
 
-## Setting Defaults
+## Setting defaults
 
 Reduce repetition by setting defaults for resources of the same type:
 
@@ -181,7 +181,7 @@ The first two files inherit the `defaults` values. The `/app/bin/app` file overr
 
 Manifests support template expressions like `{{ lookup("key") }}` for adjusting values. These expressions cannot generate new resources; they only modify values in valid YAML.
 
-### Available Variables
+### Available variables
 
 Templates have access to:
 
@@ -191,7 +191,7 @@ Templates have access to:
 | `Data`    | Resolved Hiera data                  |
 | `Environ` | Environment variables                |
 
-### Generating Resources with Jet Templates
+### Generating resources with Jet templates
 
 To dynamically generate resources from data, use [Jet Templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md).
 
@@ -230,11 +230,11 @@ Create the template file:
 
 The template receives the fully resolved Hiera data, plus `Facts` and `Environ`.
 
-## Failure Handling
+## Failure handling
 
 By default, if a resource fails, the apply continues to the next resource.
 
-### Fail on Error
+### Fail on error
 
 To stop execution on the first failure, set `fail_on_error`:
 
@@ -256,7 +256,7 @@ ERROR exec#/usr/bin/false failed ensure=present runtime=3ms provider=posix error
 WARN  Terminating manifest execution due to failed resource
 ```
 
-### Resource Dependencies
+### Resource dependencies
 
 Use the `require` property to ensure a resource only runs after its dependencies succeed:
 
@@ -279,7 +279,7 @@ ccm:
 
 If the required resource fails, the dependent resource is skipped.
 
-## Dry Run (Noop Mode)
+## Dry run (noop mode)
 
 Preview changes without applying them:
 
@@ -290,7 +290,7 @@ ccm apply manifest.yaml --noop
 > [!info] Note
 > Noop mode cannot always detect cascading effects. If one resource change would affect a later resource, that dependency may not be reflected in the dry run.
 
-## Health Check Only Mode
+## Health check only mode
 
 Run only health checks without applying resources:
 
@@ -300,7 +300,7 @@ ccm apply manifest.yaml --monitor-only
 
 This is useful for verifying system state without making changes.
 
-## Manifests in NATS Object Store
+## Manifests in NATS object store
 
 Manifests can be stored in [NATS](https://nats.io) Object Stores, avoiding the need to distribute files locally.
 
@@ -350,7 +350,7 @@ INFO  Using manifest from Object Store in temporary directory bucket=CCM file=ma
 INFO  file#/etc/motd stable ensure=present runtime=0s provider=posix
 ```
 
-## Manifests on Web Servers
+## Manifests on web servers
 
 Store gzipped tar archives on a web server and apply them directly:
 
@@ -366,7 +366,7 @@ HTTP Basic Auth is supported via URL credentials:
 ccm apply https://user:pass@example.net/manifest.tar.gz
 ```
 
-## Additional Facts
+## Additional facts
 
 Provide additional facts from the command line or a file:
 

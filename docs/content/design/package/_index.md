@@ -2,6 +2,7 @@
 title = "Package Type"
 toc = true
 weight = 40
+description = "Package resource for system package management"
 +++
 
 This document describes the design of the package resource type for managing software packages.

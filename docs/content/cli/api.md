@@ -1,10 +1,11 @@
 +++
 title = "JSON API"
+description = "Manage resources programmatically via STDIN/STDOUT"
 toc = true
 weight = 10
 +++
 
-CCM provides a STDIN/STDOUT API for managing resources programmatically. This enables integration with external languages, allowing you to build DSLs in Ruby, Perl, Python, or any language that can execute processes and handle JSON or YAML.
+CCM provides a STDIN/STDOUT API for managing resources programmatically. This enables integration with external languages. Build DSLs in Ruby, Perl, Python, or any language that can execute processes and handle JSON or YAML.
 
 ## Overview
 
@@ -28,14 +29,14 @@ ccm ensure api pipe [--yaml] [--noop] [--facts <file>] [--data <file>]
 | `--facts <file>` | Load additional facts from a YAML file                        |
 | `--data <file>`  | Load Hiera-style data from a YAML file                        |
 
-## Request Format
+## Request format
 
 Requests must include a protocol identifier, resource type, and properties.
 
 > [!info] Note
 > JSON Schemas for these requests and responses are available at [resource_ensure_request.json](https://choria-cm.dev/schemas/ccm/v1/resource_ensure_request.json) and [resource_ensure_response.json](https://choria-cm.dev/schemas/ccm/v1/resource_ensure_response.json).
 
-### JSON Request
+### JSON request
 
 ```json
 {
@@ -48,7 +49,7 @@ Requests must include a protocol identifier, resource type, and properties.
 }
 ```
 
-### YAML Request
+### YAML request
 
 ```yaml
 protocol: io.choria.ccm.v1.resource.ensure.request
@@ -58,7 +59,7 @@ properties:
   ensure: present
 ```
 
-### Request Fields
+### Request fields
 
 | Field        | Required | Description                                        |
 |--------------|----------|----------------------------------------------------|
@@ -66,13 +67,13 @@ properties:
 | `type`       | Yes      | Resource type example `package`                    |
 | `properties` | Yes      | Resource properties (varies by type)               |
 
-## Response Format
+## Response format
 
 Responses include a protocol identifier and either a state object (on success) or an error message.
 
 For the full response structure, see [ResourceEnsureApiResponse](https://pkg.go.dev/github.com/choria-io/ccm@main/model#ResourceEnsureApiResponse) in the Go documentation. The `state` field contains a [TransactionEvent](https://pkg.go.dev/github.com/choria-io/ccm@main/model#TransactionEvent).
 
-### Successful Response
+### Successful response
 
 ```json
 {
@@ -93,7 +94,7 @@ For the full response structure, see [ResourceEnsureApiResponse](https://pkg.go.
 }
 ```
 
-### Error Response
+### Error response
 
 ```json
 {
@@ -104,7 +105,7 @@ For the full response structure, see [ResourceEnsureApiResponse](https://pkg.go.
 
 ## Examples
 
-### Install a Package
+### Install a package
 
 ```nohighlight
 echo '{
@@ -117,7 +118,7 @@ echo '{
 }' | ccm ensure api pipe
 ```
 
-### Manage a Service
+### Manage a service
 
 ```nohighlight
 cat <<EOF | ccm ensure api pipe
@@ -129,7 +130,7 @@ properties:
 EOF
 ```
 
-### Create a File
+### Create a file
 
 ```nohighlight
 echo '{
@@ -146,7 +147,7 @@ echo '{
 }' | ccm ensure api pipe
 ```
 
-### Dry-Run Mode
+### Dry-run mode
 
 ```nohighlight
 echo '{
@@ -159,6 +160,6 @@ echo '{
 }' | ccm ensure api pipe --noop
 ```
 
-## Resource Types
+## Resource types
 
 For detailed information about each resource type and its properties, see the [Resource Documentation](/resources)

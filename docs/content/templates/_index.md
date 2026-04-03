@@ -1,14 +1,12 @@
 +++
 title = "Data"
-description = "How to use templates in CCM Manifests and CLI"
+description = "Use templates in CCM manifests and CLI"
 toc = true
 weight = 30
 pre = "<b>3. </b>"
 +++
 
-Just like applications need data to vary their behavior and configure their environments, so do Configuration Management tools.
-
-For this reason, I wrote `extlookup` and `hiera` years ago for the Puppet community. Despite CCM's minimal focus, we still need data to vary behavior.
+Applications need data to vary their behavior and configure their environments. Configuration management tools are no different.
 
 Data can be used for:
 
@@ -23,11 +21,11 @@ CCM supports various data sources:
  * **Environment** - Variables from the shell environment and `./.env` files
  * **Hiera Data** - Hierarchical data with overrides based on facts
 
-## Accessing Data
+## Accessing data
 
 Expressions like `{{ lookup('facts.host.info.platformFamily') }}` use the [Expr Language](https://expr-lang.org/docs/language-definition).
 
-### Available Variables
+### Available variables
 
 In templates, you have direct access to:
 
@@ -37,7 +35,7 @@ In templates, you have direct access to:
 | `Data`    | Resolved Hiera data (e.g., `Data.package_name`)       |
 | `Environ` | Environment variables (e.g., `Environ.HOME`)          |
 
-### Available Functions
+### Available functions
 
 | Function                       | Description                                                                                                                                                               |
 |--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -46,7 +44,7 @@ In templates, you have direct access to:
 | `template(f)`                  | Parse `f` using templates. If `f` ends in `.templ`, reads the file first, if it ends in `.jet` calls the `jet()` function                                                 |
 | `jet(f)`, `jet(f, "[[", "]]")` | Parse `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md) with optional custom delimiters. If `f` ends in `.jet`, reads the file first |
 
-### GJSON Path Examples
+### GJSON path examples
 
 The `lookup()` function uses GJSON path syntax for nested access:
 
@@ -56,7 +54,7 @@ lookup("facts.network.interfaces.0.name")    # Array index
 lookup("data.packages.#")                    # Array length
 ```
 
-### CLI Usage
+### CLI usage
 
 These expressions work on the CLI:
 
@@ -78,7 +76,7 @@ $ ccm facts --yaml                       # Output as YAML
 
 Access facts in expressions using `{{ Facts.host.info.platformFamily }}` or `{{ lookup('facts.host.info.platformFamily') }}`.
 
-### Custom Facts
+### Custom facts
 
 Custom facts are loaded from the system (`/etc/choria/ccm/`) and user (`~/.config/choria/ccm/`) configuration directories. Within each directory, facts are loaded in this order:
 
@@ -98,14 +96,14 @@ Facts directories are subject to the following security constraints:
  * **Path cleaning** - paths are normalized to remove traversal components (e.g., `/../`)
  * **Symlinks ignored** - symlinked files, symlinked `facts.d/` directories, and symlinked entries within `facts.d/` are all skipped
 
-## Hiera Data for CLI
+## Hiera data for CLI
 
 Hiera data is resolved using the Choria Hierarchical Data Resolver. By default, data is read from `./.hiera`, or you can specify a file with `--hiera`.
 
 > [!info] Note
 > This applies to `ccm ensure` commands. The `ccm apply` command uses manifests that contain their own Hiera data.
 
-### Hiera Data Sources
+### Hiera data sources
 
 Hiera data can be loaded from:
 
@@ -113,7 +111,7 @@ Hiera data can be loaded from:
  * **Key-Value store**: `--hiera kv://BUCKET/key` (requires `--context` for NATS)
  * **HTTP(S)**: `--hiera https://example.com/data.yaml` (supports Basic Auth via URL credentials)
 
-### Merge Strategies
+### Merge strategies
 
 The `hierarchy.merge` setting controls how overrides are applied:
 

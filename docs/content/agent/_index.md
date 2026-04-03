@@ -1,18 +1,18 @@
 +++
 title = "Agent"
-description = "Introduces a method for automatically running manifests on a schedule"
+description = "Run manifests automatically on a schedule"
 toc = true
 weight = 60
 pre = "<b>6. </b>"
 +++
 
-For certain use cases, it is useful to run [YAML Manifests](../yamlmanifests/) continuously. For example, you might not want to manage your `dotfiles` automatically (allowing for local modifications), but you do want to keep Docker up to date.
+Some configurations benefit from running [YAML Manifests](../yamlmanifests/) continuously. For example, `dotfiles` might be left unmanaged (allowing local modifications), while Docker should always be up to date.
 
 The CCM Agent runs manifests continuously, loading them from local files, Object Storage, or HTTP(S) URLs, with Key-Value data overlaid.
 
 The Agent also supports [Registration](../registration/), a service discovery system where resources that reach a stable state publish their details to NATS. Other nodes can query the registry in templates to build configurations dynamically.
 
-## Run Modes
+## Run modes
 
 The agent supports two modes of operation that combine to be efficient and fast-reacting:
 
@@ -21,11 +21,11 @@ The agent supports two modes of operation that combine to be efficient and fast-
 
 By enabling both modes, you can run health checks very frequently (even at 10- or 20-second intervals) while keeping full Configuration Management runs less frequent (every few hours).
 
-Enabling both modes is optional but recommended. We also recommend adding health checks to your key resources.
+Enabling both modes is optional but recommended. Adding health checks to key resources is also recommended.
 
-## Supported Manifest and Data Sources
+## Supported manifest and data sources
 
-### Manifest Sources
+### Manifest sources
 
 Manifests can be loaded from:
 
@@ -35,7 +35,7 @@ Manifests can be loaded from:
 
 Remote sources (Object Storage and HTTP) must be `.tar.gz` archives containing a `manifest.yaml` file, templates and file sources.
 
-### External Data Sources
+### External data sources
 
 For Hiera data resolution, the agent supports:
 
@@ -43,7 +43,7 @@ For Hiera data resolution, the agent supports:
  * **Key-Value store**: `kv://bucket/key`
  * **HTTP(S)**: `https://example.com/data.yaml`
 
-## Logical Flow
+## Logical flow
 
 The agent continuously runs and manages manifests as follows:
 
@@ -60,11 +60,11 @@ The agent continuously runs and manages manifests as follows:
 
 In the background, object stores and HTTP sources are watched for changes. Updates trigger immediate apply runs with exponential backoff retry on failures.
 
-## Prometheus Metrics
+## Prometheus metrics
 
 When `monitor_port` is configured, the agent exposes Prometheus metrics on `/metrics`. These metrics can be used to monitor agent health, track resource states and events, and observe health check statuses.
 
-### Agent Metrics
+### Agent metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
@@ -78,7 +78,7 @@ When `monitor_port` is configured, the agent exposes Prometheus metrics on `/met
 | `choria_ccm_agent_manifest_fetch_count` | Counter | manifest | Remote manifest fetches |
 | `choria_ccm_agent_manifest_fetch_error_count` | Counter | manifest | Remote manifest fetch failures |
 
-### Resource Metrics
+### Resource metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
@@ -93,14 +93,14 @@ When `monitor_port` is configured, the agent exposes Prometheus metrics on `/met
 | `choria_ccm_resource_state_skipped_count` | Counter | type, name | Resources that were skipped |
 | `choria_ccm_resource_state_noop_count` | Counter | type, name | Resources in noop mode |
 
-### Health Check Metrics
+### Health check metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|
 | `choria_ccm_healthcheck_duration_seconds` | Summary | type, name, check | Time taken for health checks |
 | `choria_ccm_healthcheck_status_count` | Counter | type, name, status, check | Health check results by status |
 
-### Facts Metrics
+### Facts metrics
 
 | Metric | Type | Labels | Description |
 |--------|------|--------|-------------|

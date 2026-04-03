@@ -1,6 +1,6 @@
 +++
 title = "Registration"
-description = "service discovery through NATS-based registration of stable resources"
+description = "Discover services through NATS-based registration of stable resources"
 toc = true
 weight = 65
 pre = "<b>7. </b>"
@@ -8,16 +8,16 @@ pre = "<b>7. </b>"
 
 The registration system publishes service discovery entries to NATS when managed resources reach a stable state. Resources that pass all health checks and are not in a failed state announce themselves to a shared registry. Other nodes discover these services dynamically through template lookups.
 
-> [!note] Supported Version
+> [!info] Supported Version
 > Added in version `0.0.20`
 
-## Use Cases
+## Use cases
 
 * **Dynamic load balancer configuration** - Web server resources register themselves on successful deploy, and a file resource on the load balancer node uses template lookups to generate an upstream configuration
 * **Service mesh discovery** - Database and cache resources register their addresses and ports, allowing application nodes to build connection strings from live registry data
 * **Canary deployments** - New service instances register with lower priority values, allowing consumers to prefer established instances while gradually shifting traffic
 
-## Resource Configuration
+## Resource configuration
 
 Any resource type can publish registration entries by adding `register_when_stable` to its properties. Each entry describes a service endpoint to advertise.
 
@@ -45,7 +45,7 @@ resources:
 
 This manifest ensures Nginx is running, verifies it responds to health checks, and then registers the node as a `web` service in the `production` cluster.
 
-### Entry Properties
+### Entry properties
 
 | Property              | Template Key  | Description                                                                                                         |
 |-----------------------|---------------|---------------------------------------------------------------------------------------------------------------------|
@@ -60,7 +60,7 @@ This manifest ensures Nginx is running, verifies it responds to health checks, a
 
 The `cluster`, `address`, `port`, and `annotations` fields support template expressions for dynamic values resolved at apply time.
 
-## How It Works
+## How it works
 
 Registration entries are published after a resource is applied. The following conditions must all be met:
 
@@ -73,7 +73,7 @@ Each entry is published to a NATS subject with the structure and may be persiste
 
 ## Prerequisites
 
-### NATS Stream
+### NATS stream
 
 When using the `jetstream` destination, a JetStream stream must exist before registration entries can be published. Use `ccm registration init` to create or update the stream:
 
@@ -85,7 +85,7 @@ This creates a stream named `REGISTRATION` (or updates it if it already exists) 
 
 The `--max-age` value should exceed the agent's apply or health check interval to prevent entries from expiring between runs. It also controls how long deletion markers for expired entries are retained in the stream.
 
-### Agent Configuration
+### Agent configuration
 
 Add the `registration` field to the agent configuration file at `/etc/choria/ccm/config.yaml`:
 
@@ -100,7 +100,7 @@ manifests:
 
 Valid values for `registration` are `nats` (core NATS, fire-and-forget) and `jetstream` (reliable delivery). Omitting the field disables registration.
 
-## Template Lookups
+## Template lookups
 
 Other resources can query the registration registry using the `registrations()` function in templates. This enables dynamic configuration based on what services are currently registered.
 
@@ -140,11 +140,11 @@ registrations('production', 'http', 'web', '*')
 {{< /tabs >}}
 
 
-### Format Transformers
+### Format transformers
 
 The result of `registrations()` supports transformation methods that convert entries into formats consumed by other systems. These methods are callable from all three template engines.
 
-#### Prometheus File Service Discovery
+#### Prometheus file service discovery
 
 The `PrometheusFileSD()` method converts registration entries into the [Prometheus file-based service discovery](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config) JSON format. Entries are grouped by cluster, service, and protocol into target groups.
 
@@ -172,7 +172,7 @@ registrations('production', 'http', 'web', '*').PrometheusFileSD()
 {{% /tab %}}
 {{< /tabs >}}
 
-##### Example Output
+##### Example output
 
 Given two registered web servers in the `production` cluster with a `prometheus.io/scrape: "true"` annotation:
 
@@ -192,7 +192,7 @@ Given two registered web servers in the `production` cluster with a `prometheus.
 ]
 ```
 
-## CLI Usage
+## CLI usage
 
 The `ccm apply` and `ccm ensure file` commands can query the registration registry by passing the `--registration` flag with the name of the JetStream stream holding registration data.
 
@@ -221,7 +221,7 @@ resources:
           {{ template("backends.cfg.jet") }}
 ```
 
-### Creating Entries
+### Creating entries
 
 The `create` subcommand publishes a single registration entry to the JetStream stream. This is useful for manually registering services or for integration with external provisioning tools.
 
@@ -262,7 +262,7 @@ ccm registration create \
   -A hostname=web-05
 ```
 
-### Removing Entries
+### Removing entries
 
 The `rm` subcommand (alias `delete`) purges a registration entry from the JetStream stream. All identifying fields must be specified to match the entry to remove.
 
@@ -296,7 +296,7 @@ ccm registration rm \
 | `--port`     | Yes      |         | Port number (1-65535)              |
 | `--force`    | No       | `false` | Skip confirmation prompt           |
 
-### Querying and Watching
+### Querying and watching
 
 The `ccm registration` command provides tools for inspecting and monitoring registration data from the command line.
 
@@ -343,11 +343,11 @@ ccm registration watch production http web
 
 The `--json` flag outputs each event as a JSON object for integration with other tools.
 
-## Full Example
+## Full example
 
 This example shows two nodes working together. A web server registers itself, and a load balancer discovers all web servers to generate its configuration.
 
-### Web Server Node
+### Web server node
 
 ```yaml
 data:
@@ -372,7 +372,7 @@ ccm:
               ttl: 10m
 ```
 
-### Load Balancer Node
+### Load balancer node
 
 ```yaml
 ccm:

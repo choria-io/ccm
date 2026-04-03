@@ -25,13 +25,4 @@ Each design document covers:
 
 ## Available Documents
 
-| Document            | Description                                              |
-|---------------------|----------------------------------------------------------|
-| [Archive](archive/) | Archive resource for downloading and extracting archives |
-| [Exec](exec/)       | Exec resource for command execution                      |
-| [File](file/)       | File resource for managing files and directories         |
-| [Package](package/) | Package resource for system package management           |
-| [Scaffold](scaffold/) | Scaffold resource for template directory rendering     |
-| [Service](service/) | Service resource for system service management           |
-| [New Type](new/)    | How to add a new resource type to CCM                    |
-
+{{< subpages >}}

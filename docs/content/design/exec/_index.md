@@ -2,6 +2,7 @@
 title = "Exec Type"
 toc = true
 weight = 20
+description = "Exec resource for command execution"
 +++
 
 This document describes the design of the exec resource type for executing commands.

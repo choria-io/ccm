@@ -10,7 +10,7 @@ By default, CCM verifies resource health using the resource's native state. For 
 
 For deeper validation, all resources support custom health checks. These checks run after a resource is managed and can verify that the resource is functioning correctly, not just present.
 
-## Health Check Properties
+## Health check properties
 
 | Property     | Description                                             | Default           |
 |--------------|---------------------------------------------------------|-------------------|
@@ -24,7 +24,7 @@ For deeper validation, all resources support custom health checks. These checks 
 
 Each health check must specify either `command` or `goss_rules` -- they are mutually exclusive. The `format` is auto-detected based on which field is set (`nagios` for `command`, `goss` for `goss_rules`), but can be overridden explicitly.
 
-## Nagios Format
+## Nagios format
 
 Health checks using `command` follow Nagios plugin conventions for exit codes:
 
@@ -66,9 +66,9 @@ The CLI supports a single health check per resource. For multiple health checks,
 
 This example verifies that the web server responds with content containing "Acme Inc". If the check fails, it retries up to 5 times with 1 second between attempts.
 
-## Goss Format
+## Goss format
 
-Health checks using `goss_rules` embed [Goss](https://goss.readthedocs.io) validation rules directly in the manifest. This allows you to validate system state -- running services, listening ports, file contents, HTTP responses, and more -- without writing external check scripts.
+Health checks using `goss_rules` embed [Goss](https://goss.readthedocs.io) validation rules directly in the manifest. This validates system state, including running services, listening ports, file contents, and HTTP responses, without external check scripts.
 
 The check result is OK when all Goss rules pass, or CRITICAL when any rule fails. See the [Goss documentation](https://goss.readthedocs.io) for the full list of supported resource types and matchers.
 
@@ -100,7 +100,7 @@ The check result is OK when all Goss rules pass, or CRITICAL when any rule fails
 
 This validates that the httpd service is running and enabled, port 80 is listening, and the web server responds with a 200 status containing "Acme Inc".
 
-### Templates in Goss Rules
+### Templates in Goss rules
 
 Goss rules are processed through CCM's own template engine before evaluation. This means you can use the standard `{{ }}` expression syntax with access to `Facts`, `Data`, and `Environ`, as well as the `lookup()`, `template()`, and `jet()` functions. See the [Data](../templates/) section for full details on template syntax.
 
@@ -129,9 +129,9 @@ health_checks:
           status: 200
 ```
 
-> [!note]
+> [!info] Note
 > CCM resolves templates before passing rules to Goss. Goss's own template variables are not used.
 
-## Agent Integration
+## Agent integration
 
 When running the [Agent](../agent/) with `health_check_interval` configured, health checks run independently of full manifest applies. If any health check returns a CRITICAL status, the agent triggers a remediation apply for that manifest.

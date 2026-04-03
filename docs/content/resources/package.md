@@ -1,6 +1,6 @@
 +++
 title = "Package"
-description = "Install, upgrade, downgrade and remove packages using OS Native packagers"
+description = "Install, upgrade, downgrade and remove packages using OS native packagers"
 toc = true
 weight = 40
 +++
@@ -37,7 +37,7 @@ ccm ensure package zsh 5.9
 {{% /tab %}}
 {{< /tabs >}}
 
-## Ensure Values
+## Ensure values
 
 | Value       | Description                                     |
 |-------------|-------------------------------------------------|
@@ -54,7 +54,7 @@ ccm ensure package zsh 5.9
 | `ensure`   | Desired state or version                   |
 | `provider` | Force a specific provider (`dnf`, `apt`)   |
 
-## Provider Notes
+## Provider notes
 
 ### APT (Debian/Ubuntu)
 

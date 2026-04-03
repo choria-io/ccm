@@ -56,7 +56,7 @@ ccm ensure archive /opt/downloads/app.tar.gz \
 
 This downloads the archive, extracts it to `/opt/app`, and removes the archive file after extraction. Future runs skip the download if `/opt/app/bin/app` exists.
 
-## Ensure Values
+## Ensure values
 
 | Value     | Description                       |
 |-----------|-----------------------------------|
@@ -84,7 +84,7 @@ This downloads the archive, extracts it to `/opt/app`, and removes the archive f
 
 The archive resource supports two authentication methods:
 
-**Basic Authentication:**
+### Basic authentication
 
 {{< tabs >}}
 {{% tab title="Manifest" %}}
@@ -126,7 +126,7 @@ ccm ensure archive /opt/downloads/private-app.tar.gz \
 {{% /tab %}}
 {{< /tabs >}}
 
-**Custom Headers:**
+### Custom headers
 
 {{< tabs >}}
 {{% tab title="Manifest" %}}
@@ -180,7 +180,7 @@ The archive resource is idempotent through multiple mechanisms:
 
 For best idempotency, always specify either `checksum` or `creates` (or both).
 
-## Cleanup Behavior
+## Cleanup behavior
 
 When `cleanup: true` is set:
 
@@ -188,7 +188,7 @@ When `cleanup: true` is set:
 - The `extract_parent` property is required
 - The `creates` property is required to track extraction state across runs
 
-## Supported Archive Formats
+## Supported archive formats
 
 | Extension         | Extraction Tool |
 |-------------------|-----------------|
