@@ -43,7 +43,7 @@ Integrates easily with other software via SDK or Unix-like APIs.
 {{% /card %}}
 {{< /cards >}}
 
-## Shell Example
+## Shell example
 
 Here we do a package-config-service style deployment using a shell script.  The script is safe to run multiple times as the CCM commands are all idempotent.
 
@@ -68,7 +68,7 @@ $ ccm ensure package '{{ Data.package_name }}'
  INFO  package#httpd stable ensure=present runtime=8ms provider=dnf
 ```
 
-## Manifest Example
+## Manifest example
 
 Taking the example above, here is what it looks like in a manifest, complete with multi-OS support using Hierarchical Data and System Facts:
 

@@ -41,11 +41,9 @@ ccm ensure file /etc/motd --source /tmp/ccm/motd --owner root --group root --mod
 {{% /tab %}}
 {{< /tabs >}}
 
-This copies the contents of `/tmp/ccm/motd` to `/etc/motd` verbatim and sets ownership.
+This creates `/etc/motd` with the given content, parsed through the template engine, and sets ownership and permissions.
 
-Use `--content` or `--content-file` to parse content through the template engine before writing.
-
-## Ensure Values
+## Ensure values
 
 | Value       | Description                    |
 |-------------|--------------------------------|

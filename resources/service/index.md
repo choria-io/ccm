@@ -39,7 +39,7 @@ ccm ensure service httpd running --enable --subscribe package#httpd
 {{% /tab %}}
 {{< /tabs >}}
 
-## Ensure Values
+## Ensure values
 
 | Value     | Description                  |
 |-----------|------------------------------|

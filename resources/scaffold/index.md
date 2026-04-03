@@ -40,10 +40,10 @@ ccm ensure scaffold /etc/app templates/app --engine jet --purge
 
 This renders templates from the `templates/app` directory into `/etc/app` using the Jet template engine, removing any files in the target not present in the source.
 
-> [!note] Tip
-> This is implemented using the [github.com/choria-io/scaffold](https://github.com/choria-io/scaffold) Go library, you can use this in your own projects or use the included `scaffold` CLI tool.
+> [!info] Note
+> This is implemented using the [github.com/choria-io/scaffold](https://github.com/choria-io/scaffold) Go library. Use this in other projects or use the included `scaffold` CLI tool.
 
-## Ensure Values
+## Ensure values
 
 | Value     | Description                                                      |
 |-----------|------------------------------------------------------------------|
@@ -65,7 +65,7 @@ This renders templates from the `templates/app` directory into `/etc/app` using 
 | `post`            | Post-processing commands: glob pattern to command mapping                  |
 | `provider`        | Force a specific provider (`choria` only)                                  |
 
-## Template Engines
+## Template engines
 
 Two template engines are supported:
 
@@ -76,7 +76,7 @@ Two template engines are supported:
 
 The engine defaults to `jet` if not specified. Delimiters can be customized via `left_delimiter` and `right_delimiter`.
 
-## Custom Delimiters
+## Custom delimiters
 
 {{< tabs >}}
 {{% tab title="Manifest" %}}
@@ -114,7 +114,7 @@ ccm ensure scaffold /etc/myservice templates/myservice \
 {{% /tab %}}
 {{< /tabs >}}
 
-## Post-Processing
+## Post-processing
 
 The `post` property defines commands to run on rendered files. Each entry is a map where the key is a **glob pattern** matched against the file's basename and the value is a **command** to execute. Use `{}` in the command as a placeholder for the file's full path; if omitted, the path is appended as the last argument.
 
@@ -157,15 +157,15 @@ ccm ensure scaffold /opt/app templates/app \
 
 Post-processing runs immediately after each file is rendered. Files skipped due to `skip_empty` are not post-processed.
 
-## Purge Behavior
+## Purge behavior
 
 When `purge: true` is set, files in the target directory that are not present in the source template directory are deleted during rendering. In noop mode, these deletions are logged but not performed.
 
 When `purge` is disabled (the default), files not present in the source are tracked but not removed. They do not affect idempotency checks for `ensure: present`, meaning the resource is considered stable even if extra files exist in the target.
 
-## Removal Behavior
+## Removal behavior
 
-When `ensure: absent`, only managed files (changed and stable) are removed. Files not belonging to the scaffold (purged files) are left untouched. After removing managed files and empty subdirectories, the target directory itself is removed on a best-effort basis — it is only deleted if empty. If unrelated files remain, the directory is preserved and no error is raised.
+When `ensure: absent`, only managed files (changed and stable) are removed. Files not belonging to the scaffold (purged files) are left untouched. After removing managed files and empty subdirectories, the target directory itself is removed on a best-effort basis; it is only deleted if empty. If unrelated files remain, the directory is preserved and no error is raised.
 
 ## Idempotency
 
@@ -178,18 +178,18 @@ For `ensure: present`:
 
 For `ensure: absent`, the status check filters `Changed` and `Stable` lists to only include files that actually exist on disk. This means after a successful removal, the scaffold is considered absent even if the target directory still exists with unrelated files. Purged files never affect the absent stability check.
 
-## Source Resolution
+## Source resolution
 
 The `source` property is resolved relative to the manager's working directory when it is a relative path. URL sources (with a scheme) are passed through unchanged. This allows manifests bundled with template directories to use relative paths.
 
-## Template Environment
+## Template environment
 
 Templates receive the full template environment, which provides access to:
 - `facts` - System facts for the managed node
 - `data` - Hiera-resolved configuration data, or custom data when the `data` property is set
 - Template helper functions
 
-## Custom Data
+## Custom data
 
 The `data` property allows supplying a custom data map that completely replaces the Hiera-resolved data for template rendering. This is useful when a scaffold needs data that differs from or is unrelated to the global Hiera data.
 
@@ -236,11 +236,11 @@ String values in the `data` map support template expressions that are resolved b
 
 Non-string values (integers, booleans, lists, maps) are preserved as-is without template resolution.
 
-## Creating Scaffolds
+## Creating scaffolds
 
 A scaffold source is a directory tree where every file is a template. The directory structure is mirrored directly into the target, so the source layout becomes the output layout.
 
-### Source Directory Structure
+### Source directory structure
 
 ```
 templates/app/
@@ -264,7 +264,7 @@ This renders into:
 
 The `_partials` directory is special — its contents are available to templates but are never copied to the target.
 
-### Template Syntax
+### Template syntax
 
 Every file in the source directory is processed as a template. The syntax depends on the engine selected.
 
@@ -314,7 +314,7 @@ server {
 }
 ```
 
-### Built-in Functions
+### Built-in functions
 
 Two functions are available in both template engines:
 
@@ -348,7 +348,7 @@ Two functions are available in both template engines:
 {{% /tab %}}
 {{< /tabs >}}
 
-### Sprig Functions
+### Sprig functions
 
 When using the Go template engine, all [Sprig](https://masterminds.github.io/sprig/) template functions are available. These provide string manipulation, math, date formatting, list operations, and more:
 
@@ -359,7 +359,7 @@ packages: {{ join ", " .data.packages }}
 generated: {{ now | date "2006-01-02" }}
 ```
 
-### Example Scaffold
+### Example scaffold
 
 A complete scaffold for an application configuration:
 

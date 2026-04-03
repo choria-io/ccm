@@ -1,8 +1,10 @@
-# Documentation Style Guide
+# Docs Style Guide
 
 This guide describes the writing conventions used throughout the CCM documentation. Follow these rules when adding or editing pages.
 
-## Voice and Tone
+All sections apply to every documentation page. The Page structure section applies only to resource reference pages under `resources/`.
+
+## Voice and tone
 
 - Write in plain, direct North American English.
 - Use the present tense and active voice: "The service resource manages system services," not "System services are managed by the service resource."
@@ -12,7 +14,7 @@ This guide describes the writing conventions used throughout the CCM documentati
 - Do not use emojis.
 - Do not use em dashes. Use commas, periods, or semicolons instead.
 
-## Page Structure
+## Page structure
 
 Every resource page follows this order:
 
@@ -21,11 +23,11 @@ Every resource page follows this order:
 3. **Callout**: A warning or note about common pitfalls, using `> [!info]` syntax.
 4. **Primary example**: A tabbed block (Manifest / CLI / API Request) showing typical usage.
 5. **Brief explanation**: One or two sentences describing what the example does.
-6. **Ensure Values**: Table of valid `ensure` states.
+6. **Ensure values**: Table of valid `ensure` states.
 7. **Properties**: Table of all properties with short descriptions.
 8. **Additional sections**: Provider notes, idempotency, authentication, behavioral details as needed.
 
-## Front Matter
+## Front matter
 
 Use TOML delimiters (`+++`). Include at minimum:
 
@@ -62,9 +64,9 @@ Use Markdown tables for structured reference content: ensure values, properties,
 | `ensure` | Desired state (`present`, `absent`)  |
 ```
 
-## Code Examples
+## Code examples
 
-### Tabbed Blocks
+### Tabbed blocks
 
 Show every example in three tabs using Hugo shortcodes:
 
@@ -118,9 +120,9 @@ Use the `> [!info]` blockquote syntax for warnings and notes:
 > The provider will not run `apt update` before installing a package.
 ```
 
-Use **Warning** for constraints the reader must follow to avoid errors. Use **Note** for supplementary information.
+Use **Warning** for constraints the reader must follow to avoid errors. Use **Note** for supplementary information. A custom label may replace `Warning` or `Note` when it adds clarity, such as `> [!info] Default Hierarchy`.
 
-## Descriptions and Explanations
+## Descriptions and explanations
 
 - After a tabbed example block, add one or two sentences explaining what the example does and why.
 - Describe behavior, not implementation: "The command runs only if `/tmp/hello` does not exist," not "The code checks whether the file exists and skips execution if found."
@@ -133,7 +135,7 @@ Use **Warning** for constraints the reader must follow to avoid errors. Use **No
 - Reference other resources using the `type#name` notation in backticks: `package#httpd`.
 - When cross-referencing other documentation pages, use relative Hugo links.
 
-## General Formatting
+## General formatting
 
 - No trailing whitespace.
 - One blank line between sections.

@@ -6,7 +6,7 @@ The `ccm ensure` commands are idempotent, making them safe to run multiple times
 
 Use `ccm --help` and `ccm <command> --help` to explore available commands and options.
 
-## Managing a Single Resource
+## Managing a single resource
 
 Managing a single resource is straightforward.
 
@@ -22,7 +22,7 @@ To view the current state of a resource:
 ccm status package zsh
 ```
 
-## Managing Multiple Resources
+## Managing multiple resources
 
 When managing multiple resources in a script, create a session first. The session records the outcome of each resource, enabling features like refreshing a service when a file changes.
 
@@ -39,7 +39,7 @@ ccm session report --remove
 
 This creates a temporary directory for session state. If the file resource changes, the service restarts automatically.
 
-If you prefer not to eval command output, use: `export CCM_SESSION_STORE=$(mktemp -d)`
+To avoid eval, use: `export CCM_SESSION_STORE=$(mktemp -d)`
 
 ## Data in the CLI
 
@@ -65,15 +65,15 @@ $ ccm ensure package '{{ lookup("facts.host.info.platformFamily") == "rhel" ? "h
 WARN  package#httpd changed ensure=present runtime=14.509s provider=dnf
 ```
 
-For complex conditional logic, we recommend using Hiera data with hierarchy overrides instead.
+For complex conditional logic, use Hiera data with hierarchy overrides instead.
 
-## Applying Manifests
+## Applying manifests
 
 For non-shell script usage use YAML manifests with `ccm apply`:
 
 See [YAML Manifests](../yamlmanifests/) for manifest format details.
 
-## Viewing System Facts
+## Viewing system facts
 
 CCM gathers system facts that can be used in templates and conditions:
 
@@ -88,7 +88,7 @@ $ ccm facts --yaml
 $ ccm facts host.info.platformFamily
 ```
 
-## Resolving Hiera Data
+## Resolving Hiera data
 
 The `ccm hiera` command helps debug and test Hiera data resolution:
 

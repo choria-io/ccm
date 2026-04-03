@@ -5,13 +5,13 @@
 
 ## Key Information
 
-- [Resources](https://choria-cm.dev/resources/index.md): Introduction to resources and common properties
+- [Resources](https://choria-cm.dev/resources/index.md): Introduce resources and common properties
 - [Hierarchical Data](https://choria-cm.dev/hiera/index.md): Introduce a new take on the well-known hiera tool
-- [Data](https://choria-cm.dev/templates/index.md): How to use templates in CCM Manifests and CLI
-- [Shell Usage](https://choria-cm.dev/cli/index.md): How to use the ccm CLI tooling
-- [YAML Manifests](https://choria-cm.dev/yamlmanifests/index.md): Writing, Hosting and Executing YAML Manifests
-- [Agent](https://choria-cm.dev/agent/index.md): Introduces a method for automatically running manifests on a schedule
-- [Registration](https://choria-cm.dev/registration/index.md): service discovery through NATS-based registration of stable resources
+- [Data](https://choria-cm.dev/templates/index.md): Use templates in CCM manifests and CLI
+- [Shell Usage](https://choria-cm.dev/cli/index.md): Use the ccm CLI tooling
+- [YAML Manifests](https://choria-cm.dev/yamlmanifests/index.md): Write, host and execute YAML manifests
+- [Agent](https://choria-cm.dev/agent/index.md): Run manifests automatically on a schedule
+- [Registration](https://choria-cm.dev/registration/index.md): Discover services through NATS-based registration of stable resources
 - [Monitoring](https://choria-cm.dev/monitoring/index.md): Integrating deep health knowledge into resources
 - [Design Documents](https://choria-cm.dev/design/index.md): LLM generated design documents for resources
 
@@ -19,11 +19,11 @@
 ## Resource Reference
 
 - [Archive](https://choria-cm.dev/resources/archive/index.md): Download, extract and copy files from tar.gz and zip archives
-- [Exec](https://choria-cm.dev/resources/exec/index.md): Idempotent command execution
+- [Exec](https://choria-cm.dev/resources/exec/index.md): Execute commands idempotently
 - [File](https://choria-cm.dev/resources/file/index.md): Manage files content, ownership and more
-- [Package](https://choria-cm.dev/resources/package/index.md): Install, upgrade, downgrade and remove packages using OS Native packagers
+- [Package](https://choria-cm.dev/resources/package/index.md): Install, upgrade, downgrade and remove packages using OS native packagers
 - [Scaffold](https://choria-cm.dev/resources/scaffold/index.md): Render template directories into target directories with synchronization and purge support
-- [Service](https://choria-cm.dev/resources/service/index.md): Enable, disable, start, stop and restart services using OS Native service managers
+- [Service](https://choria-cm.dev/resources/service/index.md): Enable, disable, start, stop and restart services using OS native service managers
 
 
 ## Extendibility and Integration
