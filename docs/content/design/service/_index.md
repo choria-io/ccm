@@ -2,6 +2,7 @@
 title = "Service Type"
 toc = true
 weight = 50
+description = "Service resource for system service management"
 +++
 
 This document describes the design of the service resource type for managing system services.

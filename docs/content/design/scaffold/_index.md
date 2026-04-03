@@ -2,6 +2,7 @@
 title = "Scaffold Type"
 toc = true
 weight = 45
+description = "Scaffold resource for template directory rendering"
 +++
 
 This document describes the design of the scaffold resource type for rendering template directories into target directories.

@@ -1,6 +1,6 @@
 +++
 title = "Service"
-description = "Enable, disable, start, stop and restart services using OS Native service managers"
+description = "Enable, disable, start, stop and restart services using OS native service managers"
 toc = true
 weight = 50
 +++
@@ -44,7 +44,7 @@ ccm ensure service httpd running --enable --subscribe package#httpd
 {{% /tab %}}
 {{< /tabs >}}
 
-## Ensure Values
+## Ensure values
 
 | Value     | Description                  |
 |-----------|------------------------------|

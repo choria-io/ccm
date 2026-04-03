@@ -1,6 +1,6 @@
 +++
 title = "Exec"
-description = "Idempotent command execution"
+description = "Execute commands idempotently"
 toc = true
 weight = 20
 +++
@@ -102,7 +102,7 @@ The `posix` provider is the default and is suitable for most commands. Use the `
 | `logoutput` (boolean)   | Log the command output                                                            |
 | `provider`              | Force a specific provider (`posix` or `shell`)                                    |
 
-## Guard Commands
+## Guard commands
 
 The `onlyif` and `unless` properties act as guard commands that control whether the exec runs. They are evaluated before execution and share the exec's `cwd`, `environment`, and `path` settings. Guard commands run even in noop mode to accurately report what would happen.
 

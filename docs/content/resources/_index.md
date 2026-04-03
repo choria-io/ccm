@@ -1,6 +1,6 @@
 +++
 title = "Resources"
-description = "Introduction to resources and common properties"
+description = "Introduce resources and common properties"
 toc = true
 weight = 10
 pre = "<b>1. </b>"
@@ -10,11 +10,11 @@ Resources describe the desired state of your infrastructure. Each resource repre
 
 Every resource has a type, a unique name, and resource-specific properties.
 
-## Resource Types
+## Resource types
 
 {{< subpages >}}
 
-## Common Properties
+## Common properties
 
 All resources support the following common properties:
 
@@ -28,7 +28,7 @@ All resources support the following common properties:
 | `health_checks` | Health checks to run after applying (see [Monitoring](../monitoring/))      |
 | `control`       | Conditional execution rules (see below)                                     |
 
-## Conditional Resource Execution
+## Conditional resource execution
 
 Resources can be conditionally executed using a `control` section and expressions that should resolve to boolean values.
 
@@ -69,7 +69,7 @@ ccm ensure package zsh 5.9 \
 {{< /tabs >}}
 
 
-Here we install `zsh` on all `linux` machines unless they are running inside a `docker` container.
+This installs `zsh` on all `linux` machines unless they are running inside a `docker` container.
 
 The following table shows how the two conditions interact:
 
@@ -85,7 +85,7 @@ The following table shows how the two conditions interact:
 | `false`   | `true`    | No                |
 | `false`   | `false`   | No                |
 
-## About Names
+## About names
 
 Resources can be specified like:
 

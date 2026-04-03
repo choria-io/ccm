@@ -1,12 +1,13 @@
 +++
 title = "CLI Plugins"
+description = "Extend the CLI with custom commands using App Builder"
 toc = true
 weight = 20
 +++
 
 CCM supports extending the CLI with custom commands using [App Builder](https://choria-io.github.io/appbuilder/index.html). This allows you to create organization-specific workflows that integrate with the `ccm` command.
 
-## Plugin Locations
+## Plugin locations
 
 CCM searches for plugins in two directories:
 
@@ -17,7 +18,7 @@ CCM searches for plugins in two directories:
 
 Plugins in the user directory override system plugins with the same name.
 
-## Plugin File Format
+## Plugin file format
 
 Plugin files must be named `<command>-plugin.yaml`. The filename determines the command name:
 
@@ -27,7 +28,7 @@ backup-plugin.yaml    → ccm backup
 myapp-plugin.yaml     → ccm myapp
 ```
 
-## Basic Plugin Structure
+## Basic plugin structure
 
 Plugins use App Builder's YAML definition format. Here's a minimal example:
 
@@ -45,11 +46,11 @@ commands:
 
 This creates `ccm deploy web` which applies a manifest.
 
-## Passing Data to Manifests
+## Passing data to manifests
 
 Plugins can pass data to manifests through environment variables or facts. Both are accessible in manifest templates.
 
-### Using Environment Variables
+### Using environment variables
 
 Environment variables set in the plugin are available in manifests via `{{ lookup("env.VAR_NAME") }}`:
 
@@ -79,7 +80,7 @@ resources:
       log_level: {{ lookup("env.LOG_LEVEL") }}
 ```
 
-### Using Facts
+### Using facts
 
 Pass additional facts using the `--fact` flag. Facts are available via `{{ lookup("facts.KEY") }}`:
 
@@ -109,7 +110,7 @@ resources:
     version: "{{ lookup('facts.app_version') }}"
 ```
 
-## Further Reading
+## Further reading
 
 For complete App Builder documentation including all command types, templating features, and advanced options, see the [App Builder documentation](https://choria-io.github.io/appbuilder/index.html).
 

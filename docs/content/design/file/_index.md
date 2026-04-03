@@ -2,6 +2,7 @@
 title = "File Type"
 toc = true
 weight = 30
+description = "File resource for managing files and directories"
 +++
 
 This document describes the design of the file resource type for managing files and directories.

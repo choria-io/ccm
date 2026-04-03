@@ -2,6 +2,7 @@
 title = "Adding a Type"
 toc = true
 weight = 100
+description = "How to add a new resource type to CCM"
 +++
 
 This guide documents the process for adding a new resource type to CCM. It uses the `archive` type as a reference implementation.

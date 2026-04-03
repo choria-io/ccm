@@ -2,6 +2,7 @@
 title = "Archive Type"
 toc = true
 weight = 10
+description = "Archive resource for downloading and extracting archives"
 +++
 
 This document describes the design of the archive resource type for downloading and extracting archives.

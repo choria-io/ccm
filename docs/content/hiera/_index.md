@@ -17,9 +17,9 @@ Key features:
  * Command-line tool with built-in system facts
  * Go library for embedding
 
-### Usage
+## Usage
 
-Here's an annotated example:
+An annotated example:
 
 ```yaml
 hierarchy:
@@ -61,7 +61,7 @@ The templating here is identical to that in the [Template documentation](../temp
 > [!info] Default Hierarchy
 > If no `hierarchy` section is provided, the resolver uses a default hierarchy of `["default"]`.
 
-### CLI Example
+## CLI example
 
 The `ccm hiera` command resolves hierarchy files with facts. It is designed to be a generally usable tool, with flexible options for providing facts.
 
@@ -111,11 +111,13 @@ $ ccm hiera parse data.json fqdn=other.fqdn.com --env
 HIERA_TEST=value
 ```
 
-### Fact Sources
+## Fact sources
 
-Facts can come from multiple sources, which are merged together:
+Facts can come from multiple sources, which are merged together.
 
-**System facts** (`-S` or `--system-facts`):
+### System facts
+
+Use `-S` or `--system-facts`:
 
 ```nohighlight
 # View system facts
@@ -125,19 +127,25 @@ $ ccm hiera facts -S
 $ ccm hiera parse data.json -S
 ```
 
-**Environment variables as facts** (`-E` or `--env-facts`):
+### Environment variables as facts
 
-```banohighlightsh
+Use `-E` or `--env-facts`:
+
+```nohighlight
 ccm hiera parse data.json -E
 ```
 
-**Facts file** (`--facts FILE`):
+### Facts file
+
+Use `--facts FILE`:
 
 ```nohighlight
 ccm hiera parse data.json --facts facts.yaml
 ```
 
-**Command-line facts** (key=value pairs):
+### Command-line facts
+
+Pass key=value pairs as positional arguments:
 
 ```nohighlight
 ccm hiera parse data.json env=prod role=web
@@ -145,7 +153,7 @@ ccm hiera parse data.json env=prod role=web
 
 All fact sources can be combined. Command-line facts take highest precedence.
 
-### Data in NATS
+## Data in NATS
 
 [NATS](https://nats.io) is a lightweight messaging system that supports Key-Value stores. Hierarchy data can be stored in NATS and used with `ccm ensure` and `ccm hiera` commands.
 
@@ -169,7 +177,7 @@ Resolve the hierarchy using the KV store:
 ccm hiera parse kv://CCM/data --context ccm -S
 ```
 
-### Data on Web Servers
+## Data on web servers
 
 Hierarchy data can also be stored on a web server and fetched via HTTP or HTTPS.
 
