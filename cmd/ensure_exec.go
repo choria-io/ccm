@@ -21,6 +21,8 @@ type ensureExecCommand struct {
 	refreshOnly bool
 	logoutput   bool
 	parent      *ensureCommand
+	execIf      string
+	execUnless  string
 }
 
 func registerEnsureExecCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
@@ -37,6 +39,8 @@ func registerEnsureExecCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	exec.Flag("refresh-only", "Only run when notified by a subscribed resource").UnNegatableBoolVar(&cmd.refreshOnly)
 	exec.Flag("subscribe", "Subscribe to changes in other resources").PlaceHolder("type#name").Short('S').StringsVar(&cmd.subscribe)
 	exec.Flag("logoutput", "Log output of the command").UnNegatableBoolVar(&cmd.logoutput)
+	exec.Flag("exec-if", "Execute command when this command returns 0").StringVar(&cmd.execIf)
+	exec.Flag("exec-unless", "Execute command unless this command returns 0").StringVar(&cmd.execUnless)
 
 	parent.addCommonFlags(exec)
 }
@@ -57,6 +61,8 @@ func (c *ensureExecCommand) execAction(_ *fisk.ParseContext) error {
 		RefreshOnly: c.refreshOnly,
 		Subscribe:   c.subscribe,
 		LogOutput:   c.logoutput,
+		Unless:      c.execUnless,
+		OnlyIf:      c.execIf,
 	}
 
 	return c.parent.commonEnsureResource(&properties)

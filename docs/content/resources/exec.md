@@ -108,6 +108,8 @@ The `onlyif` and `unless` properties act as guard commands that control whether 
 
 When `creates` is also set, it takes precedence: if the creates file exists, the command is skipped regardless of guard results. Subscribe-triggered refreshes override all guards.
 
+{{< tabs >}}
+{{% tab title="Manifest" %}}
 ```yaml
 - exec:
     - install-app:
@@ -120,3 +122,40 @@ When `creates` is also set, it takes precedence: if the creates file exists, the
         unless: /usr/sbin/iptables -C INPUT -p tcp --dport 8080 -j ACCEPT
         # Runs only if the iptables rule does not already exist
 ```
+{{% /tab %}}
+{{% tab title="CLI" %}}
+```nohighlight
+# Runs only if the package file exists
+ccm ensure exec /usr/local/bin/install-app.sh --exec-if "test -f /tmp/app-package.tar.gz"
+
+# Runs only if the iptables rule does not already exist
+ccm ensure exec "/usr/sbin/iptables -A INPUT -p tcp --dport 8080 -j ACCEPT" \
+  --exec-unless "/usr/sbin/iptables -C INPUT -p tcp --dport 8080 -j ACCEPT"
+```
+{{% /tab %}}
+{{% tab title="API Request" %}}
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "exec",
+  "properties": {
+    "name": "install-app",
+    "command": "/usr/local/bin/install-app.sh",
+    "onlyif": "test -f /tmp/app-package.tar.gz"
+  }
+}
+```
+
+```json
+{
+  "protocol": "io.choria.ccm.v1.resource.ensure.request",
+  "type": "exec",
+  "properties": {
+    "name": "configure-firewall",
+    "command": "/usr/sbin/iptables -A INPUT -p tcp --dport 8080 -j ACCEPT",
+    "unless": "/usr/sbin/iptables -C INPUT -p tcp --dport 8080 -j ACCEPT"
+  }
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
