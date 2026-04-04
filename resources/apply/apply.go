@@ -43,9 +43,18 @@ type Apply struct {
 	manifestBytes          []byte
 	preMessage             string
 	postMessage            string
+	currentDepth           int
+	maxDepth               int
+	skipSession            bool
+	denyApplyResources     bool
 
 	mu sync.Mutex
 }
+
+const (
+	// DefaultMaxRecursionDepth is how many apply() calls deep we can go
+	DefaultMaxRecursionDepth = 10
+)
 
 func (a *Apply) String() string {
 	return fmt.Sprintf("%s with %d resources", a.source, len(a.resources))
@@ -374,7 +383,8 @@ type manifestResourcesParser struct {
 // ResolveManifestReader reads and resolves a manifest using Hiera, returning the resolved data and parsed manifest
 func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, manifest io.Reader, opts ...Option) (map[string]any, model.Apply, error) {
 	apply := &Apply{
-		source: "reader",
+		source:   "reader",
+		maxDepth: DefaultMaxRecursionDepth,
 	}
 
 	for _, o := range opts {
@@ -539,9 +549,20 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 		userLog.Info("Executing manifest", "manifest", a.Source(), "resources", len(a.Resources()))
 	}
 
-	session, err := mgr.StartSession(a)
-	if err != nil {
-		return nil, err
+	var session model.SessionStore
+	if !a.skipSession {
+		session, err = mgr.StartSession(a)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if a.maxDepthExceeded() {
+		return session, fmt.Errorf("maximum apply depth of %d exceeded", a.maxDepth)
+	}
+
+	if a.denyApplyResources && a.hasApplyResources() {
+		return session, fmt.Errorf("apply resources are denied")
 	}
 
 	var terminate bool
@@ -603,6 +624,26 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 	}
 
 	return session, nil
+}
+
+func (a *Apply) hasApplyResources() bool {
+	for _, r := range a.Resources() {
+		for _, prop := range r {
+			if prop.CommonProperties().Type == "apply" {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (a *Apply) maxDepthExceeded() bool {
+	if a.maxDepth == 0 {
+		a.maxDepth = DefaultMaxRecursionDepth
+	}
+
+	return a.currentDepth >= a.maxDepth
 }
 
 func publishRegistration(ctx context.Context, mgr model.Manager, prop model.ResourceProperties, event *model.TransactionEvent, log model.Logger) error {

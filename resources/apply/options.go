@@ -21,3 +21,35 @@ func WithOverridingResolvedData(d map[string]any) Option {
 		return nil
 	}
 }
+
+// WithSkipSession skips the StartSession call, used when executing within an existing session (e.g., the apply resource)
+func WithSkipSession() Option {
+	return func(a *Apply) error {
+		a.skipSession = true
+		return nil
+	}
+}
+
+// WithMaxDepth sets the maximum recursion depth for nested apply resources
+func WithMaxDepth(depth int) Option {
+	return func(a *Apply) error {
+		a.maxDepth = depth
+		return nil
+	}
+}
+
+// WithCurrentDepth sets the current recursion depth
+func WithCurrentDepth(depth int) Option {
+	return func(a *Apply) error {
+		a.currentDepth = depth
+		return nil
+	}
+}
+
+// WithDenyApplyResources prevents the manifest from containing apply resources
+func WithDenyApplyResources() Option {
+	return func(a *Apply) error {
+		a.denyApplyResources = true
+		return nil
+	}
+}

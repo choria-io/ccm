@@ -65,25 +65,6 @@ var _ = Describe("ApplyResourceProperties", func() {
 		})
 	})
 
-	Describe("AllowApplyResources", func() {
-		It("Should return true when AllowApply is nil", func() {
-			prop := &ApplyResourceProperties{}
-			Expect(prop.AllowApplyResources()).To(BeTrue())
-		})
-
-		It("Should return true when AllowApply is true", func() {
-			allow := true
-			prop := &ApplyResourceProperties{AllowApply: &allow}
-			Expect(prop.AllowApplyResources()).To(BeTrue())
-		})
-
-		It("Should return false when AllowApply is false", func() {
-			allow := false
-			prop := &ApplyResourceProperties{AllowApply: &allow}
-			Expect(prop.AllowApplyResources()).To(BeFalse())
-		})
-	})
-
 	Describe("ResolveTemplates", func() {
 		It("Should resolve templates in name", func() {
 			prop := &ApplyResourceProperties{
@@ -138,7 +119,6 @@ var _ = Describe("ApplyResourceProperties", func() {
 
 	Describe("ToYamlManifest", func() {
 		It("Should marshal to YAML correctly", func() {
-			allow := true
 			prop := &ApplyResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/etc/ccm/manifest.yaml",
@@ -146,7 +126,7 @@ var _ = Describe("ApplyResourceProperties", func() {
 				},
 				Noop:            true,
 				HealthCheckOnly: true,
-				AllowApply:      &allow,
+				AllowApply:      true,
 				Data:            map[string]any{"key": "value"},
 			}
 
@@ -201,7 +181,7 @@ data:
 			Expect(prop.Ensure).To(Equal(EnsurePresent))
 			Expect(prop.Noop).To(BeTrue())
 			Expect(prop.HealthCheckOnly).To(BeTrue())
-			Expect(*prop.AllowApply).To(BeTrue())
+			Expect(prop.AllowApply).To(BeTrue())
 			Expect(prop.Data).To(HaveKeyWithValue("key", "value"))
 			Expect(prop.Type).To(Equal(ApplyTypeName))
 		})

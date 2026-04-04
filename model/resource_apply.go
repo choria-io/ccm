@@ -20,7 +20,7 @@ type ApplyResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
 	Noop                     bool           `json:"noop,omitempty" yaml:"noop,omitempty"`
 	HealthCheckOnly          bool           `json:"health_check_only,omitempty" yaml:"health_check_only,omitempty"`
-	AllowApply               *bool          `json:"allow_apply,omitempty" yaml:"allow_apply,omitempty"`
+	AllowApply               bool           `json:"allow_apply,omitempty" yaml:"allow_apply,omitempty"`
 	Data                     map[string]any `json:"data,omitempty" yaml:"data,omitempty"`
 }
 
@@ -68,11 +68,6 @@ func (p *ApplyResourceProperties) CommonProperties() *CommonResourceProperties {
 
 func (p *ApplyResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
 	return yaml.Marshal(p)
-}
-
-// AllowApplyResources returns true if apply resources are allowed
-func (p *ApplyResourceProperties) AllowApplyResources() bool {
-	return p.AllowApply == nil || *p.AllowApply
 }
 
 // NewApplyResourcePropertiesFromYaml creates a new apply resource properties object from a yaml document, does not validate or expand templates
