@@ -95,6 +95,9 @@ commands:
             ab_say Running go mod tidy
 
             go mod tidy
+            
+            ab_say Publishing latest schema
+            cp internal/fs/schemas/* docs/static/schemas/ccm/v1
 
     - name: test
       type: parent

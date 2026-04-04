@@ -98,7 +98,8 @@ func (p *FileResourceProperties) Validate() error {
 
 // ResolveTemplates resolves template expressions in the file resource properties
 func (p *FileResourceProperties) ResolveTemplates(env *templates.Env) error {
-	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
+	err := templates.ResolveStructTemplates(p, env, false)
+	if err != nil {
 		return err
 	}
 
@@ -109,7 +110,8 @@ func (p *FileResourceProperties) ResolveTemplates(env *templates.Env) error {
 // This allows controls like if/unless to prevent template errors in content when the
 // resource would be skipped.
 func (p *FileResourceProperties) ResolveDeferredTemplates(env *templates.Env) error {
-	if err := templates.ResolveStructTemplates(p, env, true); err != nil {
+	err := templates.ResolveStructTemplates(p, env, true)
+	if err != nil {
 		return err
 	}
 

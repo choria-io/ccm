@@ -91,7 +91,8 @@ func (p *ServiceResourceProperties) Validate() error {
 
 // ResolveTemplates resolves template expressions in the service resource properties
 func (p *ServiceResourceProperties) ResolveTemplates(env *templates.Env) error {
-	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
+	err := templates.ResolveStructTemplates(p, env, false)
+	if err != nil {
 		return err
 	}
 

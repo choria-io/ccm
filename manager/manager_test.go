@@ -1333,5 +1333,67 @@ var _ = Describe("PublishRegistration", func() {
 	})
 })
 
+var _ = Describe("SetNoopMode", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("enables noop mode", func() {
+		mgr, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.NoopMode()).To(BeFalse())
+
+		mgr.SetNoopMode(true)
+		Expect(mgr.NoopMode()).To(BeTrue())
+	})
+
+	It("disables noop mode", func() {
+		mgr, err := NewManager(mockLog, mockLog, WithNoop())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(mgr.NoopMode()).To(BeTrue())
+
+		mgr.SetNoopMode(false)
+		Expect(mgr.NoopMode()).To(BeFalse())
+	})
+
+	It("can be toggled multiple times", func() {
+		mgr, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		mgr.SetNoopMode(true)
+		Expect(mgr.NoopMode()).To(BeTrue())
+
+		mgr.SetNoopMode(false)
+		Expect(mgr.NoopMode()).To(BeFalse())
+
+		mgr.SetNoopMode(true)
+		Expect(mgr.NoopMode()).To(BeTrue())
+	})
+
+	It("setting to same value is idempotent", func() {
+		mgr, err := NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+
+		mgr.SetNoopMode(false)
+		Expect(mgr.NoopMode()).To(BeFalse())
+
+		mgr.SetNoopMode(true)
+		mgr.SetNoopMode(true)
+		Expect(mgr.NoopMode()).To(BeTrue())
+	})
+})
+
 // Verify JetStream interface compliance
 var _ jetstream.JetStream = (*modelmocks.MockJetStream)(nil)

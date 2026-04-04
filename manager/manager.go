@@ -624,9 +624,17 @@ func (m *CCM) TemplateEnvironment(ctx context.Context) (*templates.Env, error) {
 	return env, nil
 }
 
+// NoopMode reports the noop mode
 func (m *CCM) NoopMode() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	return m.noop
+}
+
+// SetNoopMode sets the noop mode
+func (m *CCM) SetNoopMode(noop bool) {
+	m.mu.Lock()
+	m.noop = noop
+	m.mu.Unlock()
 }

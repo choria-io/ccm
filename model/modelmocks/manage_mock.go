@@ -433,6 +433,18 @@ func (mr *MockManagerMockRecorder) SetFacts(facts any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFacts", reflect.TypeOf((*MockManager)(nil).SetFacts), facts)
 }
 
+// SetNoopMode mocks base method.
+func (m *MockManager) SetNoopMode(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetNoopMode", arg0)
+}
+
+// SetNoopMode indicates an expected call of SetNoopMode.
+func (mr *MockManagerMockRecorder) SetNoopMode(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNoopMode", reflect.TypeOf((*MockManager)(nil).SetNoopMode), arg0)
+}
+
 // SetWorkingDirectory mocks base method.
 func (m *MockManager) SetWorkingDirectory(dir string) {
 	m.ctrl.T.Helper()

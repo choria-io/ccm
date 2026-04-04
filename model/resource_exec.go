@@ -43,14 +43,6 @@ type ExecResourceProperties struct {
 	ParsedTimeout time.Duration `json:"-" yaml:"-"` // ParsedTimeout is the parsed duration representation of Timeout, should not be set by callers
 }
 
-// ExecMetadata contains detailed metadata about an execution
-type ExecMetadata struct {
-	Name     string         `json:"name" yaml:"name"`
-	Provider string         `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Runtime  time.Duration  `json:"runtime,omitempty" yaml:"runtime,omitempty"`
-	Extended map[string]any `json:"extended,omitempty" yaml:"extended,omitempty"`
-}
-
 // ExecState represents the current state of an execution
 type ExecState struct {
 	CommonResourceState
@@ -65,7 +57,7 @@ func (f *ExecState) CommonState() *CommonResourceState {
 	return &f.CommonResourceState
 }
 
-// Validate validates the package resource properties
+// Validate validates the exec resource properties
 func (p *ExecResourceProperties) Validate() error {
 	if p.SkipValidate {
 		return nil
@@ -127,7 +119,8 @@ func (p *ExecResourceProperties) Validate() error {
 
 // ResolveTemplates resolves template expressions in the exec resource properties
 func (p *ExecResourceProperties) ResolveTemplates(env *templates.Env) error {
-	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
+	err := templates.ResolveStructTemplates(p, env, false)
+	if err != nil {
 		return err
 	}
 
