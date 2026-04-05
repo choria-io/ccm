@@ -33,7 +33,11 @@ type ApplyState struct {
 	ResourceCount int `json:"resource_count" yaml:"resource_count"`
 }
 
-// Validate validates the exec resource properties
+func (f *ApplyState) CommonState() *CommonResourceState {
+	return &f.CommonResourceState
+}
+
+// Validate validates the apply resource properties
 func (p *ApplyResourceProperties) Validate() error {
 	if p.SkipValidate {
 		return nil
