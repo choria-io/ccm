@@ -158,18 +158,20 @@ func NewResourcePropertiesFromYaml(typeName string, rawProperties yaml.RawMessag
 	// TODO: extend the registry to include these so its automatic and doesnt need maintenance
 
 	switch typeName {
-	case PackageTypeName:
-		props, err = NewPackageResourcePropertiesFromYaml(rawProperties)
-	case ServiceTypeName:
-		props, err = NewServiceResourcePropertiesFromYaml(rawProperties)
-	case FileTypeName:
-		props, err = NewFileResourcePropertiesFromYaml(rawProperties)
-	case ExecTypeName:
-		props, err = NewExecResourcePropertiesFromYaml(rawProperties)
+	case ApplyTypeName:
+		props, err = NewApplyResourcePropertiesFromYaml(rawProperties)
 	case ArchiveTypeName:
 		props, err = NewArchiveResourcePropertiesFromYaml(rawProperties)
+	case ExecTypeName:
+		props, err = NewExecResourcePropertiesFromYaml(rawProperties)
+	case FileTypeName:
+		props, err = NewFileResourcePropertiesFromYaml(rawProperties)
+	case PackageTypeName:
+		props, err = NewPackageResourcePropertiesFromYaml(rawProperties)
 	case ScaffoldTypeName:
 		props, err = NewScaffoldResourcePropertiesFromYaml(rawProperties)
+	case ServiceTypeName:
+		props, err = NewServiceResourcePropertiesFromYaml(rawProperties)
 	default:
 		return nil, fmt.Errorf("%w: %s %s", ErrResourceInvalid, ErrUnknownType, typeName)
 	}

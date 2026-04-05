@@ -23,11 +23,36 @@ import (
 	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
+	"github.com/choria-io/ccm/resources/archive"
+	"github.com/choria-io/ccm/resources/exec"
+	"github.com/choria-io/ccm/resources/file"
+	"github.com/choria-io/ccm/resources/package"
+	"github.com/choria-io/ccm/resources/scaffold"
+	"github.com/choria-io/ccm/resources/service"
 )
 
 func TestApply(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Resources/Apply")
+}
+
+func testResourceFactory(ctx context.Context, mgr model.Manager, props model.ResourceProperties) (model.Resource, error) {
+	switch rprop := props.(type) {
+	case *model.ArchiveResourceProperties:
+		return archiveresource.New(ctx, mgr, *rprop)
+	case *model.ExecResourceProperties:
+		return execresource.New(ctx, mgr, *rprop)
+	case *model.FileResourceProperties:
+		return fileresource.New(ctx, mgr, *rprop)
+	case *model.PackageResourceProperties:
+		return packageresource.New(ctx, mgr, *rprop)
+	case *model.ScaffoldResourceProperties:
+		return scaffoldresource.New(ctx, mgr, *rprop)
+	case *model.ServiceResourceProperties:
+		return serviceresource.New(ctx, mgr, *rprop)
+	default:
+		return nil, fmt.Errorf("unsupported resource property type %T", rprop)
+	}
 }
 
 var _ = Describe("Apply", func() {
@@ -298,6 +323,8 @@ var _ = Describe("Apply", func() {
 		)
 
 		BeforeEach(func() {
+			ResourceFactory = testResourceFactory
+
 			facts = make(map[string]any)
 			data = make(map[string]any)
 			mgr, mgrLogger = modelmocks.NewManager(facts, data, false, mockctl)

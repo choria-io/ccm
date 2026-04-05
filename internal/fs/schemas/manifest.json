@@ -115,6 +115,12 @@
             { "$ref": "#/$defs/scaffoldResourceList" },
             { "$ref": "#/$defs/scaffoldResourcePropertiesWithName" }
           ]
+        },
+        "apply": {
+          "oneOf": [
+            { "$ref": "#/$defs/applyResourceList" },
+            { "$ref": "#/$defs/applyResourcePropertiesWithName" }
+          ]
         }
       },
       "minProperties": 1,
@@ -1264,6 +1270,156 @@
           "type": "string",
           "description": "Expression that must evaluate to false for the resource to be managed. Has access to Facts, Data, and Environ variables.",
           "examples": ["Facts.os == \"windows\"", "lookup(\"facts.virtual\", \"\") == \"docker\""]
+        }
+      },
+      "additionalProperties": false
+    },
+    "applyResourceList": {
+      "type": "array",
+      "description": "List of apply resources to manage (named format)",
+      "items": {
+        "type": "object",
+        "description": "Apply resource entry keyed by manifest file path",
+        "additionalProperties": {
+          "$ref": "#/$defs/applyResourceProperties"
+        },
+        "minProperties": 1,
+        "maxProperties": 1
+      }
+    },
+    "applyResourcePropertiesWithName": {
+      "type": "object",
+      "description": "Properties for an apply resource (direct format with name)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Path to the child manifest file to apply"
+        },
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the apply resource",
+          "enum": ["present"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "type": "array",
+          "description": "Registration entries to publish when the resource is stable",
+          "items": {
+            "$ref": "#/$defs/registrationEntry"
+          }
+        },
+        "noop": {
+          "type": "boolean",
+          "description": "If true, the child manifest will be applied in noop mode. Cannot weaken a parent's noop mode.",
+          "default": false
+        },
+        "health_check_only": {
+          "type": "boolean",
+          "description": "If true, only run health checks for the child manifest resources without applying them.",
+          "default": false
+        },
+        "allow_apply": {
+          "type": "boolean",
+          "description": "If false, prevents the child manifest from containing its own apply resources.",
+          "default": true
+        },
+        "data": {
+          "type": "object",
+          "description": "Data to merge into the child manifest's resolved data, overriding values from the child's own hiera resolution.",
+          "additionalProperties": true
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "applyResourceProperties": {
+      "type": "object",
+      "description": "Properties for an apply resource that applies a child manifest",
+      "properties": {
+        "alias": {
+          "type": "string",
+          "description": "An alternative name for the resource that can be used in require/subscribe references"
+        },
+        "ensure": {
+          "type": "string",
+          "description": "Desired state of the apply resource",
+          "enum": ["present"],
+          "default": "present"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Specific provider to use for managing this resource"
+        },
+        "health_checks": {
+          "type": "array",
+          "description": "Health checks to run after applying the resource",
+          "items": {
+            "$ref": "#/$defs/healthCheck"
+          }
+        },
+        "require": {
+          "type": "array",
+          "description": "List of resources that must be applied before this resource, in format 'type#name'",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+#.+$"
+          }
+        },
+        "control": {
+          "$ref": "#/$defs/resourceControl"
+        },
+        "register_when_stable": {
+          "type": "array",
+          "description": "Registration entries to publish when the resource is stable",
+          "items": {
+            "$ref": "#/$defs/registrationEntry"
+          }
+        },
+        "noop": {
+          "type": "boolean",
+          "description": "If true, the child manifest will be applied in noop mode. Cannot weaken a parent's noop mode.",
+          "default": false
+        },
+        "health_check_only": {
+          "type": "boolean",
+          "description": "If true, only run health checks for the child manifest resources without applying them.",
+          "default": false
+        },
+        "allow_apply": {
+          "type": "boolean",
+          "description": "If false, prevents the child manifest from containing its own apply resources.",
+          "default": true
+        },
+        "data": {
+          "type": "object",
+          "description": "Data to merge into the child manifest's resolved data, overriding values from the child's own hiera resolution.",
+          "additionalProperties": true
         }
       },
       "additionalProperties": false

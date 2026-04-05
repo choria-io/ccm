@@ -6,6 +6,7 @@ package ccmmanifest
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,6 +18,8 @@ import (
 	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
+	"github.com/choria-io/ccm/resources/apply"
+	execresource "github.com/choria-io/ccm/resources/exec"
 	execposix "github.com/choria-io/ccm/resources/exec/posix"
 )
 
@@ -94,6 +97,15 @@ ccm:
 `
 
 		BeforeEach(func() {
+			apply.ResourceFactory = func(ctx context.Context, mgr model.Manager, props model.ResourceProperties) (model.Resource, error) {
+				switch rprop := props.(type) {
+				case *model.ExecResourceProperties:
+					return execresource.New(ctx, mgr, *rprop)
+				default:
+					return nil, fmt.Errorf("unsupported resource type %T", rprop)
+				}
+			}
+
 			facts = map[string]any{"os": "linux"}
 			data = map[string]any{"key": "value"}
 			mgr, _ = modelmocks.NewManager(facts, data, false, mockctl)

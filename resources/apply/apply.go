@@ -28,9 +28,13 @@ import (
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/resources"
 	"github.com/choria-io/ccm/templates"
 )
+
+// ResourceFactory creates a Resource from properties. Set by the resources
+// package at init time to break the import cycle between resources/apply and
+// resources.
+var ResourceFactory func(ctx context.Context, mgr model.Manager, props model.ResourceProperties) (model.Resource, error)
 
 // Apply represents a parsed and resolved manifest ready for execution
 type Apply struct {
@@ -580,7 +584,7 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 			// TODO: error here should rather create a TransactionEvent with an error status
 			// TODO: this stuff should be stored in the registry so it knows when to call what so its automatic
 
-			resource, err = resources.NewResourceFromProperties(ctx, mgr, prop)
+			resource, err = ResourceFactory(ctx, mgr, prop)
 			if err != nil {
 				return nil, err
 			}

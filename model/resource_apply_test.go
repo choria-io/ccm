@@ -222,6 +222,49 @@ name: [invalid
 		})
 	})
 
+	Describe("ApplyState", func() {
+		It("Should return CommonState correctly", func() {
+			state := &ApplyState{
+				CommonResourceState: NewCommonResourceState(ResourceStatusApplyProtocol, ApplyTypeName, "/etc/ccm/child.yaml", EnsurePresent),
+				ResourceCount:       5,
+			}
+
+			common := state.CommonState()
+			Expect(common).ToNot(BeNil())
+			Expect(common.Name).To(Equal("/etc/ccm/child.yaml"))
+			Expect(common.Protocol).To(Equal(ResourceStatusApplyProtocol))
+			Expect(common.ResourceType).To(Equal(ApplyTypeName))
+			Expect(common.Ensure).To(Equal(EnsurePresent))
+		})
+	})
+
+	Describe("NewApplyResourcePropertiesFromYaml defaults", func() {
+		It("Should default AllowApply to true", func() {
+			yamlData := `
+name: /etc/ccm/child.yaml
+ensure: present
+`
+			props, err := NewApplyResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ApplyResourceProperties)
+			Expect(prop.AllowApply).To(BeTrue())
+		})
+
+		It("Should allow AllowApply to be set to false", func() {
+			yamlData := `
+name: /etc/ccm/child.yaml
+ensure: present
+allow_apply: false
+`
+			props, err := NewApplyResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(props).To(HaveLen(1))
+			prop := props[0].(*ApplyResourceProperties)
+			Expect(prop.AllowApply).To(BeFalse())
+		})
+	})
+
 	Describe("Constants", func() {
 		It("Should have correct values", func() {
 			Expect(ResourceStatusApplyProtocol).To(Equal("io.choria.ccm.v1.resource.apply.state"))
