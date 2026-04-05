@@ -28,6 +28,7 @@ func NewManager(facts map[string]any, data map[string]any, noop bool, ctl *gomoc
 	logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().With(gomock.Any()).AnyTimes().Return(logger)
 
 	return mgr, logger

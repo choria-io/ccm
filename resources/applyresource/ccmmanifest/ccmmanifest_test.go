@@ -125,6 +125,8 @@ ccm:
 			mgr.EXPECT().StartSession(gomock.Any()).AnyTimes().Return(session, nil)
 			mgr.EXPECT().RecordEvent(gomock.Any()).AnyTimes().Return(nil)
 			mgr.EXPECT().PublishRegistration(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+			mgr.EXPECT().IsResourceFailed(gomock.Any(), gomock.Any()).AnyTimes().Return(false, nil)
+			mgr.EXPECT().ShouldRefresh(gomock.Any(), gomock.Any()).AnyTimes().Return(false, nil)
 
 			registry.Clear()
 			execposix.Register()

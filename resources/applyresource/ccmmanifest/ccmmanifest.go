@@ -6,6 +6,7 @@ package ccmmanifest
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/choria-io/ccm/model"
@@ -60,14 +61,67 @@ func (p *Provider) ApplyManifest(ctx context.Context, mgr model.Manager, propert
 		return nil, err
 	}
 
-	_, err = resolvedApply.Execute(ctx, mgr, effectiveHC, log.With("manifest", properties.Name))
+	userLog := mgr.UserLogger().With("manifest", properties.Name)
+
+	_, err = resolvedApply.Execute(ctx, mgr, effectiveHC, userLog)
 	if err != nil {
 		return nil, err
 	}
 
+	resources := resolvedApply.Resources()
+	var failed, changed, skipped int
+
+	for _, r := range resources {
+		for typeName, prop := range r {
+			name := prop.CommonProperties().Name
+
+			isFailed, ferr := mgr.IsResourceFailed(typeName, name)
+			if ferr != nil {
+				log.Debug("Could not check resource status", "resource", typeName+"#"+name, "error", ferr)
+				continue
+			}
+
+			if isFailed {
+				failed++
+				continue
+			}
+
+			shouldRefresh, rerr := mgr.ShouldRefresh(typeName, name)
+			if rerr != nil {
+				log.Debug("Could not check resource changed status", "resource", typeName+"#"+name, "error", rerr)
+				continue
+			}
+
+			if shouldRefresh {
+				changed++
+			}
+		}
+	}
+
+	skipped = len(resources) - failed - changed
+
 	state := &model.ApplyState{
 		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, properties.Name, model.EnsurePresent),
-		ResourceCount:       len(resolvedApply.Resources()),
+		ResourceCount:       len(resources),
+	}
+
+	logArgs := []any{
+		"resources", len(resources),
+		"changed", changed,
+		"failed", failed,
+		"skipped", skipped,
+	}
+
+	switch {
+	case failed > 0:
+		userLog.Error("Child manifest had failures", logArgs...)
+		return state, fmt.Errorf("child manifest had %d failed resources", failed)
+
+	case changed > 0:
+		userLog.Warn("Child manifest had changes", logArgs...)
+
+	default:
+		userLog.Info("Child manifest completed", logArgs...)
 	}
 
 	return state, nil
