@@ -1,3 +1,7 @@
+// Copyright (c) 2026, R.I. Pienaar and the Choria Project contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package model
 
 import (
@@ -72,7 +76,7 @@ func (p *ApplyResourceProperties) ToYamlManifest() (yaml.RawMessage, error) {
 
 // NewApplyResourcePropertiesFromYaml creates a new apply resource properties object from a yaml document, does not validate or expand templates
 func NewApplyResourcePropertiesFromYaml(raw yaml.RawMessage) ([]ResourceProperties, error) {
-	res, err := parseProperties(raw, ApplyTypeName, func() ResourceProperties { return &ApplyResourceProperties{} })
+	res, err := parseProperties(raw, ApplyTypeName, func() ResourceProperties { return &ApplyResourceProperties{AllowApply: true} })
 	if err != nil {
 		return nil, err
 	}
