@@ -48,8 +48,14 @@ func (p *Provider) ApplyManifest(ctx context.Context, mgr model.Manager, propert
 	}
 
 	if properties.Data != nil {
-		log.Debug("Overriding resolved data from apply resource")
+		log.Debug("Overriding resolved data from apply resource", "data", properties.Data)
 		opts = append(opts, apply.WithOverridingResolvedData(properties.Data))
+	} else {
+		parentData := mgr.Data()
+		if len(parentData) > 0 {
+			log.Debug("Inheriting parent data into child manifest")
+			opts = append(opts, apply.WithOverridingResolvedData(parentData))
+		}
 	}
 
 	if !properties.AllowApply {

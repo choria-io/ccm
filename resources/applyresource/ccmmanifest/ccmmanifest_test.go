@@ -292,7 +292,7 @@ ccm:
 				Expect(found).To(BeTrue(), "child data should appear in SetData calls after hiera merge")
 			})
 
-			It("Should not override data when properties have nil data", func(ctx context.Context) {
+			It("Should inherit parent data when properties have nil data", func(ctx context.Context) {
 				path := writeManifest(simpleManifest)
 
 				props := &model.ApplyResourceProperties{
@@ -305,6 +305,45 @@ ccm:
 
 				_, err := provider.ApplyManifest(ctx, mgr, props, 0, false, logger)
 				Expect(err).ToNot(HaveOccurred())
+
+				// Parent data should flow into the child via WithOverridingResolvedData
+				// The parent manager has data {"key": "value"} from BeforeEach
+				Expect(setDataHistory).ToNot(BeEmpty())
+				found := false
+				for _, d := range setDataHistory {
+					if v, ok := d["key"]; ok && v == "value" {
+						found = true
+						break
+					}
+				}
+				Expect(found).To(BeTrue(), "parent data should be inherited by child when data property is nil")
+			})
+
+			It("Should not inherit parent data when properties have explicit data", func(ctx context.Context) {
+				path := writeManifest(simpleManifest)
+
+				childData := map[string]any{"override_key": "override_value"}
+
+				props := &model.ApplyResourceProperties{
+					CommonResourceProperties: model.CommonResourceProperties{
+						Name:   path,
+						Ensure: model.EnsurePresent,
+					},
+					Data:       childData,
+					AllowApply: true,
+				}
+
+				_, err := provider.ApplyManifest(ctx, mgr, props, 0, false, logger)
+				Expect(err).ToNot(HaveOccurred())
+
+				// The first SetData call is from ResolveManifestReader during
+				// child resolution. It should contain only the explicit data,
+				// not the parent's "key": "value". The last SetData call is
+				// from restoreState which restores the parent data.
+				Expect(setDataHistory).To(HaveLen(2))
+				resolvedData := setDataHistory[0]
+				Expect(resolvedData).To(HaveKeyWithValue("override_key", "override_value"))
+				Expect(resolvedData).ToNot(HaveKey("key"), "parent data should not be inherited when data property is set")
 			})
 		})
 
