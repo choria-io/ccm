@@ -235,7 +235,7 @@ func resolveMapValue(v reflect.Value, env *Env, deferred bool, fieldName string)
 			return v, nil
 		}
 
-		resolved, err := ResolveTemplateString(s, env)
+		resolved, err := ResolveTemplateTyped(s, env)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("resolving field %s: %w", fieldName, err)
 		}

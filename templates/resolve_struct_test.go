@@ -354,6 +354,112 @@ var _ = Describe("ResolveStructTemplates", func() {
 		})
 	})
 
+	Describe("type-preserving resolution in map[string]any", func() {
+		It("preserves map type when template resolves to a map", func() {
+			env.Data["user"] = map[string]any{"name": "John", "age": 30}
+
+			s := testStruct{
+				Data: map[string]any{
+					"user": "{{ Data.user }}",
+				},
+			}
+			Expect(ResolveStructTemplates(&s, env, false)).To(Succeed())
+			user, ok := s.Data["user"].(map[string]any)
+			Expect(ok).To(BeTrue(), "expected map[string]any, got %T", s.Data["user"])
+			Expect(user["name"]).To(Equal("John"))
+			Expect(user["age"]).To(Equal(30))
+		})
+
+		It("preserves integer type when template resolves to an integer", func() {
+			env.Data["port"] = 8080
+
+			s := testStruct{
+				Data: map[string]any{
+					"port": "{{ Data.port }}",
+				},
+			}
+			Expect(ResolveStructTemplates(&s, env, false)).To(Succeed())
+			Expect(s.Data["port"]).To(BeAssignableToTypeOf(int(0)))
+			Expect(s.Data["port"]).To(Equal(8080))
+		})
+
+		It("preserves boolean type when template resolves to a boolean", func() {
+			env.Data["enabled"] = true
+
+			s := testStruct{
+				Data: map[string]any{
+					"enabled": "{{ Data.enabled }}",
+				},
+			}
+			Expect(ResolveStructTemplates(&s, env, false)).To(Succeed())
+			Expect(s.Data["enabled"]).To(BeAssignableToTypeOf(true))
+			Expect(s.Data["enabled"]).To(Equal(true))
+		})
+
+		It("returns string when template has surrounding text", func() {
+			env.Data["port"] = 8080
+
+			s := testStruct{
+				Data: map[string]any{
+					"addr": "localhost:{{ Data.port }}",
+				},
+			}
+			Expect(ResolveStructTemplates(&s, env, false)).To(Succeed())
+			Expect(s.Data["addr"]).To(BeAssignableToTypeOf(""))
+			Expect(s.Data["addr"]).To(Equal("localhost:8080"))
+		})
+
+		It("preserves nested map type through multiple levels", func() {
+			env.Data["config"] = map[string]any{
+				"db": map[string]any{
+					"host": "localhost",
+					"port": 5432,
+				},
+			}
+
+			s := testStruct{
+				Data: map[string]any{
+					"config": "{{ Data.config }}",
+				},
+			}
+			Expect(ResolveStructTemplates(&s, env, false)).To(Succeed())
+			config, ok := s.Data["config"].(map[string]any)
+			Expect(ok).To(BeTrue(), "expected map[string]any, got %T", s.Data["config"])
+			db, ok := config["db"].(map[string]any)
+			Expect(ok).To(BeTrue(), "expected nested map[string]any, got %T", config["db"])
+			Expect(db["host"]).To(Equal("localhost"))
+			Expect(db["port"]).To(Equal(5432))
+		})
+
+		It("preserves slice type when template resolves to a slice", func() {
+			env.Data["tags"] = []any{"web", "prod"}
+
+			s := testStruct{
+				Data: map[string]any{
+					"tags": "{{ Data.tags }}",
+				},
+			}
+			Expect(ResolveStructTemplates(&s, env, false)).To(Succeed())
+			tags, ok := s.Data["tags"].([]any)
+			Expect(ok).To(BeTrue(), "expected []any, got %T", s.Data["tags"])
+			Expect(tags).To(Equal([]any{"web", "prod"}))
+		})
+
+		It("preserves types in []map[string]any", func() {
+			env.Data["user"] = map[string]any{"name": "John"}
+
+			s := testStruct{
+				SliceOfMapAny: []map[string]any{
+					{"user": "{{ Data.user }}"},
+				},
+			}
+			Expect(ResolveStructTemplates(&s, env, false)).To(Succeed())
+			user, ok := s.SliceOfMapAny[0]["user"].(map[string]any)
+			Expect(ok).To(BeTrue(), "expected map[string]any, got %T", s.SliceOfMapAny[0]["user"])
+			Expect(user["name"]).To(Equal("John"))
+		})
+	})
+
 	Describe("generic composite type recursion", func() {
 		It("resolves []map[string]any", func() {
 			s := testStruct{
