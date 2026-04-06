@@ -37,6 +37,11 @@ type Hierarchy struct {
 type Options struct {
 	// DataKey is the key where the data section is stored in the parsed document.
 	DataKey string
+
+	// DataOverrides is an optional map of data values merged into the resolved
+	// data before validation runs. This allows callers to supply overriding
+	// values that satisfy @require annotations or change resolved defaults.
+	DataOverrides map[string]any
 }
 
 var DefaultOptions = Options{
@@ -48,6 +53,33 @@ var DefaultOptions = Options{
 type ResolveResult struct {
 	Data  map[string]any
 	Rules []ValidationRule
+}
+
+// applyOverrides merges DataOverrides from opts into the resolved data and
+// then validates the result against the provided rules. Terminal Resolve
+// functions call this before returning to ensure validation is always run.
+func applyOverrides(resolved map[string]any, rules []ValidationRule, opts Options) (map[string]any, error) {
+	if len(opts.DataOverrides) > 0 {
+		resolved = iu.DeepMergeMap(resolved, opts.DataOverrides)
+	}
+
+	err := ValidateData(resolved, rules)
+	if err != nil {
+		return nil, err
+	}
+
+	return resolved, nil
+}
+
+// mergeOverrides merges DataOverrides from opts into the resolved data without
+// validating. Building-block Resolve functions (ResolveYaml, ResolveJson) call
+// this so callers that do multi-source merging can validate after all merges.
+func mergeOverrides(resolved map[string]any, opts Options) map[string]any {
+	if len(opts.DataOverrides) > 0 {
+		return iu.DeepMergeMap(resolved, opts.DataOverrides)
+	}
+
+	return resolved
 }
 
 var (
@@ -171,6 +203,7 @@ func ResolveYaml(data []byte, facts map[string]any, opts Options, log model.Logg
 	}
 
 	rules := ParseAnnotations(cm, opts.DataKey, log)
+	resolved = mergeOverrides(resolved, opts)
 
 	return &ResolveResult{Data: resolved, Rules: rules}, nil
 }
@@ -189,6 +222,8 @@ func ResolveJson(data []byte, facts map[string]any, opts Options, log model.Logg
 	if err != nil {
 		return nil, err
 	}
+
+	resolved = mergeOverrides(resolved, opts)
 
 	return &ResolveResult{Data: resolved}, nil
 }
@@ -317,12 +352,12 @@ func ResolveHttp(ctx context.Context, rawUrl string, facts map[string]any, opts 
 		return nil, err
 	}
 
-	err = ValidateData(resolved, rules)
+	merged, err := applyOverrides(resolved, rules, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ResolveResult{Data: resolved, Rules: rules}, nil
+	return &ResolveResult{Data: merged, Rules: rules}, nil
 }
 
 // ResolveKeyValue consumes raw JSON bytes from a KV value and a map of facts to produce a final data map
@@ -384,12 +419,12 @@ func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key 
 		return nil, err
 	}
 
-	err = ValidateData(resolved, rules)
+	merged, err := applyOverrides(resolved, rules, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ResolveResult{Data: resolved, Rules: rules}, nil
+	return &ResolveResult{Data: merged, Rules: rules}, nil
 }
 
 // parseHierarchy extracts the hierarchy definition from the raw YAML map.

@@ -196,6 +196,28 @@ overrides:
 			"log_level": "DEBUG",
 		}))
 	})
+
+	It("merges DataOverrides without validating", func() {
+		yamlData := []byte(`
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: ""
+`)
+		opts := Options{
+			DataKey:       "data",
+			DataOverrides: map[string]any{"user": "override_bob"},
+		}
+
+		result, err := ResolveYaml(yamlData, map[string]any{}, opts, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKeyWithValue("user", "override_bob"))
+		Expect(result.Rules).To(HaveLen(1))
+		Expect(result.Rules[0].Required).To(BeTrue())
+	})
 })
 
 var _ = Describe("Resolve", func() {
@@ -792,6 +814,36 @@ data:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.Rules).To(BeNil())
 	})
+
+	It("satisfies @require with DataOverrides", func() {
+		yamlData := []byte(`
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: ""
+`)
+
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return(yamlData)
+
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "key").Return(mockEntry, nil)
+		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+
+		opts := Options{
+			DataKey:       "data",
+			DataOverrides: map[string]any{"user": "override_bob"},
+		}
+
+		result, err := ResolveKeyValue(ctx, mockMgr, "bucket", "key", map[string]any{}, opts, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKeyWithValue("user", "override_bob"))
+	})
 })
 
 var _ = Describe("ResolveUrl", func() {
@@ -993,6 +1045,32 @@ data:
 		result, err := ResolveFile(ctx, filePath, map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.Data).To(HaveKeyWithValue("listen_address", "10.0.0.1"))
+	})
+
+	It("satisfies @require with DataOverrides", func() {
+		yamlContent := `
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: ""
+`
+		filePath := tempDir + "/override.yaml"
+		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+
+		opts := Options{
+			DataKey:       "data",
+			DataOverrides: map[string]any{"user": "override_bob"},
+		}
+
+		result, err := ResolveFile(ctx, filePath, map[string]any{}, opts, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKeyWithValue("user", "override_bob"))
 	})
 })
 
@@ -1213,6 +1291,34 @@ data:
 		result, err := ResolveHttp(ctx, server.URL+"/config.json", map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.Rules).To(BeNil())
+	})
+
+	It("satisfies @require with DataOverrides", func() {
+		yamlData := `
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: ""
+`
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/yaml")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(yamlData))
+		}))
+
+		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+
+		opts := Options{
+			DataKey:       "data",
+			DataOverrides: map[string]any{"user": "override_bob"},
+		}
+
+		result, err := ResolveHttp(ctx, server.URL+"/config.yaml", map[string]any{}, opts, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKeyWithValue("user", "override_bob"))
 	})
 })
 
