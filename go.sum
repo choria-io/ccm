@@ -39,6 +39,8 @@ github.com/choria-io/goform v0.0.4 h1:RFgwOsEPAZjlK6Ou3Smrz0eGyOGvBhhGG4Cc9Ob8aT
 github.com/choria-io/goform v0.0.4/go.mod h1:BO/9YdJMn2GTwk5eEsMYAh+h43WyPq/0LG11iZk06gs=
 github.com/choria-io/scaffold v0.0.10 h1:iq+DdWqVzZuHPCEK97N/ICgqddJ91hTk394FJw2n4j4=
 github.com/choria-io/scaffold v0.0.10/go.mod h1:WS2tPnvan7Waxzr9ubcdvPmxfiZ27Cij3GmF+T6stXs=
+github.com/choria-io/validator v0.0.1 h1:nZmlS7FA0+s0xzKrLo8nLWbtWPOYcBmhkqOHF9NyRvU=
+github.com/choria-io/validator v0.0.1/go.mod h1:oFCdYGN6jPtgF+WH5A7XOIyoxjOLUHHi/mi5UtLSxtQ=
 github.com/clipperhouse/uax29/v2 v2.7.0 h1:+gs4oBZ2gPfVrKPthwbMzWZDaAFPGYK72F0NJv2v7Vk=
 github.com/clipperhouse/uax29/v2 v2.7.0/go.mod h1:EFJ2TJMRUaplDxHKj1qAEhCtQPW2tJSwu5BF98AuoVM=
 github.com/creack/pty v1.1.17 h1:QeVUsEDNrLBW4tMgZHvxy18sKtr6VI492kBhUfhDJNI=

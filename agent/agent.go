@@ -323,12 +323,14 @@ func (a *Agent) getData(ctx context.Context) {
 			return err
 		}
 
-		resolved, err := hiera.ResolveUrl(ctx, a.cfg.ExternalDataUrl, a.mgr, f, hiera.DefaultOptions, a.log)
+		result, err := hiera.ResolveUrl(ctx, a.cfg.ExternalDataUrl, a.mgr, f, hiera.DefaultOptions, a.log)
 		if err != nil {
 			log.Error("Could not resolve external data", "error", err)
 			metrics.AgentDataResolveFailureCount.WithLabelValues(a.cfg.ExternalDataUrl).Inc()
 			return err
 		}
+
+		resolved := result.Data
 
 		if len(resolved) == 0 {
 			log.Warn("External data resolved to empty map")

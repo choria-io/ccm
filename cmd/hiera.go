@@ -103,10 +103,12 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	res, err = hiera.ResolveUrl(ctx, cmd.input, mgr, facts, hiera.DefaultOptions, logger)
+	hieraResult, err := hiera.ResolveUrl(ctx, cmd.input, mgr, facts, hiera.DefaultOptions, logger)
 	if err != nil {
 		return err
 	}
+
+	res = hieraResult.Data
 
 	if cmd.query != "" {
 		jout, err := json.MarshalIndent(res, "", "  ")

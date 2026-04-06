@@ -65,10 +65,10 @@ func newManager(session string, hieraSource string, natsContext string, readEnv 
 		}
 
 		logger.Debug("Loading overriding hiera data from external source", "source", hieraSource)
-		resolved, err := hiera.ResolveUrl(ctx, hieraSource, mgr, facts, hiera.DefaultOptions, logger)
+		hieraResult, err := hiera.ResolveUrl(ctx, hieraSource, mgr, facts, hiera.DefaultOptions, logger)
 		switch {
 		case err == nil:
-			mgr.SetData(resolved)
+			mgr.SetData(hieraResult.Data)
 		case errors.Is(err, hiera.ErrFileNotFound):
 			logger.Debug("Hiera data file not found, skipping", "file", hieraSource)
 		default:
