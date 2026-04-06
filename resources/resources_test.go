@@ -193,6 +193,48 @@ var _ = Describe("NewResourceFromProperties", func() {
 		})
 	})
 
+	Describe("Apply resource", func() {
+		It("Should create an apply resource from ApplyResourceProperties", func(ctx context.Context) {
+			props := &model.ApplyResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   "/etc/ccm/child.yaml",
+					Ensure: model.EnsurePresent,
+				},
+				AllowApply: true,
+			}
+
+			resource, err := NewResourceFromProperties(ctx, mgr, props)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resource).ToNot(BeNil())
+		})
+
+		It("Should return validation error for invalid apply properties", func(ctx context.Context) {
+			props := &model.ApplyResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name: "/etc/ccm/child.yaml",
+					// Missing Ensure
+				},
+			}
+
+			_, err := NewResourceFromProperties(ctx, mgr, props)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(model.ErrResourceEnsureRequired))
+		})
+
+		It("Should reject URL names", func(ctx context.Context) {
+			props := &model.ApplyResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   "https://example.com/manifest.yaml",
+					Ensure: model.EnsurePresent,
+				},
+			}
+
+			_, err := NewResourceFromProperties(ctx, mgr, props)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("file path, not a URL"))
+		})
+	})
+
 	Describe("Unsupported resource type", func() {
 		It("Should return error for nil properties", func(ctx context.Context) {
 			_, err := NewResourceFromProperties(ctx, mgr, nil)

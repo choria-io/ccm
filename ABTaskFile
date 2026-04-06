@@ -95,6 +95,9 @@ commands:
             ab_say Running go mod tidy
 
             go mod tidy
+            
+            ab_say Publishing latest schema
+            cp internal/fs/schemas/* docs/static/schemas/ccm/v1
 
     - name: test
       type: parent
@@ -211,18 +214,19 @@ commands:
 
             ab_announce "Generating model mocks"
             
-            mockgen -write_generate_directive -source model/manager.go -destination model/modelmocks/manage_mock.go -package modelmocks
-            mockgen -write_generate_directive -source model/runner.go -destination model/modelmocks/runner_mock.go -package modelmocks
-            mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
-            mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
-            mockgen -write_generate_directive -source model/transaction.go -destination model/modelmocks/transaction_mock.go -package modelmocks
-            mockgen -write_generate_directive -source model/registration.go -destination model/modelmocks/registration_mock.go -package modelmocks
-            mockgen -write_generate_directive -source resources/package/package.go -destination resources/package/provider_mock_test.go -package packageresource
-            mockgen -write_generate_directive -source resources/service/service.go -destination resources/service/provider_mock_test.go -package serviceresource
-            mockgen -write_generate_directive -source resources/file/file.go -destination resources/file/provider_mock_test.go -package fileresource
-            mockgen -write_generate_directive -source resources/exec/exec.go -destination resources/exec/provider_mock_test.go -package execresource
-            mockgen -write_generate_directive -source resources/archive/archive.go -destination resources/archive/provider_mock_test.go -package archiveresource
-            mockgen -write_generate_directive -source resources/scaffold/scaffold.go -destination resources/scaffold/provider_mock_test.go -package scaffoldresource
-            mockgen -write_generate_directive -source resources/base/base.go -destination resources/base/embedded_mock_test.go -package base
             mockgen -write_generate_directive -destination model/modelmocks/jetstream_mock.go -package modelmocks github.com/nats-io/nats.go/jetstream JetStream,KeyValue,KeyValueEntry,ObjectStore,Consumer,ConsumeContext,Msg
+            mockgen -write_generate_directive -source model/manager.go -destination model/modelmocks/manage_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/provider.go -destination model/modelmocks/provider_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/registration.go -destination model/modelmocks/registration_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/runner.go -destination model/modelmocks/runner_mock.go -package modelmocks
+            mockgen -write_generate_directive -source model/transaction.go -destination model/modelmocks/transaction_mock.go -package modelmocks
             mockgen -write_generate_directive -source registration/nats.go -destination registration/publisher_mock_test.go -package registration natsMessagePublisher,jetStreamMessagePublisher
+            mockgen -write_generate_directive -source resources/applyresource/applyresource.go -destination resources/applyresource/provider_mock_test.go -package applyresource
+            mockgen -write_generate_directive -source resources/archive/archive.go -destination resources/archive/provider_mock_test.go -package archiveresource
+            mockgen -write_generate_directive -source resources/base/base.go -destination resources/base/embedded_mock_test.go -package base
+            mockgen -write_generate_directive -source resources/exec/exec.go -destination resources/exec/provider_mock_test.go -package execresource
+            mockgen -write_generate_directive -source resources/file/file.go -destination resources/file/provider_mock_test.go -package fileresource
+            mockgen -write_generate_directive -source resources/package/package.go -destination resources/package/provider_mock_test.go -package packageresource
+            mockgen -write_generate_directive -source resources/scaffold/scaffold.go -destination resources/scaffold/provider_mock_test.go -package scaffoldresource
+            mockgen -write_generate_directive -source resources/service/service.go -destination resources/service/provider_mock_test.go -package serviceresource

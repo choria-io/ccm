@@ -173,7 +173,8 @@ func archiveTypeFromFilename(filename string) string {
 
 // ResolveTemplates resolves template expressions in the archive resource properties
 func (p *ArchiveResourceProperties) ResolveTemplates(env *templates.Env) error {
-	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
+	err := templates.ResolveStructTemplates(p, env, false)
+	if err != nil {
 		return err
 	}
 

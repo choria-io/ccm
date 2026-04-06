@@ -23,11 +23,36 @@ import (
 	"github.com/choria-io/ccm/internal/registry"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/model/modelmocks"
+	"github.com/choria-io/ccm/resources/archive"
+	"github.com/choria-io/ccm/resources/exec"
+	"github.com/choria-io/ccm/resources/file"
+	"github.com/choria-io/ccm/resources/package"
+	"github.com/choria-io/ccm/resources/scaffold"
+	"github.com/choria-io/ccm/resources/service"
 )
 
 func TestApply(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Resources/Apply")
+}
+
+func testResourceFactory(ctx context.Context, mgr model.Manager, props model.ResourceProperties) (model.Resource, error) {
+	switch rprop := props.(type) {
+	case *model.ArchiveResourceProperties:
+		return archiveresource.New(ctx, mgr, *rprop)
+	case *model.ExecResourceProperties:
+		return execresource.New(ctx, mgr, *rprop)
+	case *model.FileResourceProperties:
+		return fileresource.New(ctx, mgr, *rprop)
+	case *model.PackageResourceProperties:
+		return packageresource.New(ctx, mgr, *rprop)
+	case *model.ScaffoldResourceProperties:
+		return scaffoldresource.New(ctx, mgr, *rprop)
+	case *model.ServiceResourceProperties:
+		return serviceresource.New(ctx, mgr, *rprop)
+	default:
+		return nil, fmt.Errorf("unsupported resource property type %T", rprop)
+	}
 }
 
 var _ = Describe("Apply", func() {
@@ -298,6 +323,8 @@ var _ = Describe("Apply", func() {
 		)
 
 		BeforeEach(func() {
+			ResourceFactory = testResourceFactory
+
 			facts = make(map[string]any)
 			data = make(map[string]any)
 			mgr, mgrLogger = modelmocks.NewManager(facts, data, false, mockctl)
@@ -512,6 +539,140 @@ var _ = Describe("Apply", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(Equal(session))
 			})
+		})
+
+		It("Should skip StartSession when skipSession is set", func(ctx context.Context) {
+			apply := &Apply{
+				resources:   []map[string]model.ResourceProperties{},
+				skipSession: true,
+				maxDepth:    DefaultMaxRecursionDepth,
+			}
+
+			result, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
+		It("Should call StartSession when skipSession is not set", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{},
+				maxDepth:  DefaultMaxRecursionDepth,
+			}
+
+			mgr.EXPECT().StartSession(apply).Return(session, nil)
+
+			result, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(session))
+		})
+
+		It("Should fail when max recursion depth is exceeded", func(ctx context.Context) {
+			apply := &Apply{
+				resources:    []map[string]model.ResourceProperties{},
+				skipSession:  true,
+				maxDepth:     5,
+				currentDepth: 5,
+			}
+
+			_, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("maximum apply depth of 5 exceeded"))
+		})
+
+		It("Should fail when current depth exceeds max depth", func(ctx context.Context) {
+			apply := &Apply{
+				resources:    []map[string]model.ResourceProperties{},
+				skipSession:  true,
+				maxDepth:     3,
+				currentDepth: 10,
+			}
+
+			_, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("maximum apply depth of 3 exceeded"))
+		})
+
+		It("Should allow execution when depth is within limit", func(ctx context.Context) {
+			apply := &Apply{
+				resources:    []map[string]model.ResourceProperties{},
+				skipSession:  true,
+				maxDepth:     10,
+				currentDepth: 9,
+			}
+
+			// depth 9 < 10, but 9 >= 10 is false so it should pass
+			// Actually currentDepth >= maxDepth is 9 >= 10 = false, so it proceeds
+			_, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should use default max depth when maxDepth is zero", func(ctx context.Context) {
+			apply := &Apply{
+				resources:    []map[string]model.ResourceProperties{},
+				skipSession:  true,
+				maxDepth:     0,
+				currentDepth: DefaultMaxRecursionDepth,
+			}
+
+			_, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("maximum apply depth"))
+		})
+
+		It("Should fail when apply resources are denied and manifest contains them", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{
+					{model.ApplyTypeName: &model.ApplyResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name:   "/etc/ccm/child.yaml",
+							Ensure: model.EnsurePresent,
+							Type:   model.ApplyTypeName,
+						},
+					}},
+				},
+				skipSession:        true,
+				maxDepth:           DefaultMaxRecursionDepth,
+				denyApplyResources: true,
+			}
+
+			_, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("apply resources are denied"))
+		})
+
+		It("Should allow apply resources when not denied", func(ctx context.Context) {
+			apply := &Apply{
+				resources: []map[string]model.ResourceProperties{
+					{model.ApplyTypeName: &model.ApplyResourceProperties{
+						CommonResourceProperties: model.CommonResourceProperties{
+							Name:   "/etc/ccm/child.yaml",
+							Ensure: model.EnsurePresent,
+							Type:   model.ApplyTypeName,
+						},
+					}},
+				},
+				skipSession:        true,
+				maxDepth:           DefaultMaxRecursionDepth,
+				denyApplyResources: false,
+			}
+
+			// Will fail trying to create the resource (no provider registered),
+			// but it should NOT fail with "apply resources are denied"
+			_, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).ToNot(ContainSubstring("apply resources are denied"))
+		})
+
+		It("Should allow non-apply resources when denyApplyResources is set", func(ctx context.Context) {
+			apply := &Apply{
+				resources:          []map[string]model.ResourceProperties{},
+				skipSession:        true,
+				maxDepth:           DefaultMaxRecursionDepth,
+				denyApplyResources: true,
+			}
+
+			_, err := apply.Execute(ctx, mgr, false, userLogger)
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

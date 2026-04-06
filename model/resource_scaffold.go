@@ -114,7 +114,8 @@ func (p *ScaffoldResourceProperties) Validate() error {
 
 // ResolveTemplates resolves template expressions in the scaffold resource properties
 func (p *ScaffoldResourceProperties) ResolveTemplates(env *templates.Env) error {
-	if err := templates.ResolveStructTemplates(p, env, false); err != nil {
+	err := templates.ResolveStructTemplates(p, env, false)
+	if err != nil {
 		return err
 	}
 

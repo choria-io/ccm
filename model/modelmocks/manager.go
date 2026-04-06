@@ -16,17 +16,19 @@ func NewManager(facts map[string]any, data map[string]any, noop bool, ctl *gomoc
 
 	var wd string
 
+	mgr.EXPECT().NoopMode().DoAndReturn(func() bool { return noop }).AnyTimes()
+	mgr.EXPECT().SetNoopMode(gomock.Any()).DoAndReturn(func(n bool) { noop = n }).AnyTimes()
 	mgr.EXPECT().Logger(gomock.Any()).AnyTimes().Return(logger, nil)
 	mgr.EXPECT().UserLogger().AnyTimes().Return(logger)
 	mgr.EXPECT().Facts(gomock.Any()).AnyTimes().Return(facts, nil)
 	mgr.EXPECT().Data().AnyTimes().Return(data)
-	mgr.EXPECT().NoopMode().AnyTimes().Return(noop)
 	mgr.EXPECT().SetWorkingDirectory(gomock.Any()).DoAndReturn(func(d string) string { wd = d; return d }).AnyTimes()
 	mgr.EXPECT().WorkingDirectory().DoAndReturn(func() string { return wd }).AnyTimes()
 	mgr.EXPECT().TemplateEnvironment(gomock.Any()).AnyTimes().Return(&templates.Env{Facts: facts, Data: data}, nil)
 	logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().With(gomock.Any()).AnyTimes().Return(logger)
 
 	return mgr, logger

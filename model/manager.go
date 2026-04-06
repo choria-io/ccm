@@ -47,6 +47,7 @@ type Manager interface {
 	ResourceInfo(ctx context.Context, typeName, name string) (any, error)
 	SessionSummary() (*SessionSummary, error)
 	NoopMode() bool
+	SetNoopMode(bool)
 	JetStream() (jetstream.JetStream, error)
 	NatsConnection() (*nats.Conn, error)
 }
