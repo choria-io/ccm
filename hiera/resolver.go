@@ -43,6 +43,13 @@ var DefaultOptions = Options{
 	DataKey: "data",
 }
 
+// ResolveResult holds the output of a hiera resolution including
+// any validation rules extracted from YAML comment annotations.
+type ResolveResult struct {
+	Data  map[string]any
+	Rules []ValidationRule
+}
+
 var (
 	// maxInt represents the largest int value for the current architecture and is used to safely normalize numeric types.
 	maxInt = int(^uint(0) >> 1)
@@ -147,31 +154,48 @@ func Resolve(root map[string]any, facts map[string]any, opts Options, log model.
 
 // ResolveYaml consumes raw YAML bytes and a map of facts to produce a final data map.
 // The function decodes the YAML document and delegates processing to Resolve to perform merges and fact substitution.
-func ResolveYaml(data []byte, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+// Unlike other Resolve functions, ResolveYaml does NOT validate internally - it returns rules in the result
+// for callers that need to merge before validating.
+func ResolveYaml(data []byte, facts map[string]any, opts Options, log model.Logger) (*ResolveResult, error) {
 	root := map[string]any{}
-	err := yaml.Unmarshal(data, &root)
+	cm := yaml.CommentMap{}
+
+	err := yaml.UnmarshalWithOptions(data, &root, yaml.CommentToMap(cm))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
-	return Resolve(root, facts, opts, log)
+	resolved, err := Resolve(root, facts, opts, log)
+	if err != nil {
+		return nil, err
+	}
+
+	rules := ParseAnnotations(cm, opts.DataKey, log)
+
+	return &ResolveResult{Data: resolved, Rules: rules}, nil
 }
 
 // ResolveJson consumes raw JSON bytes and a map of facts to produce a final data map.
 // The function decodes the JSON document and delegates processing to Resolve to perform merges and fact substitution.
-func ResolveJson(data []byte, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+// JSON does not support comments, so no validation rules are extracted.
+func ResolveJson(data []byte, facts map[string]any, opts Options, log model.Logger) (*ResolveResult, error) {
 	root := map[string]any{}
 	err := json.Unmarshal(data, &root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
-	return Resolve(root, facts, opts, log)
+	resolved, err := Resolve(root, facts, opts, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResolveResult{Data: resolved}, nil
 }
 
 // ResolveUrl parses a URL and resolves the data using the correct helper.
 // Supported URL schemes: file paths, kv://Bucket/Key, http://, and https://
-func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map[string]any, opts Options, log model.Logger) (*ResolveResult, error) {
 	if source == "" {
 		return nil, fmt.Errorf("source is required")
 	}
@@ -181,7 +205,7 @@ func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map
 		return nil, err
 	}
 
-	var res map[string]any
+	var res *ResolveResult
 
 	switch uri.Scheme {
 	case "kv":
@@ -200,13 +224,13 @@ func ResolveUrl(ctx context.Context, source string, mgr model.Manager, facts map
 		return nil, err
 	}
 
-	log.Debug("Resolved hiera data", "data", res)
+	log.Debug("Resolved hiera data", "data", res.Data)
 
 	return res, nil
 }
 
 // ResolveFile reads a YAML or JSON file and delegates to ResolveYaml or ResolveJson respectively.
-func ResolveFile(ctx context.Context, file string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+func ResolveFile(ctx context.Context, file string, facts map[string]any, opts Options, log model.Logger) (*ResolveResult, error) {
 	abs, err := filepath.Abs(file)
 	if err != nil {
 		return nil, err
@@ -221,16 +245,29 @@ func ResolveFile(ctx context.Context, file string, facts map[string]any, opts Op
 		return nil, err
 	}
 
+	var result *ResolveResult
+
 	if iu.IsJsonObject(raw) {
-		return ResolveJson(raw, facts, opts, log)
+		result, err = ResolveJson(raw, facts, opts, log)
+	} else {
+		result, err = ResolveYaml(raw, facts, opts, log)
 	}
 
-	return ResolveYaml(raw, facts, opts, log)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ValidateData(result.Data, result.Rules)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // ResolveHttp fetches hiera data from an HTTP(S) URL and resolves it.
 // Supports JSON and YAML formats. HTTP Basic Authentication is supported via URL credentials.
-func ResolveHttp(ctx context.Context, rawUrl string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+func ResolveHttp(ctx context.Context, rawUrl string, facts map[string]any, opts Options, log model.Logger) (*ResolveResult, error) {
 	if rawUrl == "" {
 		return nil, fmt.Errorf("URL is required for HTTP hiera data source")
 	}
@@ -245,38 +282,52 @@ func ResolveHttp(ctx context.Context, rawUrl string, facts map[string]any, opts 
 
 	log.Debug("Getting hiera data from HTTP URL", "url", redactedUrl)
 
-	result, err := iu.HttpGet(ctx, rawUrl, time.Minute)
+	httpResult, err := iu.HttpGet(ctx, rawUrl, time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch hiera data from %s: %w", redactedUrl, err)
 	}
 
-	if result.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP request to %s failed with status %d: %s", redactedUrl, result.StatusCode, result.Status)
+	if httpResult.StatusCode != 200 {
+		return nil, fmt.Errorf("HTTP request to %s failed with status %d: %s", redactedUrl, httpResult.StatusCode, httpResult.Status)
 	}
 
-	if len(result.Body) == 0 {
+	if len(httpResult.Body) == 0 {
 		return nil, fmt.Errorf("HTTP response from %s is empty", redactedUrl)
 	}
 
+	var rules []ValidationRule
+
 	root := map[string]any{}
-	if iu.IsJsonObject(result.Body) {
-		err = json.Unmarshal(result.Body, &root)
+	if iu.IsJsonObject(httpResult.Body) {
+		err = json.Unmarshal(httpResult.Body, &root)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse JSON from %s: %w", redactedUrl, err)
 		}
 	} else {
-		err = yaml.Unmarshal(result.Body, &root)
+		cm := yaml.CommentMap{}
+		err = yaml.UnmarshalWithOptions(httpResult.Body, &root, yaml.CommentToMap(cm))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse YAML from %s: %w", redactedUrl, err)
 		}
+		rules = ParseAnnotations(cm, opts.DataKey, log)
 	}
 
-	return Resolve(root, facts, opts, log)
+	resolved, err := Resolve(root, facts, opts, log)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ValidateData(resolved, rules)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResolveResult{Data: resolved, Rules: rules}, nil
 }
 
 // ResolveKeyValue consumes raw JSON bytes from a KV value and a map of facts to produce a final data map
 // The function decodes the JSON document and delegates processing to Resolve to perform merges and fact substitution.
-func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key string, facts map[string]any, opts Options, log model.Logger) (map[string]any, error) {
+func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key string, facts map[string]any, opts Options, log model.Logger) (*ResolveResult, error) {
 	if bucket == "" {
 		return nil, fmt.Errorf("bucket name is required for kv hiera data source")
 	}
@@ -311,6 +362,8 @@ func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key 
 		return nil, fmt.Errorf("kv %s#%s is empty", bucket, key)
 	}
 
+	var rules []ValidationRule
+
 	root := map[string]any{}
 	if iu.IsJsonObject(val) {
 		err = json.Unmarshal(val, &root)
@@ -318,13 +371,25 @@ func ResolveKeyValue(ctx context.Context, mgr model.Manager, bucket string, key 
 			return nil, fmt.Errorf("failed to parse JSON from kv %s#%s: %w", bucket, key, err)
 		}
 	} else {
-		err = yaml.Unmarshal(val, &root)
+		cm := yaml.CommentMap{}
+		err = yaml.UnmarshalWithOptions(val, &root, yaml.CommentToMap(cm))
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse JSON from kv %s#%s: %w", bucket, key, err)
+			return nil, fmt.Errorf("failed to parse YAML from kv %s#%s: %w", bucket, key, err)
 		}
+		rules = ParseAnnotations(cm, opts.DataKey, log)
 	}
 
-	return Resolve(root, facts, opts, log)
+	resolved, err := Resolve(root, facts, opts, log)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ValidateData(resolved, rules)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResolveResult{Data: resolved, Rules: rules}, nil
 }
 
 // parseHierarchy extracts the hierarchy definition from the raw YAML map.

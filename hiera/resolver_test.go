@@ -73,7 +73,7 @@ overrides:
 		result, err := ResolveYaml(yamlData, facts, DefaultOptions, nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "TRACE",
 			"packages":  []any{"ca-certificates", "nginx"},
 			"other":     "extra",
@@ -82,6 +82,88 @@ overrides:
 				"tls":         true,
 			},
 		}))
+	})
+
+	It("returns validation rules from annotations", func() {
+		yamlData := []byte(`
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: bob
+
+  # @validate isIPv4(value)
+  listen_address: 10.0.0.1
+`)
+
+		result, err := ResolveYaml(yamlData, map[string]any{}, DefaultOptions, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKeyWithValue("user", "bob"))
+		Expect(result.Rules).To(HaveLen(2))
+
+		ruleMap := map[string]ValidationRule{}
+		for _, r := range result.Rules {
+			ruleMap[r.Key] = r
+		}
+
+		Expect(ruleMap["user"].Required).To(BeTrue())
+		Expect(ruleMap["listen_address"].Validation).To(Equal("isIPv4(value)"))
+	})
+
+	It("passes @require when empty base value is satisfied by override", func() {
+		yamlData := []byte(`
+hierarchy:
+  order:
+    - env:{{ lookup('facts.env') }}
+    - default
+  merge: deep
+data:
+  # @require
+  user: ""
+overrides:
+  env:prod:
+    user: prod_bob
+`)
+		result, err := ResolveYaml(yamlData, map[string]any{"env": "prod"}, DefaultOptions, nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Base has empty user but override provides it - validate after merge should pass
+		err = ValidateData(result.Data, result.Rules)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKeyWithValue("user", "prod_bob"))
+	})
+
+	It("validates @validate isShellSafe on safe and unsafe values", func() {
+		safeYaml := []byte(`
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @validate isShellSafe(value)
+  command: /usr/bin/thing
+`)
+		result, err := ResolveYaml(safeYaml, map[string]any{}, DefaultOptions, nil)
+		Expect(err).NotTo(HaveOccurred())
+		err = ValidateData(result.Data, result.Rules)
+		Expect(err).NotTo(HaveOccurred())
+
+		unsafeYaml := []byte(`
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @validate isShellSafe(value)
+  command: "rm -rf /; bad"
+`)
+		result, err = ResolveYaml(unsafeYaml, map[string]any{}, DefaultOptions, nil)
+		Expect(err).NotTo(HaveOccurred())
+		err = ValidateData(result.Data, result.Rules)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("command"))
 	})
 
 	It("returns the first matching overlay when using first merge mode", func() {
@@ -110,7 +192,7 @@ overrides:
 
 		result, err := ResolveYaml(yamlData, facts, DefaultOptions, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "DEBUG",
 		}))
 	})
@@ -579,7 +661,7 @@ var _ = Describe("ResolveKeyValue", func() {
 
 		result, err := ResolveKeyValue(ctx, mockMgr, "config", "app.settings", map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "INFO",
 			"port":      8080,
 		}))
@@ -606,7 +688,7 @@ data:
 
 		result, err := ResolveKeyValue(ctx, mockMgr, "config", "app.yaml", map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "DEBUG",
 			"timeout":   30,
 		}))
@@ -641,7 +723,7 @@ data:
 		facts := map[string]any{"env": "prod"}
 		result, err := ResolveKeyValue(ctx, mockMgr, "config", "app.config", facts, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "WARN",
 			"retries":   5,
 		}))
@@ -664,6 +746,51 @@ data:
 
 		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "key", nil, DefaultOptions, mockLog)
 		Expect(err).To(MatchError(getErr))
+	})
+
+	It("validates YAML data annotations", func() {
+		yamlData := []byte(`
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: ""
+`)
+
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return(yamlData)
+
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "key").Return(mockEntry, nil)
+		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+
+		_, err := ResolveKeyValue(ctx, mockMgr, "bucket", "key", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("user"))
+		Expect(err.Error()).To(ContainSubstring("required"))
+	})
+
+	It("returns nil rules for JSON data", func() {
+		jsonData := []byte(`{
+			"hierarchy": {"order": ["default"], "merge": "first"},
+			"data": {"user": "bob"}
+		}`)
+
+		mockEntry := modelmocks.NewMockKeyValueEntry(ctrl)
+		mockEntry.EXPECT().Operation().Return(jetstream.KeyValuePut)
+		mockEntry.EXPECT().Value().Return(jsonData)
+
+		mockMgr.EXPECT().JetStream().Return(mockJS, nil)
+		mockJS.EXPECT().KeyValue(ctx, "bucket").Return(mockKV, nil)
+		mockKV.EXPECT().Get(ctx, "key").Return(mockEntry, nil)
+
+		result, err := ResolveKeyValue(ctx, mockMgr, "bucket", "key", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Rules).To(BeNil())
 	})
 })
 
@@ -723,7 +850,7 @@ var _ = Describe("ResolveUrl", func() {
 
 		result, err := ResolveUrl(ctx, "kv://mybucket/mykey", mockMgr, map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"setting": "value",
 		}))
 	})
@@ -770,7 +897,7 @@ data:
 
 		result, err := ResolveFile(ctx, filePath, map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"setting": "from_yaml",
 			"count":   42,
 		}))
@@ -793,7 +920,7 @@ data:
 
 		result, err := ResolveFile(ctx, filePath, map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"setting": "from_json",
 			"enabled": true,
 		}))
@@ -819,9 +946,53 @@ overrides:
 		facts := map[string]any{"env": "production"}
 		result, err := ResolveFile(ctx, filePath, facts, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "WARN",
 		}))
+	})
+
+	It("validates annotations in YAML files", func() {
+		yamlContent := `
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: ""
+`
+		filePath := tempDir + "/validate.yaml"
+		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+
+		_, err = ResolveFile(ctx, filePath, map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("user"))
+		Expect(err.Error()).To(ContainSubstring("required"))
+	})
+
+	It("passes validation when annotated values are present", func() {
+		yamlContent := `
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  # @validate isIPv4(value)
+  listen_address: 10.0.0.1
+`
+		filePath := tempDir + "/valid.yaml"
+		err := os.WriteFile(filePath, []byte(yamlContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+
+		result, err := ResolveFile(ctx, filePath, map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKeyWithValue("listen_address", "10.0.0.1"))
 	})
 })
 
@@ -884,7 +1055,7 @@ var _ = Describe("ResolveHttp", func() {
 
 		result, err := ResolveHttp(ctx, server.URL+"/config.json", map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "INFO",
 			"port":      8080,
 		}))
@@ -908,7 +1079,7 @@ data:
 
 		result, err := ResolveHttp(ctx, server.URL+"/config.yaml", map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "DEBUG",
 			"timeout":   30,
 		}))
@@ -939,7 +1110,7 @@ data:
 		facts := map[string]any{"env": "prod"}
 		result, err := ResolveHttp(ctx, server.URL+"/config.json", facts, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"log_level": "WARN",
 			"retries":   5,
 		}))
@@ -1003,6 +1174,46 @@ data:
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("failed to parse"))
 	})
+
+	It("validates annotations in YAML responses", func() {
+		yamlData := `
+hierarchy:
+  order:
+    - default
+  merge: first
+data:
+  # @require
+  user: ""
+`
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/yaml")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(yamlData))
+		}))
+
+		mockLog.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+
+		_, err := ResolveHttp(ctx, server.URL+"/config.yaml", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("user"))
+		Expect(err.Error()).To(ContainSubstring("required"))
+	})
+
+	It("returns nil rules for JSON responses", func() {
+		jsonData := `{
+			"hierarchy": {"order": ["default"], "merge": "first"},
+			"data": {"user": "bob"}
+		}`
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(jsonData))
+		}))
+
+		result, err := ResolveHttp(ctx, server.URL+"/config.json", map[string]any{}, DefaultOptions, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Rules).To(BeNil())
+	})
 })
 
 var _ = Describe("ResolveUrl with HTTP", func() {
@@ -1042,7 +1253,7 @@ var _ = Describe("ResolveUrl with HTTP", func() {
 
 		result, err := ResolveUrl(ctx, server.URL+"/config.json", mockMgr, map[string]any{}, DefaultOptions, mockLog)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).To(Equal(map[string]any{
+		Expect(result.Data).To(Equal(map[string]any{
 			"setting": "http_value",
 		}))
 	})

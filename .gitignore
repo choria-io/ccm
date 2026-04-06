@@ -17,3 +17,4 @@ manifest.yaml
 *.rej
 .DS_Store
 appbuilder-*
+*_PLAN.md

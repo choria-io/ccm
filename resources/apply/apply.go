@@ -439,21 +439,30 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 	apply.preMessage = parser.CCM.PreMessage
 	apply.postMessage = parser.CCM.PostMessage
 
-	resolved, err := hiera.ResolveYaml(apply.manifestBytes, facts, hiera.DefaultOptions, hieraLogger)
+	result, err := hiera.ResolveYaml(apply.manifestBytes, facts, hiera.DefaultOptions, hieraLogger)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	resolved := result.Data
+	rules := result.Rules
 
 	if apply.overridingHieraData != "" {
 		overriding, err := hiera.ResolveUrl(ctx, apply.overridingHieraData, mgr, facts, hiera.DefaultOptions, hieraLogger)
 		if err != nil {
 			return nil, nil, err
 		}
-		resolved = iu.DeepMergeMap(resolved, overriding)
+		resolved = iu.DeepMergeMap(resolved, overriding.Data)
+		rules = append(rules, overriding.Rules...)
 	}
 
 	if apply.overridingResolvedData != nil {
 		resolved = iu.DeepMergeMap(resolved, apply.overridingResolvedData)
+	}
+
+	err = hiera.ValidateData(resolved, rules)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	data := mgr.SetData(resolved)

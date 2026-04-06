@@ -10,6 +10,7 @@ require (
 	github.com/choria-io/appbuilder v0.15.0
 	github.com/choria-io/fisk v0.8.0
 	github.com/choria-io/scaffold v0.0.10
+	github.com/choria-io/validator v0.0.1
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goss-org/goss v0.4.9
