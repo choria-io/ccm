@@ -184,3 +184,70 @@ HTTP Basic Auth is supported via URL credentials:
 ```nohighlight
 ccm hiera parse https://user:pass@example.net/site.yaml -S
 ```
+
+## Data annotations
+
+> [!info] Supported Version
+> Data annotations require version 0.0.23 or later.
+
+YAML comments in the `data:` section can carry annotation directives that validate resolved values. Annotations are always active; there is no opt-in flag.
+
+Two directives are supported:
+
+| Directive            | Description                                                       |
+|----------------------|-------------------------------------------------------------------|
+| `@require`           | Value must not be nil or empty string. `false` and `0` are valid  |
+| `@validate <expr>`   | Value is checked with the given validation expression             |
+
+`@required` is accepted as an alias for `@require`.
+
+### Example
+
+```yaml
+data:
+  # The username to run the process as
+  # @require
+  user: bob
+
+  # @validate isShellSafe(value)
+  command: "/usr/bin/thing"
+
+  # @require
+  # @validate isIPv4(value)
+  listen_address: 10.0.0.1
+
+  # No annotations, no validation
+  port: 8080
+  debug: false
+```
+
+Multiple annotations per key are supported. `@require` is checked first; when it fails on a nil value, `@validate` is skipped for that key.
+
+### Validation expressions
+
+The `@validate` directive accepts [Expr Language](https://expr-lang.org) expressions evaluated by the [choria-io/validator](https://github.com/choria-io/validator) library. The value being validated is available as `value` in the expression.
+
+Common expressions:
+
+| Expression                                     | Description                      |
+|------------------------------------------------|----------------------------------|
+| `isIPv4(value)` or `is_ipv4(value)`            | Valid IPv4 address               |
+| `isIPv6(value)` or `is_ipv6(value)`            | Valid IPv6 address               |
+| `isIP(value)` or `is_ip(value)`                | Valid IPv4 or IPv6 address       |
+| `isShellSafe(value)` or `is_shell_safe(value)` | Contains no shell metacharacters |
+| `isInt(value)` or `is_int(value)`              | Integer value                    |
+| `isFloat(value)` or `is_float(value)`          | Floating-point value             |
+| `isDuration(value)` or `is_duration(value)`    | Valid Go duration string         |
+| `isRegex(value)` or `is_regex(value)`          | Valid regular expression         |
+
+### Behavior
+
+Annotations are extracted from the `data:` section only. Comments in `overrides:` are ignored.
+
+Validation runs against the final merged data. A base value of `user: ""` with `@require` passes when an override provides a non-empty value.
+
+`@validate` on map values is skipped. Maps are validated by annotating their nested keys individually. `@validate` on array values is skipped.
+
+Unrecognized directives starting with `@` produce a warning, catching typos like `@requiired`.
+
+JSON data sources do not support annotations because JSON has no comment syntax.
