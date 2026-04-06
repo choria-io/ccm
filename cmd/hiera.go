@@ -31,7 +31,8 @@ type hieraCommand struct {
 	yamlOutput  bool
 	envOutput   bool
 	envPrefix   string
-	dataKey     string
+	dataInput   map[string]string
+	dataFile    string
 	query       string
 	natsContext string
 }
@@ -39,21 +40,23 @@ type hieraCommand struct {
 func registerHieraCommand(ccm *fisk.Application) {
 	cmd := &hieraCommand{
 		factsInput: make(map[string]string),
+		dataInput:  make(map[string]string),
 	}
 
 	hiera := ccm.Command("hiera", "Hierarchical data resolver")
 
 	parse := hiera.Command("parse", "Parses a YAML or JSON file and prints the result as JSON").Alias("resolve").Action(cmd.parseAction)
 	parse.Arg("input", "Input JSON or YAML file to resolve").Envar("HIERA_INPUT").Required().StringVar(&cmd.input)
+	parse.Flag("data", "Override data values (always strings)").Short('D').StringMapVar(&cmd.dataInput)
+	parse.Flag("data-file", "JSON or YAML file containing override data values").PlaceHolder("FILE").ExistingFileVar(&cmd.dataFile)
 	parse.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)
 	parse.Flag("facts", "JSON or YAML file containing facts").ExistingFileVar(&cmd.factsFile)
 	parse.Flag("env-facts", "Provide facts from the process environment").Short('E').UnNegatableBoolVar(&cmd.envFacts)
+	parse.Flag("query", "Performs a gjson query on the result").StringVar(&cmd.query)
+	parse.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 	parse.Flag("yaml", "Output YAML instead of JSON").UnNegatableBoolVar(&cmd.yamlOutput)
 	parse.Flag("env", "Output environment variables").UnNegatableBoolVar(&cmd.envOutput)
 	parse.Flag("env-prefix", "Prefix for environment variable names").Default("HIERA").StringVar(&cmd.envPrefix)
-	parse.Flag("query", "Performs a gjson query on the result").StringVar(&cmd.query)
-	parse.Flag("data", "Sets the data key").Default("data").StringVar(&cmd.dataKey)
-	parse.Flag("context", "NATS Context to connect with").Envar("NATS_CONTEXT").Default("CCM").StringVar(&cmd.natsContext)
 
 	facts := hiera.Command("facts", "Shows resolved facts").Action(cmd.showFactsAction)
 	facts.Arg("fact", "Facts about the node").StringMapVar(&cmd.factsInput)
@@ -103,7 +106,38 @@ func (cmd *hieraCommand) parseAction(_ *fisk.ParseContext) error {
 		return err
 	}
 
-	hieraResult, err := hiera.ResolveUrl(ctx, cmd.input, mgr, facts, hiera.DefaultOptions, logger)
+	hieraOpts := hiera.DefaultOptions
+
+	if cmd.dataFile != "" {
+		raw, err := os.ReadFile(cmd.dataFile)
+		if err != nil {
+			return fmt.Errorf("failed to read data file: %w", err)
+		}
+
+		fileData := map[string]any{}
+		if iu.IsJsonObject(raw) {
+			err = json.Unmarshal(raw, &fileData)
+		} else {
+			err = yaml.Unmarshal(raw, &fileData)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to parse data file: %w", err)
+		}
+
+		hieraOpts.DataOverrides = fileData
+	}
+
+	if len(cmd.dataInput) > 0 {
+		if hieraOpts.DataOverrides == nil {
+			hieraOpts.DataOverrides = iu.MapStringsToMapStringAny(cmd.dataInput)
+		} else {
+			for k, v := range cmd.dataInput {
+				hieraOpts.DataOverrides[k] = v
+			}
+		}
+	}
+
+	hieraResult, err := hiera.ResolveUrl(ctx, cmd.input, mgr, facts, hieraOpts, logger)
 	if err != nil {
 		return err
 	}
