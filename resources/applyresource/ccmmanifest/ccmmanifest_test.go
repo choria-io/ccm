@@ -471,4 +471,166 @@ ccm:
 		})
 	})
 
+	Describe("fail_on_error", func() {
+		var (
+			mockctl  *gomock.Controller
+			mgr      *modelmocks.MockManager
+			logger   *modelmocks.MockLogger
+			runner   *modelmocks.MockCommandRunner
+			provider *Provider
+			tempDir  string
+		)
+
+		writeManifest := func(content string) string {
+			path := filepath.Join(tempDir, "manifest.yaml")
+			err := os.WriteFile(path, []byte(content), 0644)
+			Expect(err).ToNot(HaveOccurred())
+			return path
+		}
+
+		twoResourceManifest := func(failOnError bool) string {
+			foe := "false"
+			if failOnError {
+				foe = "true"
+			}
+
+			return fmt.Sprintf(`
+ccm:
+  fail_on_error: %s
+  resources:
+    - exec:
+        - /bin/first:
+            ensure: present
+    - exec:
+        - /bin/second:
+            ensure: present
+`, foe)
+		}
+
+		BeforeEach(func() {
+			mockctl = gomock.NewController(GinkgoT())
+			logger = modelmocks.NewMockLogger(mockctl)
+			runner = modelmocks.NewMockCommandRunner(mockctl)
+
+			logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().With(gomock.Any()).AnyTimes().Return(logger)
+
+			var err error
+			provider, err = NewProvider(logger, runner)
+			Expect(err).ToNot(HaveOccurred())
+
+			apply.ResourceFactory = func(ctx context.Context, mgr model.Manager, props model.ResourceProperties) (model.Resource, error) {
+				switch rprop := props.(type) {
+				case *model.ExecResourceProperties:
+					return execresource.New(ctx, mgr, *rprop)
+				default:
+					return nil, fmt.Errorf("unsupported resource type %T", rprop)
+				}
+			}
+
+			facts := map[string]any{"os": "linux"}
+			data := map[string]any{"key": "value"}
+			mgr, _ = modelmocks.NewManager(facts, data, false, mockctl)
+
+			mgr.EXPECT().NewRunner().AnyTimes().Return(runner, nil)
+			mgr.EXPECT().SetData(gomock.Any()).DoAndReturn(func(d map[string]any) map[string]any {
+				return d
+			}).AnyTimes()
+			mgr.EXPECT().StartSession(gomock.Any()).AnyTimes().Return(modelmocks.NewMockSessionStore(mockctl), nil)
+			mgr.EXPECT().RecordEvent(gomock.Any()).AnyTimes().Return(nil)
+			mgr.EXPECT().PublishRegistration(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+			mgr.EXPECT().ShouldRefresh(gomock.Any(), gomock.Any()).AnyTimes().Return(false, nil)
+
+			registry.Clear()
+			execposix.Register()
+			Register()
+
+			tempDir, err = os.MkdirTemp("", "ccmmanifest-foe-test-*")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			os.RemoveAll(tempDir)
+			registry.Clear()
+			mockctl.Finish()
+		})
+
+		It("Should stop at first failure when fail_on_error is true", func(ctx context.Context) {
+			path := writeManifest(twoResourceManifest(true))
+
+			// runner returns exit code 1 causing exec resources to fail desired state
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), gomock.Any()).
+				Return([]byte{}, []byte{}, 1, nil).AnyTimes()
+
+			// first resource failed, second never ran so has no events
+			mgr.EXPECT().IsResourceFailed("exec", "/bin/first").Return(true, nil)
+			mgr.EXPECT().IsResourceFailed("exec", "/bin/second").Return(false, fmt.Errorf("no events found for exec#/bin/second"))
+
+			props := &model.ApplyResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   path,
+					Ensure: model.EnsurePresent,
+				},
+				AllowApply: true,
+			}
+
+			state, err := provider.ApplyManifest(ctx, mgr, props, 0, false, logger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("1 failed"))
+			Expect(state).ToNot(BeNil())
+			Expect(state.ResourceCount).To(Equal(2))
+		})
+
+		It("Should continue through all resources when fail_on_error is false", func(ctx context.Context) {
+			path := writeManifest(twoResourceManifest(false))
+
+			// runner returns exit code 1 causing exec resources to fail desired state
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), gomock.Any()).
+				Return([]byte{}, []byte{}, 1, nil).AnyTimes()
+
+			// both resources ran and both failed
+			mgr.EXPECT().IsResourceFailed("exec", "/bin/first").Return(true, nil)
+			mgr.EXPECT().IsResourceFailed("exec", "/bin/second").Return(true, nil)
+
+			props := &model.ApplyResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   path,
+					Ensure: model.EnsurePresent,
+				},
+				AllowApply: true,
+			}
+
+			state, err := provider.ApplyManifest(ctx, mgr, props, 0, false, logger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("2 failed"))
+			Expect(state).ToNot(BeNil())
+			Expect(state.ResourceCount).To(Equal(2))
+		})
+
+		It("Should not return error when no child resources fail", func(ctx context.Context) {
+			path := writeManifest(twoResourceManifest(true))
+
+			// runner succeeds
+			runner.EXPECT().ExecuteWithOptions(gomock.Any(), gomock.Any()).
+				Return([]byte{}, []byte{}, 0, nil).AnyTimes()
+
+			mgr.EXPECT().IsResourceFailed(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
+
+			props := &model.ApplyResourceProperties{
+				CommonResourceProperties: model.CommonResourceProperties{
+					Name:   path,
+					Ensure: model.EnsurePresent,
+				},
+				AllowApply: true,
+			}
+
+			state, err := provider.ApplyManifest(ctx, mgr, props, 0, false, logger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(state).ToNot(BeNil())
+			Expect(state.ResourceCount).To(Equal(2))
+		})
+	})
 })
