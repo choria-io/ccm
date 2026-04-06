@@ -172,6 +172,7 @@ var _ = Describe("Apply Type", func() {
 				finalState := &model.ApplyState{
 					CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, "/etc/ccm/child.yaml", model.EnsurePresent),
 					ResourceCount:       3,
+					ChangedCount:        1,
 				}
 
 				provider.EXPECT().ApplyManifest(gomock.Any(), mgr, gomock.Any(), 0, false, gomock.Any()).Return(finalState, nil)
@@ -179,6 +180,21 @@ var _ = Describe("Apply Type", func() {
 				event, err := applyRes.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(event.Changed).To(BeTrue())
+				Expect(event.Failed).To(BeFalse())
+			})
+
+			It("Should report stable when no child resources changed", func(ctx context.Context) {
+				finalState := &model.ApplyState{
+					CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, "/etc/ccm/child.yaml", model.EnsurePresent),
+					ResourceCount:       3,
+					ChangedCount:        0,
+				}
+
+				provider.EXPECT().ApplyManifest(gomock.Any(), mgr, gomock.Any(), 0, false, gomock.Any()).Return(finalState, nil)
+
+				event, err := applyRes.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(event.Changed).To(BeFalse())
 				Expect(event.Failed).To(BeFalse())
 			})
 
@@ -237,13 +253,14 @@ var _ = Describe("Apply Type", func() {
 				finalState := &model.ApplyState{
 					CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, "/etc/ccm/child.yaml", model.EnsurePresent),
 					ResourceCount:       2,
+					ChangedCount:        0,
 				}
 
 				noopProvider.EXPECT().ApplyManifest(gomock.Any(), noopMgr, gomock.Any(), 0, false, gomock.Any()).Return(finalState, nil)
 
 				event, err := noopRes.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Changed).To(BeTrue())
+				Expect(event.Changed).To(BeFalse())
 			})
 		})
 

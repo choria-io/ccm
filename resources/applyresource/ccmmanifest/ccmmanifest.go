@@ -103,6 +103,8 @@ func (p *Provider) ApplyManifest(ctx context.Context, mgr model.Manager, propert
 	state := &model.ApplyState{
 		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, properties.Name, model.EnsurePresent),
 		ResourceCount:       len(resources),
+		ChangedCount:        changed,
+		FailedCount:         failed,
 	}
 
 	logArgs := []any{

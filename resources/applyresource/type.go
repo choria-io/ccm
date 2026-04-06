@@ -86,7 +86,9 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	t.FinalizeState(state, false, "", true, false, false)
+	changed := state.ChangedCount > 0
+	stable := !changed
+	t.FinalizeState(state, false, "", changed, stable, false)
 
 	return state, nil
 }

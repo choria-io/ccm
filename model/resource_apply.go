@@ -31,6 +31,8 @@ type ApplyResourceProperties struct {
 type ApplyState struct {
 	CommonResourceState
 	ResourceCount int `json:"resource_count" yaml:"resource_count"`
+	ChangedCount  int `json:"changed_count" yaml:"changed_count"`
+	FailedCount   int `json:"failed_count" yaml:"failed_count"`
 }
 
 func (f *ApplyState) CommonState() *CommonResourceState {
