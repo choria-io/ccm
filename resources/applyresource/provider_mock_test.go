@@ -71,18 +71,3 @@ func (mr *MockApplyProviderMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockApplyProvider)(nil).Name))
 }
-
-// Status mocks base method.
-func (m *MockApplyProvider) Status(ctx context.Context, properties *model.ApplyResourceProperties) (*model.ApplyState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Status", ctx, properties)
-	ret0, _ := ret[0].(*model.ApplyState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Status indicates an expected call of Status.
-func (mr *MockApplyProviderMockRecorder) Status(ctx, properties any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockApplyProvider)(nil).Status), ctx, properties)
-}

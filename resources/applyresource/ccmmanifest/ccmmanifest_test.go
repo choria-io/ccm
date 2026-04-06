@@ -471,23 +471,4 @@ ccm:
 		})
 	})
 
-	Describe("Status", func() {
-		It("Should return a baseline ApplyState", func(ctx context.Context) {
-			props := &model.ApplyResourceProperties{
-				CommonResourceProperties: model.CommonResourceProperties{
-					Name:   "/etc/ccm/child.yaml",
-					Ensure: model.EnsurePresent,
-				},
-			}
-
-			state, err := provider.Status(ctx, props)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(state).ToNot(BeNil())
-			Expect(state.Protocol).To(Equal(model.ResourceStatusApplyProtocol))
-			Expect(state.ResourceType).To(Equal(model.ApplyTypeName))
-			Expect(state.Name).To(Equal("/etc/ccm/child.yaml"))
-			Expect(state.Ensure).To(Equal(model.EnsurePresent))
-			Expect(state.ResourceCount).To(Equal(0))
-		})
-	})
 })

@@ -168,24 +168,12 @@ var _ = Describe("Apply Type", func() {
 				factory.EXPECT().IsManageable(facts, gomock.Any()).Return(true, 1, nil).AnyTimes()
 			})
 
-			It("Should fail if initial status check fails", func(ctx context.Context) {
-				provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("status failed"))
-
-				event, err := applyRes.Apply(ctx)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Errors).To(ContainElement(ContainSubstring("status failed")))
-			})
-
 			It("Should delegate to provider ApplyManifest", func(ctx context.Context) {
-				initialState := &model.ApplyState{
-					CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, "/etc/ccm/child.yaml", model.EnsurePresent),
-				}
 				finalState := &model.ApplyState{
 					CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, "/etc/ccm/child.yaml", model.EnsurePresent),
 					ResourceCount:       3,
 				}
 
-				provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
 				provider.EXPECT().ApplyManifest(gomock.Any(), mgr, gomock.Any(), 0, false, gomock.Any()).Return(finalState, nil)
 
 				event, err := applyRes.Apply(ctx)
@@ -195,11 +183,6 @@ var _ = Describe("Apply Type", func() {
 			})
 
 			It("Should report failure when ApplyManifest errors", func(ctx context.Context) {
-				initialState := &model.ApplyState{
-					CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, "/etc/ccm/child.yaml", model.EnsurePresent),
-				}
-
-				provider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
 				provider.EXPECT().ApplyManifest(gomock.Any(), mgr, gomock.Any(), 0, false, gomock.Any()).Return(nil, fmt.Errorf("child manifest failed"))
 
 				event, err := applyRes.Apply(ctx)
@@ -250,19 +233,17 @@ var _ = Describe("Apply Type", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("Should not call ApplyManifest in noop mode", func(ctx context.Context) {
-				initialState := &model.ApplyState{
+			It("Should call ApplyManifest in noop mode to recurse into child resources", func(ctx context.Context) {
+				finalState := &model.ApplyState{
 					CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, "/etc/ccm/child.yaml", model.EnsurePresent),
+					ResourceCount:       2,
 				}
 
-				noopProvider.EXPECT().Status(gomock.Any(), gomock.Any()).Return(initialState, nil)
-				// No ApplyManifest call expected
+				noopProvider.EXPECT().ApplyManifest(gomock.Any(), noopMgr, gomock.Any(), 0, false, gomock.Any()).Return(finalState, nil)
 
 				event, err := noopRes.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(event.Changed).To(BeTrue())
-				Expect(event.Noop).To(BeTrue())
-				Expect(event.NoopMessage).To(Equal("Would have applied child manifest"))
 			})
 		})
 

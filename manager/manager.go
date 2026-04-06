@@ -394,16 +394,16 @@ func (m *CCM) ResourceInfo(ctx context.Context, typeName, name string) (any, err
 	prop := props[0]
 
 	switch typeName {
-	case model.FileTypeName:
-		return m.infoFileResource(ctx, prop.(*model.FileResourceProperties))
-	case model.ServiceTypeName:
-		return m.infoServiceResource(ctx, prop.(*model.ServiceResourceProperties))
-	case model.PackageTypeName:
-		return m.infoPackageResource(ctx, prop.(*model.PackageResourceProperties))
 	case model.ArchiveTypeName:
 		return m.infoArchiveResource(ctx, prop.(*model.ArchiveResourceProperties))
 	case model.ExecTypeName:
 		return nil, fmt.Errorf("exec resources do not support retrieving status")
+	case model.FileTypeName:
+		return m.infoFileResource(ctx, prop.(*model.FileResourceProperties))
+	case model.PackageTypeName:
+		return m.infoPackageResource(ctx, prop.(*model.PackageResourceProperties))
+	case model.ServiceTypeName:
+		return m.infoServiceResource(ctx, prop.(*model.ServiceResourceProperties))
 	default:
 		return nil, fmt.Errorf("unsupported resource type %s", typeName)
 	}

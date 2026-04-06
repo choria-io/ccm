@@ -139,12 +139,6 @@ func (p *Provider) restoreState(mgr model.Manager) {
 	mgr.SetData(p.savedData)
 }
 
-func (p *Provider) Status(_ context.Context, properties *model.ApplyResourceProperties) (*model.ApplyState, error) {
-	return &model.ApplyState{
-		CommonResourceState: model.NewCommonResourceState(model.ResourceStatusApplyProtocol, model.ApplyTypeName, properties.Name, model.EnsurePresent),
-	}, nil
-}
-
 func (p *Provider) Name() string {
 	return ProviderName
 }

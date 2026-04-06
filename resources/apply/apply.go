@@ -351,6 +351,13 @@ func unTarAndResolve(ctx context.Context, r io.Reader, mgr model.Manager, path s
 
 // ResolveManifestFilePath reads a file and resolves the manifest using ResolveManifestReader()
 func ResolveManifestFilePath(ctx context.Context, mgr model.Manager, path string, opts ...Option) (map[string]any, model.Apply, error) {
+	if !filepath.IsAbs(path) {
+		wd := mgr.WorkingDirectory()
+		if wd != "" {
+			path = filepath.Join(wd, path)
+		}
+	}
+
 	manifestFile, err := os.Open(path)
 	if err != nil {
 		return nil, nil, err

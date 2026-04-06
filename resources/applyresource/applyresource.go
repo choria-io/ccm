@@ -18,9 +18,6 @@ type ApplyProvider interface {
 	// The provider handles manifest resolution, state save/restore, noop/health_check
 	// strengthening, and recursion depth tracking.
 	ApplyManifest(ctx context.Context, mgr model.Manager, properties *model.ApplyResourceProperties, currentDepth int, healthCheckOnly bool, log model.Logger) (*model.ApplyState, error)
-
-	// Status returns the current state of an apply resource (always returns a baseline state)
-	Status(ctx context.Context, properties *model.ApplyResourceProperties) (*model.ApplyState, error)
 }
 
 func init() {

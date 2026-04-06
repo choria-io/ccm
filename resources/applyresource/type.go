@@ -79,19 +79,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	var (
 		p          = t.provider.(ApplyProvider)
 		properties = t.prop
-		noop       = t.mgr.NoopMode()
 	)
-
-	initialStatus, err := p.Status(ctx, properties)
-	if err != nil {
-		return nil, err
-	}
-
-	if noop {
-		t.log.Info("Skipping apply as noop")
-		t.FinalizeState(initialStatus, true, "Would have applied child manifest", true, false, false)
-		return initialStatus, nil
-	}
 
 	state, err := p.ApplyManifest(ctx, t.mgr, properties, 0, false, t.log)
 	if err != nil {
