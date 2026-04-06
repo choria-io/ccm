@@ -18,6 +18,7 @@
 
 ## Resource Reference
 
+- [Apply](https://choria-cm.dev/resources/apply/index.md): Compose manifests from smaller reusable manifests
 - [Archive](https://choria-cm.dev/resources/archive/index.md): Download, extract and copy files from tar.gz and zip archives
 - [Exec](https://choria-cm.dev/resources/exec/index.md): Execute commands idempotently
 - [File](https://choria-cm.dev/resources/file/index.md): Manage files content, ownership and more
