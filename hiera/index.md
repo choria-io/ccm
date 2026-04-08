@@ -11,6 +11,9 @@ Key features:
  * Command-line tool with built-in system facts
  * Go library for embedding
 
+> [!note] Alternate variable syntax
+> Since version 0.0.25 you can use  `${ lookup(...) }` as well as `{{ lookup(..) }}`
+
 ## Usage
 
 An annotated example:
