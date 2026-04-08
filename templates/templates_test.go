@@ -689,4 +689,148 @@ var _ = Describe("Templates", func() {
 			Expect(result["port"]).To(Equal(8080))
 		})
 	})
+
+	Describe("findTemplateExpressions", func() {
+		DescribeTable("single expression matching",
+			func(input string, count int, innerExprs []string) {
+				matches := findTemplateExpressions(input)
+				Expect(matches).To(HaveLen(count))
+				for i, expr := range innerExprs {
+					Expect(input[matches[i].innerStart:matches[i].innerEnd]).To(Equal(expr))
+				}
+			},
+			// {{ }} basic
+			Entry("simple {{ }} expression", "{{ Data.x }}", 1, []string{"Data.x"}),
+			Entry("multiple {{ }} expressions", "a {{ x }} b {{ y }} c", 2, []string{"x", "y"}),
+			Entry("empty {{ }} expression", "{{  }}", 1, []string{""}),
+			Entry("single { inside {{ }}", "{{ a } b }}", 1, []string{"a } b"}),
+
+			// {{ }} quote handling
+			Entry("}} inside double quotes", `{{ x("}}") }}`, 1, []string{`x("}}")`}),
+			Entry("}} inside single quotes", `{{ x('}}') }}`, 1, []string{`x('}}')`}),
+			Entry("}} inside backtick strings", "{{ x(`}}`) }}", 1, []string{"x(`}}`)"}),
+			Entry("escaped quote before }}", `{{ x("hello\"}}world") }}`, 1, []string{`x("hello\"}}world")`}),
+			Entry("backtick raw no escapes", "{{ x(`test\\`)}}", 1, []string{"x(`test\\`)"}),
+
+			// ${ } basic
+			Entry("simple ${ } expression", "${ Data.x }", 1, []string{"Data.x"}),
+			Entry("empty ${ } expression", "${  }", 1, []string{""}),
+			Entry("multiple ${ } expressions", "${ a } and ${ b }", 2, []string{"a", "b"}),
+
+			// ${ } brace depth and quote handling
+			Entry("brace depth for lambdas", "${ map(list, { # + 1 }) }", 1, []string{"map(list, { # + 1 })"}),
+			Entry("nested filter lambda", "${ filter(items, { # > 5 }) }", 1, []string{"filter(items, { # > 5 })"}),
+			Entry("} inside quotes in ${ }", `${ x("}") }`, 1, []string{`x("}")`}),
+			Entry("}} inside ${ } quotes", `${ x("}}") }`, 1, []string{`x("}}")`}),
+
+			// mixed syntax
+			Entry("mixed {{ }} and ${ }", "a {{ x }} b ${ y } c", 2, []string{"x", "y"}),
+
+			// ${{ disambiguation
+			Entry("${{ as literal $ + {{ }}", "${{ Data.x }}", 1, []string{"Data.x"}),
+		)
+
+		DescribeTable("no matches",
+			func(input string) {
+				Expect(findTemplateExpressions(input)).To(BeEmpty())
+			},
+			Entry("plain text", "plain text"),
+			Entry("unterminated {{ expression", "{{ unterminated"),
+			Entry("unterminated ${ expression", "${ unterminated"),
+			Entry("$ without brace", "costs $5"),
+		)
+
+		It("Should have correct full bounds for {{ }}", func() {
+			matches := findTemplateExpressions("{{ Data.x }}")
+			Expect(matches[0].fullStart).To(Equal(0))
+			Expect(matches[0].fullEnd).To(Equal(12))
+		})
+
+		It("Should have correct full bounds for ${ }", func() {
+			matches := findTemplateExpressions("${ Data.x }")
+			Expect(matches[0].fullStart).To(Equal(0))
+			Expect(matches[0].fullEnd).To(Equal(11))
+		})
+
+		It("Should start ${{ match at position 1", func() {
+			matches := findTemplateExpressions("${{ Data.x }}")
+			Expect(matches[0].fullStart).To(Equal(1))
+		})
+	})
+
+	Describe("Quote-aware resolution", func() {
+		DescribeTable("resolving expressions with delimiters in quotes",
+			func(template string, expected string) {
+				result, err := ResolveTemplateString(template, env)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(expected))
+			},
+			Entry("}} in resolved value", `{{ Data.val }}`, "closing braces: }}"),
+			Entry("string concat with }}", `{{ Data.app_name + "}}" }}`, "myapp}}"),
+		)
+
+		BeforeEach(func() {
+			env.Data["val"] = "closing braces: }}"
+		})
+
+		It("Should preserve type for single expression with }} in quotes", func() {
+			env.Data["items"] = []any{"a", "b"}
+			result, err := ResolveTemplateTyped(`{{ Data.items }}`, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal([]any{"a", "b"}))
+		})
+	})
+
+	Describe("Dollar-brace syntax resolution", func() {
+		DescribeTable("string resolution",
+			func(template string, expected string) {
+				result, err := ResolveTemplateString(template, env)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(expected))
+			},
+			Entry("simple ${ } expression", "${ Data.app_name }", "myapp"),
+			Entry("${ } with surrounding text", "app: ${ Data.app_name } v${ Data.app_version }", "app: myapp v1.2.3"),
+			Entry("mixed {{ }} and ${ }", "{{ Data.app_name }} on ${ Facts.hostname }", "myapp on test-server"),
+			Entry("${ } with lookup", "${ lookup('data.app_name') }", "myapp"),
+			Entry("$ without brace unchanged", "costs $5", "costs $5"),
+			Entry("${{ as literal $ + {{ }}", "${{ Data.app_name }}", "$myapp"),
+		)
+
+		DescribeTable("type preservation",
+			func(template string, expected any) {
+				result, err := ResolveTemplateTyped(template, env)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(expected))
+			},
+			Entry("int via ${ }", "${ Data.port }", 8080),
+			Entry("bool via ${ }", "${ Data.enabled }", true),
+		)
+
+		It("Should return matched true for ${ } with value", func() {
+			result, matched, err := ResolveTemplateStringMatch("role:${ Data.app_name }", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(matched).To(BeTrue())
+			Expect(result).To(Equal("role:myapp"))
+		})
+
+		It("Should return matched false for missing values with ${ }", func() {
+			env.DefaultOnMissing = true
+			result, matched, err := ResolveTemplateStringMatch("role:${ lookup('data.missing') }", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(matched).To(BeFalse())
+			Expect(result).To(Equal("role:"))
+		})
+
+		It("Should resolve ${ } in ExpandValuesRecursively", func() {
+			input := map[string]any{
+				"app": "${ Data.app_name }",
+				"os":  "{{ Facts.os }}",
+			}
+			result, err := ExpandValuesRecursively(input, env)
+			Expect(err).ToNot(HaveOccurred())
+			m := result.(map[string]any)
+			Expect(m["app"]).To(Equal("myapp"))
+			Expect(m["os"]).To(Equal("linux"))
+		})
+	})
 })
