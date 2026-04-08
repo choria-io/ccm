@@ -117,7 +117,12 @@ func ValidateData(data map[string]any, rules []ValidationRule) error {
 			continue
 		}
 
-		ok, err := validator.Validate(value, rule.Validation)
+		str, ok := value.(string)
+		if !ok {
+			str = fmt.Sprint(value)
+		}
+
+		ok, err := validator.Validate(str, rule.Validation)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("key %q validation %q failed: %w", rule.Key, rule.Validation, err))
 		} else if !ok {
