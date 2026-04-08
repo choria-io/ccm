@@ -26,6 +26,14 @@ type Env struct {
 
 	RegistrationsFunc func(cluster, protocol, service, ip string) (any, error) `json:"-" yaml:"-"`
 
+	// DefaultOnMissing when true causes lookup() to return "" instead of an error
+	// when a key is missing and no default is provided
+	DefaultOnMissing bool `json:"-" yaml:"-"`
+
+	// RestrictFunctions when true only registers lookup() in expressions,
+	// excluding file I/O and template functions
+	RestrictFunctions bool `json:"-" yaml:"-"`
+
 	envJSON json.RawMessage
 	mu      sync.Mutex
 }
@@ -138,6 +146,9 @@ func (e *Env) lookup(params ...any) (any, error) {
 	res := gjson.GetBytes(e.envJSON, key)
 	if !res.Exists() {
 		if defaultValue == nil {
+			if e.DefaultOnMissing {
+				return "", nil
+			}
 			return "", fmt.Errorf("missing key '%s' in environment", key)
 		}
 		return defaultValue, nil
@@ -152,6 +163,12 @@ func (e *Env) lookup(params ...any) (any, error) {
 	}
 
 	return res.Value(), nil
+}
+
+// ResolveTemplateStringMatch resolves {{ expression }} placeholders in a template string and returns the result,
+// a boolean indicating if any placeholders matched and produced non-empty values, and any error
+func ResolveTemplateStringMatch(template string, env *Env) (string, bool, error) {
+	return applyFactsString(template, env)
 }
 
 // ResolveTemplateString resolves {{ expression }} placeholders in a template string and returns the result as a string
