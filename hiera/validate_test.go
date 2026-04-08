@@ -255,6 +255,14 @@ var _ = Describe("ValidateData", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("converts non-string scalars to string before validating", func() {
+			rules := []ValidationRule{{Key: "port", Validation: "isInt(value)"}}
+			data := map[string]any{"port": 8080}
+
+			err := ValidateData(data, rules)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("skips validation for map values", func() {
 			rules := []ValidationRule{{Key: "web", Validation: "isIPv4(value)"}}
 			data := map[string]any{"web": map[string]any{"port": 80}}
