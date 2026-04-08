@@ -539,4 +539,154 @@ var _ = Describe("Templates", func() {
 			Expect(result).To(Equal("-42"))
 		})
 	})
+
+	Describe("ResolveTemplateStringMatch", func() {
+		It("Should return matched true when placeholders resolve", func() {
+			result, matched, err := ResolveTemplateStringMatch("role:{{ Data.app_name }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("role:myapp"))
+			Expect(matched).To(BeTrue())
+		})
+
+		It("Should return matched false when placeholders resolve to empty", func() {
+			env.DefaultOnMissing = true
+			result, matched, err := ResolveTemplateStringMatch("role:{{ lookup('data.missing') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("role:"))
+			Expect(matched).To(BeFalse())
+		})
+
+		It("Should return matched true for plain strings without placeholders", func() {
+			result, matched, err := ResolveTemplateStringMatch("plain text", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("plain text"))
+			Expect(matched).To(BeTrue())
+		})
+	})
+
+	Describe("DefaultOnMissing", func() {
+		It("Should error on missing keys when DefaultOnMissing is false", func() {
+			_, err := ResolveTemplateString("{{ lookup('data.nonexistent') }}", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("missing key"))
+		})
+
+		It("Should return empty string on missing keys when DefaultOnMissing is true", func() {
+			env.DefaultOnMissing = true
+			result, err := ResolveTemplateString("{{ lookup('data.nonexistent') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(""))
+		})
+
+		It("Should still use default value when provided", func() {
+			env.DefaultOnMissing = true
+			result, err := ResolveTemplateString("{{ lookup('data.nonexistent', 'fallback') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("fallback"))
+		})
+	})
+
+	Describe("RestrictFunctions", func() {
+		It("Should allow readFile when RestrictFunctions is false", func() {
+			_, err := ExprParse("readFile('/nonexistent')", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read file"))
+		})
+
+		It("Should disallow readFile when RestrictFunctions is true", func() {
+			env.RestrictFunctions = true
+			_, err := ExprParse("readFile('/nonexistent')", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("compile error"))
+		})
+
+		It("Should disallow file when RestrictFunctions is true", func() {
+			env.RestrictFunctions = true
+			_, err := ExprParse("file('/nonexistent')", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("compile error"))
+		})
+
+		It("Should disallow template when RestrictFunctions is true", func() {
+			env.RestrictFunctions = true
+			_, err := ExprParse("template('test')", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("compile error"))
+		})
+
+		It("Should allow lookup when RestrictFunctions is true", func() {
+			env.RestrictFunctions = true
+			env.DefaultOnMissing = true
+			result, err := ExprParse("lookup('data.app_name')", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("myapp"))
+		})
+	})
+
+	Describe("ExpandValuesRecursively", func() {
+		It("Should expand string values", func() {
+			result, err := ExpandValuesRecursively("App: {{ Data.app_name }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("App: myapp"))
+		})
+
+		It("Should return non-string primitives unchanged", func() {
+			result, err := ExpandValuesRecursively(42, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(42))
+
+			result, err = ExpandValuesRecursively(true, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(true))
+		})
+
+		It("Should recursively expand map values", func() {
+			input := map[string]any{
+				"name": "{{ Data.app_name }}",
+				"port": 8080,
+			}
+			result, err := ExpandValuesRecursively(input, env)
+			Expect(err).ToNot(HaveOccurred())
+			m := result.(map[string]any)
+			Expect(m["name"]).To(Equal("myapp"))
+			Expect(m["port"]).To(Equal(8080))
+		})
+
+		It("Should recursively expand slice values", func() {
+			input := []any{"{{ Data.app_name }}", 42, "{{ Data.app_version }}"}
+			result, err := ExpandValuesRecursively(input, env)
+			Expect(err).ToNot(HaveOccurred())
+			s := result.([]any)
+			Expect(s[0]).To(Equal("myapp"))
+			Expect(s[1]).To(Equal(42))
+			Expect(s[2]).To(Equal("1.2.3"))
+		})
+
+		It("Should handle deeply nested structures", func() {
+			input := map[string]any{
+				"outer": map[string]any{
+					"inner": []any{"{{ Data.app_name }}"},
+				},
+			}
+			result, err := ExpandValuesRecursively(input, env)
+			Expect(err).ToNot(HaveOccurred())
+			m := result.(map[string]any)
+			outer := m["outer"].(map[string]any)
+			inner := outer["inner"].([]any)
+			Expect(inner[0]).To(Equal("myapp"))
+		})
+	})
+
+	Describe("ExpandMapValues", func() {
+		It("Should expand all map values", func() {
+			input := map[string]any{
+				"app":  "{{ Data.app_name }}",
+				"port": "{{ Data.port }}",
+			}
+			result, err := ExpandMapValues(input, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result["app"]).To(Equal("myapp"))
+			Expect(result["port"]).To(Equal(8080))
+		})
+	})
 })

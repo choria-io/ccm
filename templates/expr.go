@@ -14,12 +14,18 @@ func ExprParse(query string, env *Env, opts ...expr.Option) (any, error) {
 	o := []expr.Option{
 		expr.Env(env),
 		expr.Function("lookup", env.lookup),
-		expr.Function("readFile", env.readFile),
-		expr.Function("file", env.readFile),
-		expr.Function("template", env.template),
-		expr.Function("jet", env.jet),
-		expr.Function("registrations", env.registrations),
 	}
+
+	if !env.RestrictFunctions {
+		o = append(o,
+			expr.Function("readFile", env.readFile),
+			expr.Function("file", env.readFile),
+			expr.Function("template", env.template),
+			expr.Function("jet", env.jet),
+			expr.Function("registrations", env.registrations),
+		)
+	}
+
 	o = append(o, opts...)
 
 	program, err := expr.Compile(query, o...)
