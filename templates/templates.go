@@ -9,13 +9,178 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
 
 	"github.com/tidwall/gjson"
 )
+
+// templateMatch represents a found template expression with its position in the source string
+type templateMatch struct {
+	fullStart, fullEnd   int // bounds of entire {{ expr }} or ${ expr } including delimiters
+	innerStart, innerEnd int // bounds of expression text (whitespace-trimmed)
+}
+
+// delimKind distinguishes the two template syntaxes
+type delimKind int
+
+const (
+	delimDoubleBrace delimKind = iota // {{ expr }}
+	delimDollarBrace                  // ${ expr }
+)
+
+// findTemplateExpressions scans a string for {{ expr }} and ${ expr } template expressions
+// using a state-machine lexer that correctly handles closing delimiters inside quoted strings.
+// For {{ }} expressions, the closer is }}. For ${ } expressions, brace depth is tracked so
+// that nested braces (e.g., in expr-lang lambdas) are handled correctly.
+func findTemplateExpressions(s string) []templateMatch {
+	var matches []templateMatch
+	n := len(s)
+	i := 0
+
+	for i < n {
+		// scan for opener: {{ or ${
+		var kind delimKind
+		var fullStart int
+		var delimLen int
+
+		if i < n-1 && s[i] == '{' && s[i+1] == '{' {
+			kind = delimDoubleBrace
+			fullStart = i
+			delimLen = 2
+		} else if i < n-1 && s[i] == '$' && s[i+1] == '{' {
+			// check for ${{ which is literal $ followed by {{ expression
+			if i+2 < n && s[i+2] == '{' {
+				// treat as literal $, the {{ will be picked up on next iteration
+				i++
+				continue
+			}
+			kind = delimDollarBrace
+			fullStart = i
+			delimLen = 2
+		} else {
+			i++
+			continue
+		}
+
+		i += delimLen // skip past opener
+
+		// scan for closer, tracking quote state
+		var inDouble, inSingle, inBacktick, escaped bool
+		braceDepth := 1 // for ${ } mode
+		closed := false
+		innerRawStart := i
+
+	exprScan:
+		for i < n {
+			ch := s[i]
+
+			if escaped {
+				escaped = false
+				i++
+				continue
+			}
+
+			if inBacktick {
+				// raw strings: no escape processing, only exit on backtick
+				if ch == '`' {
+					inBacktick = false
+				}
+				i++
+				continue
+			}
+
+			if inDouble {
+				if ch == '\\' {
+					escaped = true
+				} else if ch == '"' {
+					inDouble = false
+				}
+				i++
+				continue
+			}
+
+			if inSingle {
+				if ch == '\\' {
+					escaped = true
+				} else if ch == '\'' {
+					inSingle = false
+				}
+				i++
+				continue
+			}
+
+			// not inside any quote
+			if ch == '"' {
+				inDouble = true
+			} else if ch == '\'' {
+				inSingle = true
+			} else if ch == '`' {
+				inBacktick = true
+			} else if kind == delimDoubleBrace && ch == '}' && i+1 < n && s[i+1] == '}' {
+				m := buildMatch(s, fullStart, i+2, innerRawStart, i)
+				matches = append(matches, m)
+				i += 2
+				closed = true
+
+				break exprScan
+			} else if kind == delimDollarBrace {
+				if ch == '{' {
+					braceDepth++
+				} else if ch == '}' {
+					braceDepth--
+					if braceDepth == 0 {
+						m := buildMatch(s, fullStart, i+1, innerRawStart, i)
+						matches = append(matches, m)
+						i++
+						closed = true
+
+						break exprScan
+					}
+				}
+			}
+
+			i++
+		}
+
+		if !closed {
+			// unterminated expression, skip past the opener and continue scanning
+			i = fullStart + delimLen
+		}
+	}
+
+	return matches
+}
+
+// buildMatch creates a templateMatch with whitespace-trimmed inner bounds
+func buildMatch(s string, fullStart, fullEnd, innerRawStart, innerRawEnd int) templateMatch {
+	inner := s[innerRawStart:innerRawEnd]
+	innerTrimmed := strings.TrimSpace(inner)
+	innerStart := innerRawStart + strings.Index(inner, innerTrimmed)
+	innerEnd := innerStart + len(innerTrimmed)
+
+	if innerTrimmed == "" {
+		innerStart = innerRawStart
+		innerEnd = innerRawStart
+	}
+
+	return templateMatch{
+		fullStart:  fullStart,
+		fullEnd:    fullEnd,
+		innerStart: innerStart,
+		innerEnd:   innerEnd,
+	}
+}
+
+// hasTemplateExpression returns true if the string contains any template expressions
+func hasTemplateExpression(s string) bool {
+	if !strings.Contains(s, "{{") && !strings.Contains(s, "${") {
+		return false
+	}
+
+	return len(findTemplateExpressions(s)) > 0
+}
 
 // Env represents the template execution environment containing facts and data
 type Env struct {
@@ -177,16 +342,12 @@ func ResolveTemplateString(template string, env *Env) (string, error) {
 		return "", nil
 	}
 
-	re := regexp.MustCompile(`{{\s*(.*?)\s*}}`)
-
-	matches := re.FindAllStringSubmatch(template, -1)
-	switch {
-	case matches == nil:
+	if !hasTemplateExpression(template) {
 		return template, nil
-	default:
-		res, _, err := applyFactsString(template, env)
-		return res, err
 	}
+
+	res, _, err := applyFactsString(template, env)
+	return res, err
 }
 
 // ResolveTemplateTyped resolves {{ expression }} placeholders and preserves the type of single expressions
@@ -195,31 +356,29 @@ func ResolveTemplateTyped(template string, env *Env) (any, error) {
 		return "", nil
 	}
 
-	re := regexp.MustCompile(`{{\s*(.*?)\s*}}`)
-	trimmed := strings.TrimSpace(template)
-
-	matches := re.FindAllStringSubmatch(template, -1)
-	switch {
-	case matches == nil:
+	matches := findTemplateExpressions(template)
+	if len(matches) == 0 {
 		return template, nil
-	case len(matches) == 1 && strings.HasPrefix(trimmed, "{{") && strings.HasSuffix(trimmed, "}}"):
-		return ExprParse(matches[0][1], env)
-	default:
-		res, _, err := applyFactsString(template, env)
-		return res, err
 	}
+
+	if len(matches) == 1 {
+		trimmed := strings.TrimSpace(template)
+		fullMatch := template[matches[0].fullStart:matches[0].fullEnd]
+
+		if trimmed == fullMatch {
+			inner := template[matches[0].innerStart:matches[0].innerEnd]
+			return ExprParse(inner, env)
+		}
+	}
+
+	res, _, err := applyFactsString(template, env)
+	return res, err
 }
 
 // applyFactsString parses {{ expression}} placeholders using expr and replace them with the resulting values
 func applyFactsString(template string, env *Env) (string, bool, error) {
-	// Matches: {{ something }}
-	// Capture group 1 = inner text
-	re := regexp.MustCompile(`{{\s*(.*?)\s*}}`)
-
-	out := template
-
-	matches := re.FindAllStringSubmatchIndex(template, -1)
-	if matches == nil {
+	matches := findTemplateExpressions(template)
+	if len(matches) == 0 {
 		// nothing to replace, so we report that we matched because this string should be used for those who care about matching
 		return template, template != "", nil
 	}
@@ -229,11 +388,8 @@ func applyFactsString(template string, env *Env) (string, bool, error) {
 	lastIndex := 0
 	var matched []bool
 
-	for _, loc := range matches {
-		fullStart, fullEnd := loc[0], loc[1]
-		innerStart, innerEnd := loc[2], loc[3]
-
-		innerExpr := template[innerStart:innerEnd]
+	for _, m := range matches {
+		innerExpr := template[m.innerStart:m.innerEnd]
 
 		value, err := ExprParse(innerExpr, env)
 		if err != nil {
@@ -254,15 +410,15 @@ func applyFactsString(template string, env *Env) (string, bool, error) {
 		}
 
 		// Write everything before this match
-		result.WriteString(out[lastIndex:fullStart])
+		result.WriteString(template[lastIndex:m.fullStart])
 		// Now the match
 		result.WriteString(fmt.Sprint(value))
 
-		lastIndex = fullEnd
+		lastIndex = m.fullEnd
 	}
 
 	// Append any remainder after last match
-	result.WriteString(out[lastIndex:])
+	result.WriteString(template[lastIndex:])
 
 	return result.String(), slices.Contains(matched, true), nil
 }
