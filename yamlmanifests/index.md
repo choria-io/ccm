@@ -25,6 +25,9 @@ The manifest is resolved using the [Choria Hierarchical Data Resolver](../hiera/
 
 ## Full example
 
+> [!note] Alternate variable syntax
+> Since version 0.0.25 you can use  `${ lookup(...) }` as well as `{{ lookup(..) }}`
+
 ### Input data
 
 Define input data like parameters for a module:
