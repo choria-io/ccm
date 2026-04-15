@@ -7,7 +7,7 @@
 
 - [Resources](https://choria-cm.dev/resources/index.md): Introduce resources and common properties
 - [Hierarchical Data](https://choria-cm.dev/hiera/index.md): Introduce a new take on the well-known hiera tool
-- [Data](https://choria-cm.dev/templates/index.md): Use templates in CCM manifests and CLI
+- [Templates](https://choria-cm.dev/templates/index.md): Use templates in CCM manifests and CLI
 - [Shell Usage](https://choria-cm.dev/cli/index.md): Use the ccm CLI tooling
 - [YAML Manifests](https://choria-cm.dev/yamlmanifests/index.md): Write, host and execute YAML manifests
 - [Agent](https://choria-cm.dev/agent/index.md): Run manifests automatically on a schedule
