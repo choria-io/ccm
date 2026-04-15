@@ -8,14 +8,14 @@ require (
 	github.com/SladkyCitron/slogcolor v1.8.0
 	github.com/adrg/xdg v0.5.3
 	github.com/choria-io/appbuilder v0.15.0
-	github.com/choria-io/fisk v0.8.0
+	github.com/choria-io/fisk v0.8.1
 	github.com/choria-io/scaffold v0.0.10
 	github.com/choria-io/validator v0.0.2
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goss-org/goss v0.4.9
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/nats-io/nats.go v1.50.0
+	github.com/nats-io/nats.go v1.51.0
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/prometheus/client_golang v1.23.2
@@ -99,7 +99,7 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
