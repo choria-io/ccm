@@ -10,8 +10,7 @@ A manifest is a YAML file that combines data, hierarchy configuration, and resou
 
 Manifests support template expressions but not procedural logic. Think of them as declarative configuration similar to multi-resource shell scripts.
 
-> [!info] CCM Studio
-> An experimental visual editor for manifests is available at [CCM Studio](https://studio.choria-cm.dev/).
+A visual editor for manifests is available at [CCM Studio](https://studio.choria-cm.dev/).
 
 ## Manifest structure
 
@@ -51,7 +50,7 @@ Define resources to manage in the `ccm` section:
 ccm:
   resources:
     - package:
-        - "{{ lookup('data.package_name') }}":
+        - "${ lookup('data.package_name') }":
             ensure: latest
 ```
 
@@ -62,7 +61,7 @@ Configure a hierarchy to vary data by dimensions like OS platform:
 ```yaml
 hierarchy:
   order:
-    - os:{{ lookup('facts.host.info.platformFamily') }}
+    - os:${ lookup('facts.host.info.platformFamily') }
 ```
 
 This looks for overrides in `os:rhel`, `os:debian`, etc.
@@ -88,12 +87,12 @@ data:
 ccm:
   resources:
     - package:
-        - "{{ lookup('data.package_name') }}":
+        - "${ lookup('data.package_name') }":
              ensure: latest
 
 hierarchy:
   order:
-    - os:{{ lookup('facts.host.info.platformFamily') }}
+    - os:${ lookup('facts.host.info.platformFamily') }
 
 overrides:
   os:debian:
@@ -182,7 +181,7 @@ The first two files inherit the `defaults` values. The `/app/bin/app` file overr
 
 ## Templating
 
-Manifests support template expressions like `{{ lookup("key") }}` for adjusting values. These expressions cannot generate new resources; they only modify values in valid YAML.
+Manifests support template expressions like `${ lookup("key") }` for adjusting values. These expressions cannot generate new resources; they only modify values in valid YAML.
 
 ### Available variables
 

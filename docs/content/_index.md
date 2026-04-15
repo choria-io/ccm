@@ -83,7 +83,7 @@ data:
 ccm:
   resources:
     - package:
-        - "{{ Data.package_name }}":
+        - "${ Data.package_name }":
             ensure: present
     - file: 
         - "/etc/httpd/conf.d/listen.conf":
@@ -91,7 +91,7 @@ ccm:
             content: |
                 Listen 8080
     - service:
-        - "{{ Data.service_name }}":
+        - "${ Data.service_name }":
             ensure: running
             enable: true
             subscribe: 
@@ -99,7 +99,7 @@ ccm:
 
 hierarchy:
   order:
-    - os:{{ lookup('facts.host.info.platformFamily') }}
+    - os:${ lookup('facts.host.info.platformFamily') }
 
 overrides:
   os:debian:

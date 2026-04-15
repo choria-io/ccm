@@ -1,5 +1,5 @@
 +++
-title = "Data"
+title = "Templates"
 description = "Use templates in CCM manifests and CLI"
 toc = true
 weight = 30
@@ -23,7 +23,7 @@ CCM supports various data sources:
 
 ## Accessing data
 
-Expressions like `{{ lookup('facts.host.info.platformFamily') }}` use the [Expr Language](https://expr-lang.org/docs/language-definition).
+Expressions like `{{ lookup('facts.host.info.platformFamily') }}` or `${ lookup('facts.host.info.platformFamily') }` use the [Expr Language](https://expr-lang.org/docs/language-definition).
 
 ### Available variables
 
@@ -59,6 +59,12 @@ lookup("data.packages.#")                    # Array length
 These expressions work on the CLI:
 
 ```nohighlight
+$ ccm ensure package '${ lookup("data.package_name", "httpd") }'
+```
+
+It might be easier to avoid using `$` on the CLI so the alternative syntax is helpful:
+
+```nohighlight
 $ ccm ensure package '{{ lookup("data.package_name", "httpd") }}'
 ```
 
@@ -74,7 +80,8 @@ $ ccm facts host                         # Query specific path
 $ ccm facts --yaml                       # Output as YAML
 ```
 
-Access facts in expressions using `{{ Facts.host.info.platformFamily }}` or `{{ lookup('facts.host.info.platformFamily') }}`.
+Access facts in expressions using `${ Facts.host.info.platformFamily }` or `${ lookup('facts.host.info.
+platformFamily') }`.
 
 ### Custom facts
 
@@ -125,7 +132,7 @@ Given this file stored in `./.hiera`:
 ```yaml
 hierarchy:
   order:
-    - os:{{ lookup('facts.host.info.platformFamily') }}
+    - os:${ lookup('facts.host.info.platformFamily') }
   merge: first
 
 data:
@@ -139,7 +146,7 @@ overrides:
     package_name: httpd
 ```
 
-Running `ccm ensure package '{{ lookup("data.package_name") }}'` installs `httpd` on RHEL-based systems and `apache2` on Debian-based systems.
+Running `ccm ensure package '${ lookup("data.package_name") }'` installs `httpd` on RHEL-based systems and `apache2` on Debian-based systems.
 
 > [!info] Note
 > See the [Hiera](../hiera) section for details on configuring Hiera data in NATS.
@@ -150,10 +157,10 @@ The shell environment and variables defined in `./.env` can be accessed in two w
 
 ```yaml
 # Direct access
-home_dir: "{{ Environ.HOME }}"
+home_dir: "${ Environ.HOME }"
 
 # Via lookup (with default value)
-my_var: "{{ lookup('environ.MY_VAR', 'default') }}"
+my_var: "${ lookup('environ.MY_VAR', 'default') }"
 ```
 
 The `.env` file uses standard `KEY=value` format, one variable per line.

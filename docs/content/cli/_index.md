@@ -54,9 +54,9 @@ As covered in the [templates section](../templates), commands automatically read
 Use the `--hiera` flag or `CCM_HIERA_DATA` environment variable to specify a different data file.
 
 With data loaded, you can access:
-- `{{ lookup("data.my_data_key") }}` for Hiera data
-- `{{ lookup("env.MY_ENV_VAR") }}` for environment variables
-- `{{ lookup("facts.host.info.platformFamily") }}` for system facts
+- `{{ lookup("data.my_data_key") }}` or `${ lookup("data.my_data_key") }` for Hiera data
+- `{{ lookup("env.MY_ENV_VAR") }}` or `${ lookup("env.MY_ENV_VAR") }` for environment variables
+- `{{ lookup("facts.host.info.platformFamily") }}` or `${ lookup("facts.host.info.platformFamily") }}` for system facts
 
 Example using Hiera data:
 

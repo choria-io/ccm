@@ -27,11 +27,11 @@ An annotated example:
 ```yaml
 hierarchy:
     # Lookup and override order - facts are resolved in expressions
-    # Use GJSON path syntax for nested facts: {{ lookup('facts.host.info.hostname') }}
+    # Use GJSON path syntax for nested facts: ${ lookup('facts.host.info.hostname') }
     order:
-     - env:{{ lookup('facts.env') }}
-     - role:{{ lookup('facts.role') }}
-     - host:{{ lookup('facts.hostname') }}
+     - env:${ lookup('facts.env') }
+     - role:${ lookup('facts.role') }
+     - host:${ lookup('facts.hostname') }
     merge: deep  # "deep" merges all matches; "first" stops at first match
 
 # Base data - hierarchy results are merged into this
@@ -74,7 +74,7 @@ Given the input file `data.json`:
 {
     "hierarchy": {
         "order": [
-            "fqdn:{{ lookup('facts.fqdn') }}"
+            "fqdn:${ lookup('facts.fqdn') }"
         ]
     },
     "data": {
@@ -238,18 +238,18 @@ The `@validate` directive accepts [Expr Language](https://expr-lang.org) express
 
 Available expressions:
 
-| Expression                                       | Description                                                             |
-|--------------------------------------------------|-------------------------------------------------------------------------|
-| `isIP(value)` or `is_ip(value)`                  | Valid IPv4 or IPv6 address                                              |
-| `isIPv4(value)` or `is_ipv4(value)`              | Valid IPv4 address                                                      |
-| `isIPv6(value)` or `is_ipv6(value)`              | Valid IPv6 address                                                      |
-| `isInt(value)` or `is_int(value)`                | Integer value                                                           |
-| `isFloat(value)` or `is_float(value)`            | Floating-point value                                                    |
-| `isDuration(value)` or `is_duration(value)`      | Valid duration using `fisk.ParseDuration`                               |
-| `isRegex(value, "^[a-z]+$")` or `is_regex(...)` | Value matches the given regular expression                              |
-| `isShellSafe(value)` or `is_shellsafe(value)`    | Does not contain shell-unsafe characters                                |
-| `isHostname(value)` or `is_hostname(value)`      | Valid hostname per RFC 1123                                             |
-| `isFQDN(value)` or `is_fqdn(value)`             | Valid fully qualified domain name per RFC 1123                          |
+| Expression                                      | Description                                    |
+|-------------------------------------------------|------------------------------------------------|
+| `isIP(value)` or `is_ip(value)`                 | Valid IPv4 or IPv6 address                     |
+| `isIPv4(value)` or `is_ipv4(value)`             | Valid IPv4 address                             |
+| `isIPv6(value)` or `is_ipv6(value)`             | Valid IPv6 address                             |
+| `isInt(value)` or `is_int(value)`               | Integer value                                  |
+| `isFloat(value)` or `is_float(value)`           | Floating-point value                           |
+| `isDuration(value)` or `is_duration(value)`     | Valid duration using `fisk.ParseDuration`      |
+| `isRegex(value, "^[a-z]+$")` or `is_regex(...)` | Value matches the given regular expression     |
+| `isShellSafe(value)` or `is_shellsafe(value)`   | Does not contain shell-unsafe characters       |
+| `isHostname(value)` or `is_hostname(value)`     | Valid hostname per RFC 1123                    |
+| `isFQDN(value)` or `is_fqdn(value)`             | Valid fully qualified domain name per RFC 1123 |
 
 Multiple expressions can be combined using Expr operators: `isIPv4(value) || isIPv6(value)`.
 
