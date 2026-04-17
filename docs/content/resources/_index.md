@@ -84,14 +84,3 @@ The following table shows how the two conditions interact:
 | `true`    | `false`   | Yes               |
 | `false`   | `true`    | No                |
 | `false`   | `false`   | No                |
-
-## About names
-
-Resources can be specified like:
-
-```yaml
-/etc/motd:
-  ensure: present
-```
-
-This sets `name` to `/etc/motd`, in the following paragraphs we will refer to this as `name`.

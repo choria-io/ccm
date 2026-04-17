@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/choria-io/ccm/internal/backoff"
-	"github.com/choria-io/ccm/metrics"
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/kballard/go-shellquote"
 	"github.com/prometheus/client_golang/prometheus"

@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/choria-io/ccm/internal/backoff"
+	"github.com/choria-io/ccm/internal/metrics"
 	iu "github.com/choria-io/ccm/internal/util"
-	"github.com/choria-io/ccm/metrics"
 )
 
 // maintainHttpCache periodically checks an HTTP(S) URL for changes and updates the local cache.

@@ -5,7 +5,7 @@
 package session
 
 import (
-	"github.com/choria-io/ccm/metrics"
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/choria-io/ccm/model"
 )
 

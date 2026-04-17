@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/choria-io/ccm/hiera"
 	"github.com/choria-io/ccm/internal/backoff"
 	"github.com/choria-io/ccm/manager"
-	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 )
 

@@ -5,8 +5,8 @@
 package manager
 
 import (
+	"github.com/choria-io/ccm/internal/session"
 	"github.com/choria-io/ccm/model"
-	"github.com/choria-io/ccm/session"
 )
 
 // Option is a functional option for configuring CCM

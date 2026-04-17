@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 
 	iu "github.com/choria-io/ccm/internal/util"
-	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/resources/apply"
 )
