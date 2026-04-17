@@ -348,7 +348,7 @@ var _ = Describe("Apply", func() {
 
 			result, err := apply.Execute(ctx, noopMgr, true, userLogger)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("cannot set healthceck only and noop mode at the same time"))
+			Expect(err.Error()).To(ContainSubstring("cannot set healthcheck only and noop mode at the same time"))
 			Expect(result).To(BeNil())
 		})
 

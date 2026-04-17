@@ -13,13 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/internal/healthcheck/goss"
+	"github.com/choria-io/ccm/internal/healthcheck/nagios"
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/expr-lang/expr"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/choria-io/ccm/healthcheck/goss"
-	"github.com/choria-io/ccm/healthcheck/nagios"
-
-	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/templates"
 )

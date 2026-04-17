@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/choria-io/ccm/internal/backoff"
-	"github.com/choria-io/ccm/metrics"
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/templates"
 	"github.com/goss-org/goss"

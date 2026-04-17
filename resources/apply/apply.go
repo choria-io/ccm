@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/goccy/go-yaml"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -26,7 +27,6 @@ import (
 	"github.com/choria-io/ccm/hiera"
 	"github.com/choria-io/ccm/internal/fs"
 	iu "github.com/choria-io/ccm/internal/util"
-	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/templates"
 )
@@ -551,7 +551,7 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 	defer timer.ObserveDuration()
 
 	if mgr.NoopMode() && healthCheckOnly {
-		return nil, fmt.Errorf("cannot set healthceck only and noop mode at the same time")
+		return nil, fmt.Errorf("cannot set healthcheck only and noop mode at the same time")
 	}
 
 	log, err := mgr.Logger("component", "apply")

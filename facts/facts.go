@@ -7,8 +7,8 @@ package facts
 import (
 	"context"
 
+	"github.com/choria-io/ccm/internal/metrics"
 	iu "github.com/choria-io/ccm/internal/util"
-	"github.com/choria-io/ccm/metrics"
 	"github.com/choria-io/ccm/model"
 	"github.com/prometheus/client_golang/prometheus"
 )

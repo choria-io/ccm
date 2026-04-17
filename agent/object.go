@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/choria-io/ccm/internal/metrics"
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/choria-io/ccm/internal/backoff"
 	iu "github.com/choria-io/ccm/internal/util"
-	"github.com/choria-io/ccm/metrics"
 )
 
 // maintainObjectCache periodically checks a JetStream Object Store for changes and updates the local cache.

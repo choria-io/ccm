@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/choria-io/ccm/facts"
+	"github.com/choria-io/ccm/internal/session"
 	"github.com/goccy/go-yaml"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -27,7 +28,6 @@ import (
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
 	serviceresource "github.com/choria-io/ccm/resources/service"
-	"github.com/choria-io/ccm/session"
 	"github.com/choria-io/ccm/templates"
 )
 
