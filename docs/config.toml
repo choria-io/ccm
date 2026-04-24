@@ -24,6 +24,7 @@ disableInlineCopyToClipBoard = true
 alwaysopen = false
 collapsibleMenu = true
 externalLinkTargetc= "_self"
+disableExplicitIndexURLs = true
 
 [markup]
   [markup.goldmark]
