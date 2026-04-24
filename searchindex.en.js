@@ -5,7 +5,7 @@ var relearn_searchindex = [
     "description": "Compose manifests from smaller reusable manifests",
     "tags": [],
     "title": "Apply",
-    "uri": "/resources/apply/index.html"
+    "uri": "/resources/apply/"
   },
   {
     "breadcrumb": "",
@@ -13,7 +13,7 @@ var relearn_searchindex = [
     "description": "CCM is a small-scale Configuration Management system designed to meet users where they are - enabling experimentation, R\u0026D, and exploration without the overhead of full-system management while still following sound Configuration Management principles.\nWe focus on great UX, immediate feedback, and interactive use with minimal friction.\nSmall and Focused\rEmbraces the popular package-config-service style of Configuration Management.\nFocused on the needs of a single application or unit of software.",
     "tags": [],
     "title": "Introduction",
-    "uri": "/index.html"
+    "uri": "/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Package Type",
@@ -21,7 +21,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the APT package provider for Debian-based systems.\nEnvironment All commands are executed with the following environment variables to ensure non-interactive operation:\nVariable Value Purpose DEBIAN_FRONTEND noninteractive Prevents dpkg from prompting for user input APT_LISTBUGS_FRONTEND none Suppresses apt-listbugs prompts APT_LISTCHANGES_FRONTEND none Suppresses apt-listchanges prompts Concurrency A global package lock (model.PackageGlobalLock) is held during all command executions to prevent concurrent apt/dpkg operations within the same process. This prevents lock contention on /var/lib/dpkg/lock.",
     "tags": [],
     "title": "APT Provider",
-    "uri": "/design/package/apt/index.html"
+    "uri": "/design/package/apt/"
   },
   {
     "breadcrumb": "Introduction \u003e Resources",
@@ -29,7 +29,7 @@ var relearn_searchindex = [
     "description": "Download, extract and copy files from tar.gz and zip archives",
     "tags": [],
     "title": "Archive",
-    "uri": "/resources/archive/index.html"
+    "uri": "/resources/archive/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -37,7 +37,7 @@ var relearn_searchindex = [
     "description": "Archive resource for downloading and extracting archives",
     "tags": [],
     "title": "Archive Type",
-    "uri": "/design/archive/index.html"
+    "uri": "/design/archive/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Apply Type",
@@ -45,7 +45,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the CCM Manifest provider for resolving and executing child manifests.\nProvider Selection The CCM Manifest provider is the only apply provider. It is always available and returns priority 1 for all apply resources.\nOperations ApplyManifest Process:",
     "tags": [],
     "title": "CCM Manifest Provider",
-    "uri": "/design/apply/ccmmanifest/index.html"
+    "uri": "/design/apply/ccmmanifest/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Scaffold Type",
@@ -53,7 +53,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the Choria scaffold provider for rendering template directories using the choria-io/scaffold library.\nProvider Selection The Choria provider is the default and only scaffold provider. It is always available and returns priority 1 for all scaffold resources.\nOperations Scaffold (Render Templates) Process:",
     "tags": [],
     "title": "Choria Provider",
-    "uri": "/design/scaffold/choria/index.html"
+    "uri": "/design/scaffold/choria/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Archive Type",
@@ -61,7 +61,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the HTTP archive provider for downloading and extracting archives from HTTP/HTTPS URLs.\nProvider Selection The HTTP provider is selected when:\nThe URL scheme is http or https The archive file extension is supported (.tar.gz, .tgz, .tar, .zip) The required extraction tool (tar or unzip) is available in PATH The IsManageable() function checks these conditions and returns a priority of 1 if all are met.",
     "tags": [],
     "title": "HTTP Provider",
-    "uri": "/design/archive/http/index.html"
+    "uri": "/design/archive/http/"
   },
   {
     "breadcrumb": "Introduction \u003e Shell Usage",
@@ -69,7 +69,7 @@ var relearn_searchindex = [
     "description": "Manage resources programmatically via STDIN/STDOUT",
     "tags": [],
     "title": "JSON API",
-    "uri": "/cli/api/index.html"
+    "uri": "/cli/api/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Exec Type",
@@ -77,7 +77,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the Posix exec provider for executing commands without a shell.\nProvider Selection The Posix provider is the default exec provider. It is always available and returns priority 1 for all exec resources unless a different provider is explicitly requested via the provider property.\nTo use the shell provider instead, specify provider: shell in the resource properties.",
     "tags": [],
     "title": "Posix Provider",
-    "uri": "/design/exec/posix/index.html"
+    "uri": "/design/exec/posix/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e File Type",
@@ -85,7 +85,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the Posix file provider for managing files and directories on Unix-like systems.\nProvider Selection The Posix provider is the default and only file provider. It is always available and returns priority 1 for all file resources.\nOperations Store (Create/Update File) Process:",
     "tags": [],
     "title": "Posix Provider",
-    "uri": "/design/file/posix/index.html"
+    "uri": "/design/file/posix/"
   },
   {
     "breadcrumb": "Introduction",
@@ -93,7 +93,7 @@ var relearn_searchindex = [
     "description": "Introduce resources and common properties",
     "tags": [],
     "title": "Resources",
-    "uri": "/resources/index.html"
+    "uri": "/resources/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Service Type",
@@ -101,7 +101,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the Systemd service provider for managing system services via systemctl.\nProvider Selection The Systemd provider is selected when systemctl is found in the system PATH. The provider checks for the executable using util.ExecutableInPath(\"systemctl\").\nAvailability Check:\nSearches PATH for systemctl Returns priority 1 if found Returns unavailable if not found Concurrency A global service lock (model.ServiceGlobalLock) is held during all systemctl command executions to prevent concurrent systemd operations within the same process. This prevents race conditions when multiple service resources are managed simultaneously.",
     "tags": [],
     "title": "Systemd Provider",
-    "uri": "/design/service/systemd/index.html"
+    "uri": "/design/service/systemd/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -109,7 +109,7 @@ var relearn_searchindex = [
     "description": "Apply resource for composing manifests from reusable parts",
     "tags": [],
     "title": "Apply Type",
-    "uri": "/design/apply/index.html"
+    "uri": "/design/apply/"
   },
   {
     "breadcrumb": "Introduction \u003e Shell Usage",
@@ -117,7 +117,7 @@ var relearn_searchindex = [
     "description": "Extend the CLI with custom commands using App Builder",
     "tags": [],
     "title": "CLI Plugins",
-    "uri": "/cli/plugins/index.html"
+    "uri": "/cli/plugins/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Package Type",
@@ -125,7 +125,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the DNF package provider for RHEL/Fedora-based systems.\nConcurrency A global package lock (model.PackageGlobalLock) is held during all command executions to prevent concurrent dnf/rpm operations within the same process. This prevents lock contention on the RPM database.\nOperations Status Check Command:",
     "tags": [],
     "title": "DNF Provider",
-    "uri": "/design/package/dnf/index.html"
+    "uri": "/design/package/dnf/"
   },
   {
     "breadcrumb": "Introduction \u003e Resources",
@@ -133,7 +133,7 @@ var relearn_searchindex = [
     "description": "Execute commands idempotently",
     "tags": [],
     "title": "Exec",
-    "uri": "/resources/exec/index.html"
+    "uri": "/resources/exec/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -141,7 +141,7 @@ var relearn_searchindex = [
     "description": "Exec resource for command execution",
     "tags": [],
     "title": "Exec Type",
-    "uri": "/design/exec/index.html"
+    "uri": "/design/exec/"
   },
   {
     "breadcrumb": "Introduction",
@@ -149,7 +149,7 @@ var relearn_searchindex = [
     "description": "Introduce a new take on the well-known hiera tool",
     "tags": [],
     "title": "Hierarchical Data",
-    "uri": "/hiera/index.html"
+    "uri": "/hiera/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents \u003e Exec Type",
@@ -157,7 +157,7 @@ var relearn_searchindex = [
     "description": "This document describes the implementation details of the Shell exec provider for executing commands via /bin/sh.\nProvider Selection The Shell provider is selected when provider: shell is explicitly specified in the resource properties. It has a lower priority (99) than the Posix provider (1), so it is never automatically selected.\nAvailability: The provider checks for the existence of /bin/sh via util.FileExists(). If /bin/sh does not exist, the provider is not available.",
     "tags": [],
     "title": "Shell Provider",
-    "uri": "/design/exec/shell/index.html"
+    "uri": "/design/exec/shell/"
   },
   {
     "breadcrumb": "Introduction \u003e Resources",
@@ -165,7 +165,7 @@ var relearn_searchindex = [
     "description": "Manage files content, ownership and more",
     "tags": [],
     "title": "File",
-    "uri": "/resources/file/index.html"
+    "uri": "/resources/file/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -173,7 +173,7 @@ var relearn_searchindex = [
     "description": "File resource for managing files and directories",
     "tags": [],
     "title": "File Type",
-    "uri": "/design/file/index.html"
+    "uri": "/design/file/"
   },
   {
     "breadcrumb": "Introduction",
@@ -181,7 +181,7 @@ var relearn_searchindex = [
     "description": "Use templates in CCM manifests and CLI",
     "tags": [],
     "title": "Templates",
-    "uri": "/templates/index.html"
+    "uri": "/templates/"
   },
   {
     "breadcrumb": "Introduction \u003e Resources",
@@ -189,7 +189,7 @@ var relearn_searchindex = [
     "description": "Install, upgrade, downgrade and remove packages using OS native packagers",
     "tags": [],
     "title": "Package",
-    "uri": "/resources/package/index.html"
+    "uri": "/resources/package/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -197,7 +197,7 @@ var relearn_searchindex = [
     "description": "Package resource for system package management",
     "tags": [],
     "title": "Package Type",
-    "uri": "/design/package/index.html"
+    "uri": "/design/package/"
   },
   {
     "breadcrumb": "Introduction",
@@ -205,7 +205,7 @@ var relearn_searchindex = [
     "description": "Use the ccm CLI tooling",
     "tags": [],
     "title": "Shell Usage",
-    "uri": "/cli/index.html"
+    "uri": "/cli/"
   },
   {
     "breadcrumb": "Introduction \u003e Resources",
@@ -213,7 +213,7 @@ var relearn_searchindex = [
     "description": "Render template directories into target directories with synchronization and purge support",
     "tags": [],
     "title": "Scaffold",
-    "uri": "/resources/scaffold/index.html"
+    "uri": "/resources/scaffold/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -221,7 +221,7 @@ var relearn_searchindex = [
     "description": "Scaffold resource for template directory rendering",
     "tags": [],
     "title": "Scaffold Type",
-    "uri": "/design/scaffold/index.html"
+    "uri": "/design/scaffold/"
   },
   {
     "breadcrumb": "Introduction \u003e Resources",
@@ -229,7 +229,7 @@ var relearn_searchindex = [
     "description": "Enable, disable, start, stop and restart services using OS native service managers",
     "tags": [],
     "title": "Service",
-    "uri": "/resources/service/index.html"
+    "uri": "/resources/service/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -237,7 +237,7 @@ var relearn_searchindex = [
     "description": "Service resource for system service management",
     "tags": [],
     "title": "Service Type",
-    "uri": "/design/service/index.html"
+    "uri": "/design/service/"
   },
   {
     "breadcrumb": "Introduction",
@@ -245,7 +245,7 @@ var relearn_searchindex = [
     "description": "Write, host and execute YAML manifests",
     "tags": [],
     "title": "YAML Manifests",
-    "uri": "/yamlmanifests/index.html"
+    "uri": "/yamlmanifests/"
   },
   {
     "breadcrumb": "Introduction",
@@ -253,7 +253,7 @@ var relearn_searchindex = [
     "description": "Run manifests automatically on a schedule",
     "tags": [],
     "title": "Agent",
-    "uri": "/agent/index.html"
+    "uri": "/agent/"
   },
   {
     "breadcrumb": "Introduction",
@@ -261,7 +261,7 @@ var relearn_searchindex = [
     "description": "Discover services through NATS-based registration of stable resources",
     "tags": [],
     "title": "Registration",
-    "uri": "/registration/index.html"
+    "uri": "/registration/"
   },
   {
     "breadcrumb": "Introduction",
@@ -269,7 +269,7 @@ var relearn_searchindex = [
     "description": "Integrating deep health knowledge into resources",
     "tags": [],
     "title": "Monitoring",
-    "uri": "/monitoring/index.html"
+    "uri": "/monitoring/"
   },
   {
     "breadcrumb": "Introduction",
@@ -277,7 +277,7 @@ var relearn_searchindex = [
     "description": "LLM generated design documents for resources",
     "tags": [],
     "title": "Design Documents",
-    "uri": "/design/index.html"
+    "uri": "/design/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -285,7 +285,7 @@ var relearn_searchindex = [
     "description": "How to add a new resource type to CCM",
     "tags": [],
     "title": "Adding a Type",
-    "uri": "/design/new/index.html"
+    "uri": "/design/new/"
   },
   {
     "breadcrumb": "Introduction \u003e Design Documents",
@@ -293,7 +293,7 @@ var relearn_searchindex = [
     "description": "Define writing conventions for CCM documentation",
     "tags": [],
     "title": "Docs Style Guide",
-    "uri": "/design/style/index.html"
+    "uri": "/design/style/"
   },
   {
     "breadcrumb": "Introduction",
@@ -301,7 +301,7 @@ var relearn_searchindex = [
     "description": "",
     "tags": [],
     "title": "Categories",
-    "uri": "/categories/index.html"
+    "uri": "/categories/"
   },
   {
     "breadcrumb": "Introduction",
@@ -309,6 +309,6 @@ var relearn_searchindex = [
     "description": "",
     "tags": [],
     "title": "Tags",
-    "uri": "/tags/index.html"
+    "uri": "/tags/"
   }
 ]
