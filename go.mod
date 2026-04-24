@@ -5,9 +5,9 @@ go 1.25.0
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/CloudyKit/jet/v6 v6.3.2
-	github.com/SladkyCitron/slogcolor v1.8.0
+	github.com/SladkyCitron/slogcolor v1.9.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.15.0
+	github.com/choria-io/appbuilder v0.16.0
 	github.com/choria-io/fisk v0.8.1
 	github.com/choria-io/scaffold v0.0.10
 	github.com/choria-io/validator v0.0.2
@@ -23,7 +23,7 @@ require (
 	github.com/segmentio/ksuid v1.0.4
 	github.com/shirou/gopsutil/v4 v4.26.3
 	github.com/sirupsen/logrus v1.9.4
-	github.com/synadia-io/orbit.go/jetstreamext v0.2.1
+	github.com/synadia-io/orbit.go/jetstreamext v0.3.0
 	github.com/synadia-io/orbit.go/natscontext v0.1.2
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/mock v0.6.0
@@ -60,7 +60,7 @@ require (
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/itchyny/gojq v0.12.19 // indirect
 	github.com/itchyny/timefmt-go v0.1.8 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.7.9 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.7.10 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
