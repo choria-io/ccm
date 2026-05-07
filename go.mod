@@ -9,21 +9,21 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/choria-io/appbuilder v0.16.0
 	github.com/choria-io/fisk v0.8.1
-	github.com/choria-io/scaffold v0.0.10
+	github.com/choria-io/scaffold v0.0.11
 	github.com/choria-io/validator v0.0.2
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/goss-org/goss v0.4.9
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/nats-io/nats.go v1.51.0
-	github.com/onsi/ginkgo/v2 v2.28.1
-	github.com/onsi/gomega v1.39.1
+	github.com/nats-io/nats.go v1.52.0
+	github.com/onsi/ginkgo/v2 v2.28.3
+	github.com/onsi/gomega v1.40.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/segmentio/ksuid v1.0.4
-	github.com/shirou/gopsutil/v4 v4.26.3
+	github.com/shirou/gopsutil/v4 v4.26.4
 	github.com/sirupsen/logrus v1.9.4
-	github.com/synadia-io/orbit.go/jetstreamext v0.3.0
+	github.com/synadia-io/orbit.go/jetstreamext v0.3.1
 	github.com/synadia-io/orbit.go/natscontext v0.1.2
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/mock v0.6.0
@@ -35,7 +35,7 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/CloudyKit/fastprinter v0.0.0-20251202014920-1725d2651bd4 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.4.0 // indirect
+	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/achanda/go-sysctl v0.0.0-20160222034550-6be7678c45d2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -51,7 +51,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
+	github.com/google/pprof v0.0.0-20260507013755-92041b743c96 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/goss-org/GOnetstat v0.0.0-20230101144325-22be0bd9e64d // indirect
 	github.com/goss-org/go-ps v0.0.0-20230609005227-7b318e6a56e5 // indirect
@@ -61,10 +61,10 @@ require (
 	github.com/itchyny/gojq v0.12.19 // indirect
 	github.com/itchyny/timefmt-go v0.1.8 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.7.10 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.21 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/miekg/dns v1.1.72 // indirect

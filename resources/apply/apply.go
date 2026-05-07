@@ -547,6 +547,14 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 }
 
 func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly bool, userLog model.Logger) (model.SessionStore, error) {
+	if mgr == nil {
+		return nil, fmt.Errorf("manager is required")
+	}
+
+	if ResourceFactory == nil {
+		return nil, fmt.Errorf("ResourceFactory is not initialized; import github.com/choria-io/ccm/resources to register it")
+	}
+
 	timer := prometheus.NewTimer(metrics.ManifestApplyTime.WithLabelValues(a.source))
 	defer timer.ObserveDuration()
 
@@ -587,12 +595,17 @@ func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly 
 
 	var terminate bool
 
-	for _, r := range a.Resources() {
+	for n, r := range a.Resources() {
 		if len(r) > 1 {
 			return nil, fmt.Errorf("only one resource type per resource is supported")
 		}
 
 		for _, prop := range r {
+			if prop == nil {
+				userLog.Error("invalid properties received for resource", "resource", n)
+				continue
+			}
+
 			var event *model.TransactionEvent
 			var resource model.Resource
 			var err error

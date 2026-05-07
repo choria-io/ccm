@@ -24,6 +24,7 @@ import (
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/registration"
+	_ "github.com/choria-io/ccm/resources" // do not remove, triggers initialization of the factories
 	archiveresource "github.com/choria-io/ccm/resources/archive"
 	fileresource "github.com/choria-io/ccm/resources/file"
 	packageresource "github.com/choria-io/ccm/resources/package"
