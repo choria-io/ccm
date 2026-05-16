@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -25,6 +26,7 @@ import (
 	"github.com/choria-io/ccm/model/modelmocks"
 	"github.com/choria-io/ccm/resources/archive"
 	"github.com/choria-io/ccm/resources/exec"
+	execposix "github.com/choria-io/ccm/resources/exec/posix"
 	"github.com/choria-io/ccm/resources/file"
 	"github.com/choria-io/ccm/resources/package"
 	"github.com/choria-io/ccm/resources/scaffold"
@@ -673,6 +675,69 @@ var _ = Describe("Apply", func() {
 
 			_, err := apply.Execute(ctx, mgr, false, userLogger)
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should let a later exec read a file created by an earlier exec via a deferred ${ file() } template", func(ctx context.Context) {
+			tmpDir, err := os.MkdirTemp("", "apply-exec-deferred-template-*")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpDir)
+
+			filePath := filepath.Join(tmpDir, "file1.txt")
+			fileContents := "hello-world"
+
+			manifestContent := fmt.Sprintf(`
+ccm:
+  resources:
+    - exec:
+        - "writer":
+            ensure: present
+            command: "/usr/bin/write-file %s"
+    - exec:
+        - "reader":
+            ensure: present
+            command: "/bin/echo ${ file('%s') }"
+`, filePath, filePath)
+
+			manifestPath := filepath.Join(tmpDir, "manifest.yaml")
+			Expect(os.WriteFile(manifestPath, []byte(manifestContent), 0644)).To(Succeed())
+
+			mgr.EXPECT().SetData(gomock.Any()).DoAndReturn(func(d map[string]any) map[string]any {
+				data = d
+				return data
+			}).AnyTimes()
+
+			_, applyManifest, err := ResolveManifestFilePath(ctx, mgr, manifestPath)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(applyManifest.Resources()).To(HaveLen(2))
+
+			execposix.Register()
+
+			var readerOpts model.ExtendedExecOptions
+			gomock.InOrder(
+				runner.EXPECT().ExecuteWithOptions(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, opts model.ExtendedExecOptions) ([]byte, []byte, int, error) {
+						Expect(opts.Command).To(Equal("/usr/bin/write-file"))
+						Expect(opts.Args).To(Equal([]string{filePath}))
+						Expect(os.WriteFile(filePath, []byte(fileContents), 0644)).To(Succeed())
+						return nil, nil, 0, nil
+					}),
+				runner.EXPECT().ExecuteWithOptions(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, opts model.ExtendedExecOptions) ([]byte, []byte, int, error) {
+						readerOpts = opts
+						return nil, nil, 0, nil
+					}),
+			)
+
+			mgr.EXPECT().StartSession(applyManifest).Return(session, nil)
+			mgr.EXPECT().RecordEvent(gomock.Any()).Return(nil).Times(2)
+			userLogger.EXPECT().Warn(gomock.Any(), gomock.Any()).AnyTimes()
+			userLogger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
+
+			_, err = applyManifest.Execute(ctx, mgr, false, userLogger)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(readerOpts.Command).To(Equal("/bin/echo"))
+			Expect(readerOpts.Args).To(Equal([]string{fileContents}))
 		})
 	})
 })

@@ -27,18 +27,18 @@ const (
 // ExecResourceProperties defines the properties for an exec resource
 type ExecResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
-	Command                  string   `json:"command" yaml:"command"`                             // Command specifies the command to run, when not set will use the name property
-	Cwd                      string   `json:"cwd,omitempty" yaml:"cwd,omitempty"`                 // Cwd specifies the working directory from which to run the command
-	Environment              []string `json:"environment,omitempty" yaml:"environment,omitempty"` // Environment specifies additional environment variables to set when running the command
-	Path                     string   `json:"path,omitempty" yaml:"path,omitempty"`               // Path specifies the search path for executable commands, as an array of directories or a colon-separated list
-	Returns                  []int    `json:"returns,omitempty" yaml:"returns,omitempty"`         // Returns specify the expected exit codes indicating success; defaults to 0 if not specified
-	Timeout                  string   `json:"timeout,omitempty" yaml:"timeout,omitempty"`         // Timeout specifies the maximum time the command is allowed to run; if exceeded the command will be terminated, the timeout is a duration like 10s
-	Creates                  string   `json:"creates,omitempty" yaml:"creates,omitempty"`         // Creates specifies a file that the command creates; if this file exists the command will not run
-	OnlyIf                   string   `json:"onlyif,omitempty" yaml:"onlyif,omitempty"`           // OnlyIf specifies a guard command; the exec runs only if this command exits 0
-	Unless                   string   `json:"unless,omitempty" yaml:"unless,omitempty"`           // Unless specifies a guard command; the exec runs only if this command exits non-zero
-	RefreshOnly              bool     `json:"refreshonly,omitempty" yaml:"refreshonly,omitempty"` // RefreshOnly determines whether the command should only run when notified by a subscribed resource
-	Subscribe                []string `json:"subscribe,omitempty" yaml:"subscribe,omitempty"`     // Subscribe specifies resources to subscribe to for refresh notifications in the format "type#name"
-	LogOutput                bool     `json:"logoutput,omitempty" yaml:"logoutput,omitempty"`     // LogOutput determines whether to log the command's output
+	Command                  string   `json:"command" yaml:"command" template:"deferred"`                             // Command specifies the command to run, when not set will use the name property
+	Cwd                      string   `json:"cwd,omitempty" yaml:"cwd,omitempty" template:"deferred"`                 // Cwd specifies the working directory from which to run the command
+	Environment              []string `json:"environment,omitempty" yaml:"environment,omitempty" template:"deferred"` // Environment specifies additional environment variables to set when running the command
+	Path                     string   `json:"path,omitempty" yaml:"path,omitempty"`                                   // Path specifies the search path for executable commands, as an array of directories or a colon-separated list
+	Returns                  []int    `json:"returns,omitempty" yaml:"returns,omitempty"`                             // Returns specify the expected exit codes indicating success; defaults to 0 if not specified
+	Timeout                  string   `json:"timeout,omitempty" yaml:"timeout,omitempty"`                             // Timeout specifies the maximum time the command is allowed to run; if exceeded the command will be terminated, the timeout is a duration like 10s
+	Creates                  string   `json:"creates,omitempty" yaml:"creates,omitempty" template:"deferred"`         // Creates specifies a file that the command creates; if this file exists the command will not run
+	OnlyIf                   string   `json:"onlyif,omitempty" yaml:"onlyif,omitempty" template:"deferred"`           // OnlyIf specifies a guard command; the exec runs only if this command exits 0
+	Unless                   string   `json:"unless,omitempty" yaml:"unless,omitempty" template:"deferred"`           // Unless specifies a guard command; the exec runs only if this command exits non-zero
+	RefreshOnly              bool     `json:"refreshonly,omitempty" yaml:"refreshonly,omitempty"`                     // RefreshOnly determines whether the command should only run when notified by a subscribed resource
+	Subscribe                []string `json:"subscribe,omitempty" yaml:"subscribe,omitempty"`                         // Subscribe specifies resources to subscribe to for refresh notifications in the format "type#name"
+	LogOutput                bool     `json:"logoutput,omitempty" yaml:"logoutput,omitempty"`                         // LogOutput determines whether to log the command's output
 
 	ParsedTimeout time.Duration `json:"-" yaml:"-"` // ParsedTimeout is the parsed duration representation of Timeout, should not be set by callers
 }
@@ -125,6 +125,14 @@ func (p *ExecResourceProperties) ResolveTemplates(env *templates.Env) error {
 	}
 
 	return p.resolveRegistrations(env)
+}
+
+// ResolveDeferredTemplates resolves command, guard, cwd, environment and creates
+// templates after control evaluation. This lets these fields reference state
+// (for example via ${ file(...) }) produced by earlier resources in the same
+// manifest, which would not yet exist at parse time.
+func (p *ExecResourceProperties) ResolveDeferredTemplates(env *templates.Env) error {
+	return templates.ResolveStructTemplates(p, env, true)
 }
 
 func (p *ExecResourceProperties) CommonProperties() *CommonResourceProperties {

@@ -211,7 +211,7 @@ var _ = Describe("ExecResourceProperties", func() {
 	})
 
 	Describe("ResolveTemplates", func() {
-		It("Should resolve templates in Cwd", func() {
+		It("Should resolve templates in Cwd as deferred", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -227,6 +227,10 @@ var _ = Describe("ExecResourceProperties", func() {
 			}
 
 			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Cwd).To(Equal("/home/{{ Facts.username }}"))
+
+			err = prop.ResolveDeferredTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(prop.Cwd).To(Equal("/home/testuser"))
 		})
@@ -278,7 +282,7 @@ var _ = Describe("ExecResourceProperties", func() {
 			Expect(prop.Ensure).To(Equal("present"))
 		})
 
-		It("Should resolve templates in Environment", func() {
+		It("Should resolve templates in Environment as deferred", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -299,12 +303,16 @@ var _ = Describe("ExecResourceProperties", func() {
 
 			err := prop.ResolveTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Environment[0]).To(Equal("HOME=/home/{{ Facts.username }}"))
+
+			err = prop.ResolveDeferredTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(prop.Environment).To(HaveLen(2))
 			Expect(prop.Environment[0]).To(Equal("HOME=/home/testuser"))
 			Expect(prop.Environment[1]).To(Equal("APP_ENV=production"))
 		})
 
-		It("Should resolve templates in Command", func() {
+		It("Should resolve templates in Command as deferred", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -322,10 +330,14 @@ var _ = Describe("ExecResourceProperties", func() {
 
 			err := prop.ResolveTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Command).To(Equal("/usr/bin/{{ Facts.tool }} --config {{ Facts.config_path }}"))
+
+			err = prop.ResolveDeferredTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(prop.Command).To(Equal("/usr/bin/myapp --config /etc/myapp.conf"))
 		})
 
-		It("Should resolve templates in Creates", func() {
+		It("Should resolve templates in Creates as deferred", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -341,6 +353,10 @@ var _ = Describe("ExecResourceProperties", func() {
 			}
 
 			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(prop.Creates).To(Equal("/tmp/{{ Facts.marker_file }}"))
+
+			err = prop.ResolveDeferredTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(prop.Creates).To(Equal("/tmp/setup.done"))
 		})
@@ -383,7 +399,7 @@ var _ = Describe("ExecResourceProperties", func() {
 			Expect(prop.Subscribe).To(BeEmpty())
 		})
 
-		It("Should return error for invalid template in Cwd", func() {
+		It("Should return error for invalid template in Cwd at deferred phase", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -395,6 +411,9 @@ var _ = Describe("ExecResourceProperties", func() {
 			env := &templates.Env{Facts: map[string]any{}}
 
 			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = prop.ResolveDeferredTemplates(env)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -413,7 +432,7 @@ var _ = Describe("ExecResourceProperties", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("Should return error for invalid template in Environment", func() {
+		It("Should return error for invalid template in Environment at deferred phase", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -425,10 +444,13 @@ var _ = Describe("ExecResourceProperties", func() {
 			env := &templates.Env{Facts: map[string]any{}}
 
 			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = prop.ResolveDeferredTemplates(env)
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("Should return error for invalid template in Command", func() {
+		It("Should return error for invalid template in Command at deferred phase", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -440,10 +462,13 @@ var _ = Describe("ExecResourceProperties", func() {
 			env := &templates.Env{Facts: map[string]any{}}
 
 			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = prop.ResolveDeferredTemplates(env)
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("Should return error for invalid template in Creates", func() {
+		It("Should return error for invalid template in Creates at deferred phase", func() {
 			prop := &ExecResourceProperties{
 				CommonResourceProperties: CommonResourceProperties{
 					Name:   "/bin/echo hello",
@@ -455,6 +480,9 @@ var _ = Describe("ExecResourceProperties", func() {
 			env := &templates.Env{Facts: map[string]any{}}
 
 			err := prop.ResolveTemplates(env)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = prop.ResolveDeferredTemplates(env)
 			Expect(err).To(HaveOccurred())
 		})
 
