@@ -110,13 +110,15 @@ When using `source`, the path is relative to the manifest's working directory if
 
 Unlike some resources, file resources require explicit attributes:
 
-| Property | Required | Description                   |
-|----------|----------|-------------------------------|
-| `owner`  | Yes      | Username that owns the file   |
-| `group`  | Yes      | Group that owns the file      |
-| `mode`   | Yes      | Permissions in octal notation |
+| Property | Required | Description                                    |
+|----------|----------|------------------------------------------------|
+| `owner`  | Yes      | Username or numeric UID that owns the file     |
+| `group`  | Yes      | Group name or numeric GID that owns the file   |
+| `mode`   | Yes      | Permissions in octal notation                  |
 
 This prevents accidental creation of files with default or inherited permissions.
+
+A purely-numeric value for `owner` or `group` is always interpreted as a UID or GID respectively, without consulting `/etc/passwd` or `/etc/group`. This matches the semantics of `chown(1)` for numeric arguments and allows the resource to be applied on systems where the target account exists only by ID (containers, mounted volumes from other hosts, namespaced filesystems).
 
 ## Apply Logic
 
@@ -156,8 +158,8 @@ The file resource checks multiple attributes for idempotency:
 
 1. **Ensure match**: Current type matches desired (`present`/`absent`/`directory`)
 2. **Content match**: SHA256 checksum of contents matches (for `ensure: present`)
-3. **Owner match**: Current owner matches desired
-4. **Group match**: Current group matches desired
+3. **Owner match**: Current owner matches desired, comparing by numeric UID when either side is a numeric value or resolves to one
+4. **Group match**: Current group matches desired, comparing by numeric GID when either side is a numeric value or resolves to one
 5. **Mode match**: Current permissions match desired
 
 ### Decision Table
