@@ -42,6 +42,12 @@ var _ = Describe("FileResourceProperties", func() {
 			Entry("valid absolute path", "/etc/nginx/nginx.conf", "present", "nginx", "nginx", "0640", ""),
 			Entry("valid path with spaces in name", "/tmp/my file.txt", "present", "root", "root", "0644", ""),
 
+			// owner/group/mode optional when ensure=absent
+			Entry("absent with empty owner", "/tmp/test.txt", "absent", "", "root", "0644", ""),
+			Entry("absent with empty group", "/tmp/test.txt", "absent", "root", "", "0644", ""),
+			Entry("absent with empty mode", "/tmp/test.txt", "absent", "root", "root", "", ""),
+			Entry("absent with all attributes empty", "/tmp/test.txt", "absent", "", "", "", ""),
+
 			// Name validation
 			Entry("empty name", "", "present", "root", "root", "0644", "name"),
 			Entry("path with ..", "/tmp/../etc/passwd", "present", "root", "root", "0644", "canonical"),
