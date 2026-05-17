@@ -71,6 +71,20 @@ func (mr *MockFileProviderMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockFileProvider)(nil).Name))
 }
 
+// Remove mocks base method.
+func (m *MockFileProvider) Remove(ctx context.Context, file string, force bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Remove", ctx, file, force)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Remove indicates an expected call of Remove.
+func (mr *MockFileProviderMockRecorder) Remove(ctx, file, force any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockFileProvider)(nil).Remove), ctx, file, force)
+}
+
 // Status mocks base method.
 func (m *MockFileProvider) Status(ctx context.Context, file string) (*model.FileState, error) {
 	m.ctrl.T.Helper()

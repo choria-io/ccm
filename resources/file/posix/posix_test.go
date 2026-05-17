@@ -554,4 +554,83 @@ var _ = Describe("Posix Provider", func() {
 			Expect(res.Ensure).To(Equal(model.EnsurePresent))
 		})
 	})
+
+	Describe("Remove", func() {
+		It("Should remove an existing file", func() {
+			tmpDir := GinkgoT().TempDir()
+			testFile := filepath.Join(tmpDir, "victim.txt")
+			Expect(os.WriteFile(testFile, []byte("bye"), 0644)).To(Succeed())
+
+			Expect(provider.Remove(context.Background(), testFile, false)).To(Succeed())
+			_, statErr := os.Stat(testFile)
+			Expect(os.IsNotExist(statErr)).To(BeTrue())
+		})
+
+		It("Should remove an empty directory without force", func() {
+			tmpDir := GinkgoT().TempDir()
+			target := filepath.Join(tmpDir, "empty")
+			Expect(os.Mkdir(target, 0755)).To(Succeed())
+
+			Expect(provider.Remove(context.Background(), target, false)).To(Succeed())
+			_, statErr := os.Stat(target)
+			Expect(os.IsNotExist(statErr)).To(BeTrue())
+		})
+
+		It("Should error with a helpful hint on a non-empty directory without force", func() {
+			tmpDir := GinkgoT().TempDir()
+			target := filepath.Join(tmpDir, "populated")
+			Expect(os.Mkdir(target, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(target, "child"), []byte("stay"), 0644)).To(Succeed())
+
+			err := provider.Remove(context.Background(), target, false)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("directory is not empty"))
+			Expect(err.Error()).To(ContainSubstring("'force: true'"))
+			Expect(err.Error()).To(ContainSubstring(target))
+
+			_, statErr := os.Stat(target)
+			Expect(statErr).ToNot(HaveOccurred())
+		})
+
+		It("Should remove a non-empty directory when force is true", func() {
+			tmpDir := GinkgoT().TempDir()
+			target := filepath.Join(tmpDir, "populated")
+			Expect(os.Mkdir(target, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(target, "child"), []byte("gone"), 0644)).To(Succeed())
+			nested := filepath.Join(target, "sub")
+			Expect(os.Mkdir(nested, 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(nested, "deep"), []byte("gone"), 0644)).To(Succeed())
+
+			Expect(provider.Remove(context.Background(), target, true)).To(Succeed())
+			_, statErr := os.Stat(target)
+			Expect(os.IsNotExist(statErr)).To(BeTrue())
+		})
+
+		It("Should silently succeed when the path is already absent", func() {
+			tmpDir := GinkgoT().TempDir()
+			target := filepath.Join(tmpDir, "ghost")
+
+			Expect(provider.Remove(context.Background(), target, false)).To(Succeed())
+			Expect(provider.Remove(context.Background(), target, true)).To(Succeed())
+		})
+
+		It("Should remove only the symlink when force is true and target is a symlink to a populated directory", func() {
+			tmpDir := GinkgoT().TempDir()
+			realDir := filepath.Join(tmpDir, "real")
+			Expect(os.Mkdir(realDir, 0755)).To(Succeed())
+			keeper := filepath.Join(realDir, "keepme")
+			Expect(os.WriteFile(keeper, []byte("alive"), 0644)).To(Succeed())
+
+			link := filepath.Join(tmpDir, "link")
+			Expect(os.Symlink(realDir, link)).To(Succeed())
+
+			Expect(provider.Remove(context.Background(), link, true)).To(Succeed())
+
+			_, statErr := os.Lstat(link)
+			Expect(os.IsNotExist(statErr)).To(BeTrue())
+
+			_, keeperErr := os.Stat(keeper)
+			Expect(keeperErr).ToNot(HaveOccurred())
+		})
+	})
 })
