@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
+	"syscall"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -441,6 +443,29 @@ var _ = Describe("Posix Provider", func() {
 
 			err := provider.CreateDirectory(context.Background(), testDir, currentUser.Username, currentGroup.Name, "invalid")
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should accept numeric UID and GID for ownership", func() {
+			tmpDir := GinkgoT().TempDir()
+			testDir := filepath.Join(tmpDir, "numericowner")
+
+			err := provider.CreateDirectory(context.Background(), testDir, currentUser.Uid, currentUser.Gid, "0750")
+			Expect(err).ToNot(HaveOccurred())
+
+			stat, err := os.Stat(testDir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.IsDir()).To(BeTrue())
+
+			ssys, ok := stat.Sys().(*syscall.Stat_t)
+			Expect(ok).To(BeTrue())
+
+			expectedUID, err := strconv.Atoi(currentUser.Uid)
+			Expect(err).ToNot(HaveOccurred())
+			expectedGID, err := strconv.Atoi(currentUser.Gid)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(int(ssys.Uid)).To(Equal(expectedUID))
+			Expect(int(ssys.Gid)).To(Equal(expectedGID))
 		})
 
 		It("Should replace a symlink to a directory with a real directory", func() {

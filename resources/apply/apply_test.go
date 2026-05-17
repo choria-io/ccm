@@ -31,6 +31,7 @@ import (
 	"github.com/choria-io/ccm/resources/package"
 	"github.com/choria-io/ccm/resources/scaffold"
 	"github.com/choria-io/ccm/resources/service"
+	"github.com/choria-io/ccm/templates"
 )
 
 func TestApply(t *testing.T) {
@@ -1944,5 +1945,48 @@ ccm:
 			err := apply.validateManifestAny(manifest)
 			Expect(err).NotTo(HaveOccurred())
 		})
+	})
+})
+
+var _ = Describe("jetParseManifestResources", func() {
+	var tempDir string
+
+	BeforeEach(func() {
+		var err error
+		tempDir, err = os.MkdirTemp("", "jet-resources-test-*")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		os.RemoveAll(tempDir)
+	})
+
+	It("does not HTML-escape <, >, & in rendered output", func() {
+		body := `- exec:
+    - "[[ Data.cmd ]]":
+        unless: "[[ Data.guard ]]"
+        # literal: echo a > b && echo c < d
+`
+		path := filepath.Join(tempDir, "resources.jet")
+		Expect(os.WriteFile(path, []byte(body), 0644)).To(Succeed())
+
+		env := &templates.Env{
+			Facts: map[string]any{},
+			Data: map[string]any{
+				"cmd":   "echo hello > /tmp/out",
+				"guard": "test 1 < 2 && echo skip",
+			},
+		}
+
+		out, err := jetParseManifestResources(path, env)
+		Expect(err).NotTo(HaveOccurred())
+
+		rendered := string(out)
+		Expect(rendered).To(ContainSubstring("echo hello > /tmp/out"))
+		Expect(rendered).To(ContainSubstring("test 1 < 2 && echo skip"))
+		Expect(rendered).To(ContainSubstring("echo a > b && echo c < d"))
+		Expect(rendered).NotTo(ContainSubstring("&gt;"))
+		Expect(rendered).NotTo(ContainSubstring("&lt;"))
+		Expect(rendered).NotTo(ContainSubstring("&amp;"))
 	})
 })
