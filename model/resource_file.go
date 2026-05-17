@@ -97,14 +97,19 @@ func (p *FileResourceProperties) Validate() error {
 		}
 	}
 
-	if p.Owner == "" {
-		return fmt.Errorf("owner cannot be empty")
-	}
-	if p.Group == "" {
-		return fmt.Errorf("group cannot be empty")
-	}
-	if p.Mode == "" {
-		return fmt.Errorf("mode cannot be empty")
+	// owner/group/mode describe a desired on-disk state and are not
+	// consulted on the removal path, so they are optional when the
+	// resource is being removed.
+	if p.Ensure != EnsureAbsent {
+		if p.Owner == "" {
+			return fmt.Errorf("owner cannot be empty")
+		}
+		if p.Group == "" {
+			return fmt.Errorf("group cannot be empty")
+		}
+		if p.Mode == "" {
+			return fmt.Errorf("mode cannot be empty")
+		}
 	}
 
 	return nil

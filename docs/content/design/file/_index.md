@@ -117,13 +117,21 @@ When using `source`, the path is relative to the manifest's working directory if
 
 Unlike some resources, file resources require explicit attributes:
 
-| Property | Required | Description                                    |
-|----------|----------|------------------------------------------------|
-| `owner`  | Yes      | Username or numeric UID that owns the file     |
-| `group`  | Yes      | Group name or numeric GID that owns the file   |
-| `mode`   | Yes      | Permissions in octal notation                  |
+| Property | Required           | Description                                    |
+|----------|--------------------|------------------------------------------------|
+| `owner`  | Yes, except absent | Username or numeric UID that owns the file     |
+| `group`  | Yes, except absent | Group name or numeric GID that owns the file   |
+| `mode`   | Yes, except absent | Permissions in octal notation                  |
 
 This prevents accidental creation of files with default or inherited permissions.
+
+When `ensure: absent`, `owner`, `group`, and `mode` are optional. They describe a desired on-disk state and are not consulted during removal. Manifests that only ever remove a path may omit them.
+
+```yaml
+- file:
+    - /tmp/leftover.lock:
+        ensure: absent
+```
 
 A purely-numeric value for `owner` or `group` is always interpreted as a UID or GID respectively, without consulting `/etc/passwd` or `/etc/group`. This matches the semantics of `chown(1)` for numeric arguments and allows the resource to be applied on systems where the target account exists only by ID (containers, mounted volumes from other hosts, namespaced filesystems).
 
