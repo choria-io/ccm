@@ -386,6 +386,11 @@
           "description": "File permissions in octal notation",
           "pattern": "^[0-7]{3,4}$",
           "examples": ["0644", "0755", "0600"]
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Allow removing non-empty directories when ensure is absent. Has no effect for regular files. Only valid with ensure: absent.",
+          "default": false
         }
       },
       "required": ["name"],
@@ -865,6 +870,11 @@
           "description": "File permissions in octal notation",
           "pattern": "^[0-7]{3,4}$",
           "examples": ["0644", "0755", "0600"]
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Allow removing non-empty directories when ensure is absent. Has no effect for regular files. Only valid with ensure: absent.",
+          "default": false
         }
       },
       "additionalProperties": false
