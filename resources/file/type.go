@@ -249,21 +249,25 @@ func (t *Type) validate() error {
 		return err
 	}
 
-	mode := t.prop.Mode
+	// Mode may legitimately be empty when ensure=absent; the property
+	// validator below enforces non-empty for other ensure values.
+	if t.prop.Mode != "" {
+		mode := t.prop.Mode
 
-	// Strip common octal prefixes (0o, 0O)
-	mode = strings.TrimPrefix(mode, "0o")
-	mode = strings.TrimPrefix(mode, "0O")
+		// Strip common octal prefixes (0o, 0O)
+		mode = strings.TrimPrefix(mode, "0o")
+		mode = strings.TrimPrefix(mode, "0O")
 
-	// Parse as octal number
-	parsed, err := strconv.ParseUint(mode, 8, 32)
-	if err != nil {
-		return fmt.Errorf("mode %q is not a valid octal number: %w", t.prop.Mode, err)
-	}
+		// Parse as octal number
+		parsed, err := strconv.ParseUint(mode, 8, 32)
+		if err != nil {
+			return fmt.Errorf("mode %q is not a valid octal number: %w", t.prop.Mode, err)
+		}
 
-	// Validate it's within the valid Unix permission range (0-0777)
-	if parsed > 0o777 {
-		return fmt.Errorf("mode %q exceeds maximum value 0777", t.prop.Mode)
+		// Validate it's within the valid Unix permission range (0-0777)
+		if parsed > 0o777 {
+			return fmt.Errorf("mode %q exceeds maximum value 0777", t.prop.Mode)
+		}
 	}
 
 	return t.prop.Validate()
