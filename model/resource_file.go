@@ -32,6 +32,7 @@ type FileResourceProperties struct {
 	Owner                    string `json:"owner" yaml:"owner"`                                             // Owner specifies the user that should own the file
 	Group                    string `json:"group" yaml:"group"`                                             // Group specifies the group that should own the file
 	Mode                     string `json:"mode" yaml:"mode"`                                               // Mode specifies the file permissions in octal notation (e.g., "0644")
+	Force                    bool   `json:"force,omitempty" yaml:"force,omitempty"`                         // Force allows removal of non-empty directories when Ensure is absent; has no effect on regular files
 }
 
 // FileMetadata contains detailed metadata about a file
@@ -81,6 +82,19 @@ func (p *FileResourceProperties) Validate() error {
 
 	if filepath.Clean(p.Name) != p.Name {
 		return fmt.Errorf("file path must be canonical")
+	}
+
+	if !filepath.IsAbs(p.Name) {
+		return fmt.Errorf("file path must be absolute")
+	}
+
+	if p.Force {
+		if p.Ensure != EnsureAbsent {
+			return fmt.Errorf("'force: true' is only valid with 'ensure: absent', got 'ensure: %s'", p.Ensure)
+		}
+		if p.Name == "/" {
+			return fmt.Errorf("'force: true' cannot be used with the filesystem root")
+		}
 	}
 
 	if p.Owner == "" {

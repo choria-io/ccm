@@ -46,6 +46,7 @@ var _ = Describe("FileResourceProperties", func() {
 			Entry("empty name", "", "present", "root", "root", "0644", "name"),
 			Entry("path with ..", "/tmp/../etc/passwd", "present", "root", "root", "0644", "canonical"),
 			Entry("path with .", "/tmp/./file.txt", "present", "root", "root", "0644", "canonical"),
+			Entry("relative path", "tmp/test.txt", "present", "root", "root", "0644", "absolute"),
 
 			// Ensure validation
 			Entry("empty ensure", "/tmp/test.txt", "", "root", "root", "0644", "ensure"),
@@ -84,6 +85,36 @@ var _ = Describe("FileResourceProperties", func() {
 			Entry("log file", "/var/log/app.log", "app", "app", "0644"),
 			Entry("socket path", "/var/run/app.sock", "root", "root", "0755"),
 			Entry("deep path", "/opt/app/config/settings/main.conf", "app", "app", "0600"),
+		)
+
+		DescribeTable("force flag",
+			func(name, ensure string, force bool, errorText string) {
+				prop := &FileResourceProperties{
+					CommonResourceProperties: CommonResourceProperties{
+						Name:   name,
+						Ensure: ensure,
+					},
+					Owner: "root",
+					Group: "root",
+					Mode:  "0644",
+					Force: force,
+				}
+
+				err := prop.Validate()
+
+				if errorText != "" {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(errorText))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+			},
+
+			Entry("force with absent is valid", "/tmp/test.txt", "absent", true, ""),
+			Entry("force false with present is valid", "/tmp/test.txt", "present", false, ""),
+			Entry("force with present is rejected", "/tmp/test.txt", "present", true, "'force: true' is only valid with 'ensure: absent'"),
+			Entry("force with directory is rejected", "/tmp/test.txt", "directory", true, "'force: true' is only valid with 'ensure: absent'"),
+			Entry("force with filesystem root is rejected", "/", "absent", true, "'force: true' cannot be used with the filesystem root"),
 		)
 	})
 

@@ -545,6 +545,61 @@ var _ = Describe("File Type", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(result.Changed).To(BeFalse())
 				})
+
+				It("Should call provider Remove without force by default", func(ctx context.Context) {
+					initial := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata:            &model.FileMetadata{Owner: "root", Group: "root", Mode: "0644"},
+					}
+					final := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
+						Metadata:            &model.FileMetadata{},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initial, nil)
+					provider.EXPECT().Remove(gomock.Any(), "/tmp/testfile", false).Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(final, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+					Expect(result.FinalEnsure).To(Equal(model.EnsureAbsent))
+				})
+
+				It("Should pass force through to provider Remove when set", func(ctx context.Context) {
+					file.prop.Force = true
+
+					initial := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+						Metadata:            &model.FileMetadata{Owner: "root", Group: "root", Mode: "0755"},
+					}
+					final := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
+						Metadata:            &model.FileMetadata{},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initial, nil)
+					provider.EXPECT().Remove(gomock.Any(), "/tmp/testfile", true).Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(final, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+
+				It("Should surface provider Remove errors", func(ctx context.Context) {
+					initial := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+						Metadata:            &model.FileMetadata{Owner: "root", Group: "root", Mode: "0755"},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initial, nil)
+					provider.EXPECT().Remove(gomock.Any(), "/tmp/testfile", false).Return(fmt.Errorf("directory is not empty"))
+
+					event, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Errors).To(ContainElement(ContainSubstring("directory is not empty")))
+				})
 			})
 
 			Context("when ensure is directory", func() {
@@ -769,13 +824,42 @@ var _ = Describe("File Type", func() {
 				}
 
 				noopProvider.EXPECT().Status(gomock.Any(), "/tmp/noopfile").Return(initialState, nil)
-				// No os.Remove call expected (it's not through provider)
+				// No Remove call expected in noop mode
 
 				result, err := noopFile.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.Changed).To(BeTrue())
 				Expect(result.Noop).To(BeTrue())
 				Expect(result.NoopMessage).To(Equal("Would have removed the file"))
+			})
+
+			It("Should report directory noop message for an empty directory", func(ctx context.Context) {
+				noopFile.prop.Ensure = model.EnsureAbsent
+				initialState := &model.FileState{
+					CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+					Metadata:            &model.FileMetadata{Owner: "root", Group: "root", Mode: "0755"},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "/tmp/noopfile").Return(initialState, nil)
+
+				result, err := noopFile.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.NoopMessage).To(Equal("Would have removed the directory"))
+			})
+
+			It("Should report recursive noop message when force is set on a directory", func(ctx context.Context) {
+				noopFile.prop.Ensure = model.EnsureAbsent
+				noopFile.prop.Force = true
+				initialState := &model.FileState{
+					CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+					Metadata:            &model.FileMetadata{Owner: "root", Group: "root", Mode: "0755"},
+				}
+
+				noopProvider.EXPECT().Status(gomock.Any(), "/tmp/noopfile").Return(initialState, nil)
+
+				result, err := noopFile.Apply(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.NoopMessage).To(Equal("Would have recursively removed the directory"))
 			})
 
 			It("Should not change when already in desired state", func(ctx context.Context) {

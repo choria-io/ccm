@@ -6,11 +6,13 @@ package posix
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
@@ -127,6 +129,36 @@ func (p *Provider) Store(ctx context.Context, file string, contents []byte, sour
 	}
 
 	return nil
+}
+
+// Remove removes a file or directory.
+//
+// When force is true, non-empty directories are removed recursively via
+// os.RemoveAll. RemoveAll does not follow symlinks during traversal; if the
+// target itself is a symlink, only the symlink is removed and its target is
+// left intact.
+//
+// When force is false, os.Remove is used, which errors on non-empty
+// directories. In that case the error is wrapped with guidance to set
+// force: true.
+//
+// A path that does not exist is treated as a no-op.
+func (p *Provider) Remove(ctx context.Context, file string, force bool) error {
+	if force {
+		return os.RemoveAll(file)
+	}
+
+	err := os.Remove(file)
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, os.ErrNotExist):
+		return nil
+	case errors.Is(err, syscall.ENOTEMPTY):
+		return fmt.Errorf("cannot remove %s: directory is not empty, set 'force: true' to remove non-empty directories: %w", file, err)
+	default:
+		return err
+	}
 }
 
 // Status returns the current installation status of a file

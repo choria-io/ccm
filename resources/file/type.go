@@ -120,14 +120,14 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	case properties.Ensure == model.EnsureAbsent && initialStatus.Ensure != model.EnsureAbsent:
 		// remove
 		if !noop {
-			t.log.Info("Removing file due to ensure=absent")
-			err = os.Remove(properties.Name)
+			t.log.Info("Removing file due to ensure=absent", "force", properties.Force)
+			err = p.Remove(ctx, properties.Name, properties.Force)
 			if err != nil {
 				return nil, err
 			}
 		} else {
 			t.log.Info("Skipping remove as noop")
-			noopMessage = "Would have removed the file"
+			noopMessage = removeNoopMessage(initialStatus.Ensure, properties.Force)
 		}
 		refreshState = true
 	default:
@@ -318,6 +318,17 @@ func (t *Type) SelectProvider() (string, error) {
 	}
 
 	return t.providerUnlocked(), nil
+}
+
+func removeNoopMessage(currentEnsure string, force bool) string {
+	switch {
+	case currentEnsure == model.FileEnsureDirectory && force:
+		return "Would have recursively removed the directory"
+	case currentEnsure == model.FileEnsureDirectory:
+		return "Would have removed the directory"
+	default:
+		return "Would have removed the file"
+	}
 }
 
 func (t *Type) adjustedSource(properties *model.FileResourceProperties) string {
