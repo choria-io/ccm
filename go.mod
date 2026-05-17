@@ -7,8 +7,8 @@ require (
 	github.com/CloudyKit/jet/v6 v6.3.2
 	github.com/SladkyCitron/slogcolor v1.9.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.16.0
-	github.com/choria-io/fisk v0.8.2
+	github.com/choria-io/appbuilder v0.17.0
+	github.com/choria-io/fisk v0.8.3
 	github.com/choria-io/scaffold v0.0.11
 	github.com/choria-io/validator v0.0.2
 	github.com/expr-lang/expr v1.17.8
