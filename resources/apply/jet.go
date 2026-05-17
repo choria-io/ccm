@@ -7,6 +7,7 @@ package apply
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/CloudyKit/jet/v6"
@@ -21,7 +22,9 @@ func jetParseManifestResources(path string, env *templates.Env) (yaml.RawMessage
 		return nil, err
 	}
 
-	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims("[[", "]]"))
+	set := jet.NewSet(jet.NewInMemLoader(), jet.WithDelims("[[", "]]"), jet.WithSafeWriter(func(w io.Writer, b []byte) {
+		w.Write(b)
+	}))
 
 	for k, v := range env.JetFunctions() {
 		set.AddGlobalFunc(k, v)
