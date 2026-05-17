@@ -76,10 +76,34 @@ func IsSymlink(path string) bool {
 	return fi.Mode()&os.ModeSymlink != 0
 }
 
-// LookupUserID looks up a user by name and returns the numeric UID.
+// isNumericID reports whether s is a non-empty string composed entirely of
+// ASCII digits, indicating it should be interpreted as a numeric UID/GID rather
+// than a name.
+func isNumericID(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// LookupUserID returns the numeric UID for a user. If name is purely numeric it
+// is interpreted as a UID directly and no /etc/passwd lookup is performed; the
+// kernel does not require an entry to exist for chown to succeed.
 func LookupUserID(name string) (int, error) {
 	if name == "" {
 		return -1, fmt.Errorf("user name cannot be empty")
+	}
+	if isNumericID(name) {
+		uid, err := strconv.Atoi(name)
+		if err != nil {
+			return -1, fmt.Errorf("could not parse numeric user id %q: %w", name, err)
+		}
+		return uid, nil
 	}
 	u, err := user.Lookup(name)
 	if err != nil {
@@ -92,10 +116,18 @@ func LookupUserID(name string) (int, error) {
 	return uid, nil
 }
 
-// LookupGroupID looks up a group by name and returns the numeric GID.
+// LookupGroupID returns the numeric GID for a group. If name is purely numeric
+// it is interpreted as a GID directly and no /etc/group lookup is performed.
 func LookupGroupID(name string) (int, error) {
 	if name == "" {
 		return -1, fmt.Errorf("group name cannot be empty")
+	}
+	if isNumericID(name) {
+		gid, err := strconv.Atoi(name)
+		if err != nil {
+			return -1, fmt.Errorf("could not parse numeric group id %q: %w", name, err)
+		}
+		return gid, nil
 	}
 	g, err := user.LookupGroup(name)
 	if err != nil {
@@ -106,6 +138,42 @@ func LookupGroupID(name string) (int, error) {
 		return -1, fmt.Errorf("could not convert group id %s to integer: %w", g.Gid, err)
 	}
 	return gid, nil
+}
+
+// UserIDMatches reports whether desired and actual refer to the same user
+// identity. Either value may be a username or a purely-numeric UID; mixed
+// forms are resolved to numeric UIDs before comparison.
+func UserIDMatches(desired, actual string) bool {
+	if desired == actual {
+		return true
+	}
+	desiredUID, err := LookupUserID(desired)
+	if err != nil {
+		return false
+	}
+	actualUID, err := LookupUserID(actual)
+	if err != nil {
+		return false
+	}
+	return desiredUID == actualUID
+}
+
+// GroupIDMatches reports whether desired and actual refer to the same group
+// identity. Either value may be a group name or a purely-numeric GID; mixed
+// forms are resolved to numeric GIDs before comparison.
+func GroupIDMatches(desired, actual string) bool {
+	if desired == actual {
+		return true
+	}
+	desiredGID, err := LookupGroupID(desired)
+	if err != nil {
+		return false
+	}
+	actualGID, err := LookupGroupID(actual)
+	if err != nil {
+		return false
+	}
+	return desiredGID == actualGID
 }
 
 // LookupOwnerGroup looks up both user and group by name and returns their numeric IDs.

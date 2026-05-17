@@ -122,8 +122,8 @@ The `isDesiredState()` function checks (in order):
 
 1. **Ensure value matches** - `present`, `absent`, or `directory`
 2. **Content checksum matches** - SHA256 of contents vs existing file (for files only)
-3. **Owner matches** - Username comparison
-4. **Group matches** - Group name comparison
+3. **Owner matches** - Owner comparison, normalized through `util.UserIDMatches` so a manifest written with a numeric UID compares equal to a named user with the same UID, and vice versa
+4. **Group matches** - Group comparison, normalized through `util.GroupIDMatches` using the same rules
 5. **Mode matches** - Octal permission string comparison
 
 ### Decision Flow
@@ -189,24 +189,31 @@ File modes are validated during resource creation:
 
 ## Ownership Resolution
 
-Owner and group names are resolved to numeric UID/GID via:
+Owner and group values are resolved to numeric UID/GID via:
 
 ```go
 uid, gid, err := util.LookupOwnerGroup(owner, group)
 ```
 
-This uses the system's user database (`/etc/passwd`, `/etc/group`, or equivalent):
+Resolution depends on the value's form:
 
-- `user.Lookup(owner)` → UID
-- `user.LookupGroup(group)` → GID
+- A purely-numeric value (digits only) is parsed directly as a UID or GID. The system user database is not consulted, matching the semantics of `chown(1)` when given a numeric argument.
+- Any other value is resolved through the system user database (`/etc/passwd`, `/etc/group`, or equivalent) using `user.Lookup(owner)` and `user.LookupGroup(group)`.
 
 **Error Handling:**
 
-| Condition              | Behavior                               |
-|------------------------|----------------------------------------|
-| User not found         | Return error: "could not lookup user"  |
-| Group not found        | Return error: "could not lookup group" |
-| Invalid UID/GID format | Return error from `strconv.Atoi`       |
+| Condition                       | Behavior                               |
+|---------------------------------|----------------------------------------|
+| Empty value                     | Return error: "user name cannot be empty" or "group name cannot be empty" |
+| Named user not in database      | Return error: "could not lookup user"  |
+| Named group not in database     | Return error: "could not lookup group" |
+| Numeric value out of int range  | Return error from `strconv.Atoi`       |
+
+Numeric values are not validated against the user database. A file may be chowned to a UID or GID that has no matching entry, which is intentional for namespaced or container scenarios.
+
+### State Comparison
+
+State comparison reads ownership from the filesystem as the on-disk numeric UID/GID, reverse-resolved to a name when possible by `util.GetFileOwner`. Because the manifest may use either form, comparison is delegated to `util.UserIDMatches` and `util.GroupIDMatches`, which normalize both sides to numeric IDs before comparing. This keeps a manifest stable regardless of which form was chosen.
 
 ## Working Directory Support
 
