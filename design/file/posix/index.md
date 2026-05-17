@@ -75,6 +75,31 @@ os.Chown(dir, uid, gid)          // Set ownership
 
 The explicit `Chmod` after `MkdirAll` is necessary because `MkdirAll` applies the process umask to the mode.
 
+### Remove
+
+**Process:**
+
+- When `force` is `true`, the path is removed with `os.RemoveAll()`.
+- When `force` is `false`, the path is removed with `os.Remove()`.
+- A path that does not exist is treated as a no-op (no error).
+- When `os.Remove()` fails with `syscall.ENOTEMPTY`, the error is wrapped with guidance pointing the user at `force: true`.
+
+**Error Handling:**
+
+| Condition                              | Behavior                                                                                       |
+|----------------------------------------|------------------------------------------------------------------------------------------------|
+| Path does not exist                    | Return `nil`                                                                                   |
+| `force: false`, directory not empty    | Return wrapped error: `"cannot remove <path>: directory is not empty, set 'force: true' ..."` |
+| Other syscall failure                  | Return error from underlying syscall                                                           |
+
+**Symlink Behavior:**
+
+`os.RemoveAll()` does not follow symlinks during traversal. If the target path is itself a symlink, only the symlink is removed and its target is left intact. A directory tree that contains symlinks to external locations is safe to remove with `force: true`: the symlink entries are unlinked, but the directories they point to are not deleted.
+
+**Context Cancellation:**
+
+`os.RemoveAll()` does not observe `ctx`. Removal of a very large tree cannot be interrupted mid-walk. This is acceptable for typical CCM workloads but should be considered when scheduling removal of large directories.
+
 ### Status
 
 **Process:**

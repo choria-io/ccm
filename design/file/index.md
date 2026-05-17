@@ -19,6 +19,7 @@ type FileProvider interface {
 
     CreateDirectory(ctx context.Context, dir string, owner string, group string, mode string) error
     Store(ctx context.Context, file string, contents []byte, source string, owner string, group string, mode string) error
+    Remove(ctx context.Context, file string, force bool) error
     Status(ctx context.Context, file string) (*model.FileState, error)
 }
 ```
@@ -30,6 +31,7 @@ type FileProvider interface {
 | `Status`          | Query current file state (existence, type, content hash, attributes) |
 | `Store`           | Create or update a file with content and attributes                  |
 | `CreateDirectory` | Create a directory with attributes                                   |
+| `Remove`          | Remove a file or directory; honors `force` for non-empty directories |
 
 ### Status Response
 
@@ -67,11 +69,11 @@ The `Ensure` field in `CommonResourceState` is set to:
 
 ## Ensure States
 
-| Value       | Description                                        |
-|-------------|----------------------------------------------------|
-| `present`   | Path must be a regular file with specified content |
-| `absent`    | Path must not exist                                |
-| `directory` | Path must be a directory                           |
+| Value       | Description                                                    |
+|-------------|----------------------------------------------------------------|
+| `present`   | Path must be a regular file with specified content             |
+| `absent`    | Path must not exist (see [Removal Behavior](#removal-behavior)) |
+| `directory` | Path must be a directory                                       |
 
 ## Content Sources
 
@@ -120,6 +122,32 @@ This prevents accidental creation of files with default or inherited permissions
 
 A purely-numeric value for `owner` or `group` is always interpreted as a UID or GID respectively, without consulting `/etc/passwd` or `/etc/group`. This matches the semantics of `chown(1)` for numeric arguments and allows the resource to be applied on systems where the target account exists only by ID (containers, mounted volumes from other hosts, namespaced filesystems).
 
+## Removal Behavior
+
+The `force` property controls how `ensure: absent` handles directories.
+
+| Property | Default | Description                                                       |
+|----------|---------|-------------------------------------------------------------------|
+| `force`  | `false` | When `true`, allow `ensure: absent` to remove non-empty directories |
+
+```yaml
+- file:
+    - /var/lib/myapp:
+        ensure: absent
+        force: true
+        owner: root
+        group: root
+        mode: "0755"
+```
+
+Rules:
+
+- `force` is only valid when `ensure: absent`. Combining it with any other ensure value is rejected at validation time.
+- `force: true` cannot be used with `name: /`. All other paths are allowed; CCM does not maintain a blocklist of system directories.
+- For regular files and symlinks, `force` has no effect; both forms call into the same removal path.
+- If a directory is a symlink, only the symlink itself is removed. The target directory is left untouched. See the [posix provider](posix/) for details.
+- Without `force`, attempting to remove a non-empty directory fails with a hint that `force: true` is required. Once `force` is removed from the manifest, future applies will fail again if the directory is repopulated. That is intentional: the manifest must opt in to destructive behavior every time it is applied.
+
 ## Apply Logic
 
 ```
@@ -146,7 +174,7 @@ A purely-numeric value for `owner` or `group` is always interpreted as a UID or 
     ▼                       ▼                       ▼
 ┌────────────┐      ┌───────────────┐      ┌───────────────┐
 │ Remove     │      │ CreateDir     │      │ Store         │
-│ (os.Remove)│      │               │      │               │
+│ (provider) │      │               │      │               │
 └────────────┘      └───────────────┘      └───────────────┘
 ```
 
@@ -164,17 +192,20 @@ The file resource checks multiple attributes for idempotency:
 
 ### Decision Table
 
-| Desired     | Current State              | Action                          |
-|-------------|----------------------------|---------------------------------|
-| `absent`    | absent                     | None                            |
-| `absent`    | present/directory          | Remove                          |
-| `directory` | directory + matching attrs | None                            |
-| `directory` | absent/present             | CreateDirectory                 |
-| `directory` | directory + wrong attrs    | CreateDirectory (updates attrs) |
-| `present`   | present + matching all     | None                            |
-| `present`   | absent                     | Store                           |
-| `present`   | present + wrong content    | Store                           |
-| `present`   | present + wrong attrs      | Store                           |
+| Desired     | Current State              | Action                                                |
+|-------------|----------------------------|-------------------------------------------------------|
+| `absent`    | absent                     | None                                                  |
+| `absent`    | present (file or symlink)  | Remove                                                |
+| `absent`    | empty directory            | Remove                                                |
+| `absent`    | non-empty directory + `force: false` | Error: directory is not empty               |
+| `absent`    | non-empty directory + `force: true`  | Remove recursively                          |
+| `directory` | directory + matching attrs | None                                                  |
+| `directory` | absent/present             | CreateDirectory                                       |
+| `directory` | directory + wrong attrs    | CreateDirectory (updates attrs)                       |
+| `present`   | present + matching all     | None                                                  |
+| `present`   | absent                     | Store                                                 |
+| `present`   | present + wrong content    | Store                                                 |
+| `present`   | present + wrong attrs      | Store                                                 |
 
 ### Content Comparison
 
@@ -233,7 +264,9 @@ In noop mode, the file type:
 4. Sets appropriate `NoopMessage`:
    - "Would have created the file"
    - "Would have created directory"
-   - "Would have removed the file"
+   - "Would have removed the file" (regular file or symlink)
+   - "Would have removed the directory" (directory, `force` not set)
+   - "Would have recursively removed the directory" (directory, `force: true`)
 5. Reports `Changed: true` if changes would occur
 6. Does not call provider Store/CreateDirectory methods
 7. Does not remove files
