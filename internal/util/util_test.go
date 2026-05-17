@@ -474,6 +474,18 @@ var _ = Describe("LookupUserID", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("user name cannot be empty"))
 	})
+
+	It("treats a purely numeric value as a UID without consulting /etc/passwd", func() {
+		uid, err := LookupUserID("4242424")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(uid).To(Equal(4242424))
+	})
+
+	It("treats 0 as UID 0", func() {
+		uid, err := LookupUserID("0")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(uid).To(Equal(0))
+	})
 })
 
 var _ = Describe("LookupGroupID", func() {
@@ -497,6 +509,63 @@ var _ = Describe("LookupGroupID", func() {
 		_, err := LookupGroupID("")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("group name cannot be empty"))
+	})
+
+	It("treats a purely numeric value as a GID without consulting /etc/group", func() {
+		gid, err := LookupGroupID("4242424")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(gid).To(Equal(4242424))
+	})
+})
+
+var _ = Describe("UserIDMatches", func() {
+	It("returns true when both inputs are equal strings", func() {
+		Expect(UserIDMatches("alice", "alice")).To(BeTrue())
+		Expect(UserIDMatches("1000", "1000")).To(BeTrue())
+	})
+
+	It("returns true when a name and its numeric UID refer to the same user", func() {
+		Expect(UserIDMatches("root", "0")).To(BeTrue())
+		Expect(UserIDMatches("0", "root")).To(BeTrue())
+	})
+
+	It("returns false when the IDs differ", func() {
+		Expect(UserIDMatches("root", "4242424")).To(BeFalse())
+	})
+
+	It("returns false when one side is an unresolvable name", func() {
+		Expect(UserIDMatches("nonexistent_user_12345", "0")).To(BeFalse())
+	})
+})
+
+var _ = Describe("GroupIDMatches", func() {
+	It("returns true when both inputs are equal strings", func() {
+		Expect(GroupIDMatches("wheel", "wheel")).To(BeTrue())
+		Expect(GroupIDMatches("1000", "1000")).To(BeTrue())
+	})
+
+	It("returns true when a name and its numeric GID refer to the same group", func() {
+		// wheel on macOS, root on Linux — both have GID 0
+		group := "wheel"
+		_, err := LookupGroupID("wheel")
+		if err != nil {
+			group = "root"
+		}
+		Expect(GroupIDMatches(group, "0")).To(BeTrue())
+		Expect(GroupIDMatches("0", group)).To(BeTrue())
+	})
+
+	It("returns false when the IDs differ", func() {
+		group := "wheel"
+		_, err := LookupGroupID("wheel")
+		if err != nil {
+			group = "root"
+		}
+		Expect(GroupIDMatches(group, "4242424")).To(BeFalse())
+	})
+
+	It("returns false when one side is an unresolvable name", func() {
+		Expect(GroupIDMatches("nonexistent_group_12345", "0")).To(BeFalse())
 	})
 })
 

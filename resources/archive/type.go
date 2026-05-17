@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/choria-io/ccm/internal/registry"
+	iu "github.com/choria-io/ccm/internal/util"
 	"github.com/choria-io/ccm/model"
 	"github.com/choria-io/ccm/resources/base"
 )
@@ -212,12 +213,12 @@ func (t *Type) isDesiredState(properties *model.ArchiveResourceProperties, state
 
 	// If archive exists, verify owner, group, and checksum
 	if meta.ArchiveExists {
-		if meta.Owner != properties.Owner {
+		if !iu.UserIDMatches(properties.Owner, meta.Owner) {
 			t.log.Debug("Owner does not match", "state", meta.Owner, "requested", properties.Owner)
 			return false, "", nil
 		}
 
-		if meta.Group != properties.Group {
+		if !iu.GroupIDMatches(properties.Group, meta.Group) {
 			t.log.Debug("Group does not match", "state", meta.Group, "requested", properties.Group)
 			return false, "", nil
 		}

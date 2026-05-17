@@ -204,12 +204,12 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 		}
 	}
 
-	if meta.Owner != properties.Owner {
+	if !iu.UserIDMatches(properties.Owner, meta.Owner) {
 		t.log.Debug("Owner does not match", "state", meta.Owner, "requested", properties.Owner)
 		return false, contentChecksum, nil
 	}
 
-	if meta.Group != properties.Group {
+	if !iu.GroupIDMatches(properties.Group, meta.Group) {
 		t.log.Debug("Group does not match", "state", meta.Group, "requested", properties.Group)
 		return false, contentChecksum, nil
 	}
