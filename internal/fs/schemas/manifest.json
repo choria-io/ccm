@@ -366,8 +366,8 @@
           }
         },
         "content": {
-          "type": "string",
-          "description": "Desired file contents as a string. Mutually exclusive with 'source'."
+          "type": ["string", "null"],
+          "description": "Desired file contents as a string. Mutually exclusive with 'source'. Omit both 'content' and 'source' to manage owner/group/mode only without touching the file's contents; set 'content' to an empty string to create an explicit empty file."
         },
         "source": {
           "type": "string",
@@ -850,8 +850,8 @@
           }
         },
         "content": {
-          "type": "string",
-          "description": "Desired file contents as a string. Mutually exclusive with 'source'."
+          "type": ["string", "null"],
+          "description": "Desired file contents as a string. Mutually exclusive with 'source'. Omit both 'content' and 'source' to manage owner/group/mode only without touching the file's contents; set 'content' to an empty string to create an explicit empty file."
         },
         "source": {
           "type": "string",

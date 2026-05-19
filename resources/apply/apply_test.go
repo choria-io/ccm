@@ -39,6 +39,10 @@ func TestApply(t *testing.T) {
 	RunSpecs(t, "Resources/Apply")
 }
 
+func stringPtr(s string) *string {
+	return &s
+}
+
 func testResourceFactory(ctx context.Context, mgr model.Manager, props model.ResourceProperties) (model.Resource, error) {
 	switch rprop := props.(type) {
 	case *model.ArchiveResourceProperties:
@@ -465,7 +469,7 @@ var _ = Describe("Apply", func() {
 						Owner:    "root",
 						Group:    "root",
 						Mode:     "0644",
-						Contents: "test content",
+						Contents: stringPtr("test content"),
 					}},
 				},
 			}

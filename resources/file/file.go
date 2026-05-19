@@ -20,6 +20,7 @@ type FileProvider interface {
 
 	CreateDirectory(ctx context.Context, dir string, owner string, group string, mode string) error
 	Store(ctx context.Context, file string, contents []byte, source string, owner string, group string, mode string) error
+	SetAttributes(ctx context.Context, file string, owner string, group string, mode string) error
 	Remove(ctx context.Context, file string, force bool) error
 	Status(ctx context.Context, file string) (*model.FileState, error)
 }

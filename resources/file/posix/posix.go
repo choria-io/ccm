@@ -131,6 +131,40 @@ func (p *Provider) Store(ctx context.Context, file string, contents []byte, sour
 	return nil
 }
 
+// SetAttributes updates owner, group and mode on an existing regular file
+// without touching its contents. Symlinks are rejected to avoid silently
+// mutating the link target.
+//
+// chown runs before chmod because chown(2) clears setuid/setgid bits on
+// Linux; doing chmod last preserves any setuid/setgid bits the caller
+// requested in mode.
+func (p *Provider) SetAttributes(ctx context.Context, file string, owner string, group string, mode string) error {
+	parsedMode, err := parseFileMode(mode)
+	if err != nil {
+		return err
+	}
+
+	lstat, err := os.Lstat(file)
+	if err != nil {
+		return err
+	}
+	if lstat.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("%s is a symlink; refusing to set attributes through it", file)
+	}
+
+	uid, gid, err := iu.LookupOwnerGroup(owner, group)
+	if err != nil {
+		return err
+	}
+
+	err = os.Chown(file, uid, gid)
+	if err != nil {
+		return err
+	}
+
+	return os.Chmod(file, parsedMode)
+}
+
 // Remove removes a file or directory.
 //
 // When force is true, non-empty directories are removed recursively via
