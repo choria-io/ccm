@@ -31,6 +31,7 @@ func (e *Env) JetFunctions() map[string]jet.Func {
 		"readFile":      e.jetReadFile(),
 		"file":          e.jetReadFile(),
 		"registrations": e.jetRegistrations(),
+		"template":      e.jetTemplate(),
 	}
 }
 
@@ -132,6 +133,24 @@ func (e *Env) jetReadFile() jet.Func {
 		val, err := e.readFile(file)
 		if err != nil {
 			a.Panicf("file: %v", err)
+		}
+
+		return reflect.ValueOf(val)
+	}
+}
+
+func (e *Env) jetTemplate() jet.Func {
+	return func(a jet.Arguments) reflect.Value {
+		a.RequireNumOfArguments("template", 1, 1)
+
+		var contents string
+		if err := a.ParseInto(&contents); err != nil {
+			a.Panicf("template: argument must be a string: %v", err)
+		}
+
+		val, err := e.template(contents)
+		if err != nil {
+			a.Panicf("template: %v", err)
 		}
 
 		return reflect.ValueOf(val)
