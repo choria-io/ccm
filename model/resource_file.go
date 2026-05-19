@@ -29,9 +29,9 @@ type FileResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
 	Contents                 *string `json:"content,omitempty" yaml:"content,omitempty" template:"deferred"` // Contents specifies the desired file contents as a string; mutually exclusive with Source. When nil, file contents are not managed and only owner/group/mode are enforced.
 	Source                   string  `json:"source,omitempty" yaml:"source,omitempty" template:"deferred"`   // Source specifies a local file path to use as the source for the file contents; mutually exclusive with Contents
-	Owner                    string  `json:"owner" yaml:"owner"`                                             // Owner specifies the user that should own the file
-	Group                    string  `json:"group" yaml:"group"`                                             // Group specifies the group that should own the file
-	Mode                     string  `json:"mode" yaml:"mode"`                                               // Mode specifies the file permissions in octal notation (e.g., "0644")
+	Owner                    string  `json:"owner,omitempty" yaml:"owner,omitempty"`                         // Owner specifies the user that should own the file; required unless ensure is absent
+	Group                    string  `json:"group,omitempty" yaml:"group,omitempty"`                         // Group specifies the group that should own the file; required unless ensure is absent
+	Mode                     string  `json:"mode,omitempty" yaml:"mode,omitempty"`                           // Mode specifies the file permissions in octal notation (e.g., "0644"); required unless ensure is absent
 	Force                    bool    `json:"force,omitempty" yaml:"force,omitempty"`                         // Force allows removal of non-empty directories when Ensure is absent; has no effect on regular files
 }
 

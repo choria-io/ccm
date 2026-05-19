@@ -182,6 +182,11 @@ func hasTemplateExpression(s string) bool {
 	return len(findTemplateExpressions(s)) > 0
 }
 
+// HasTemplateExpression reports whether s contains a {{ ... }} or ${ ... } template expression.
+func HasTemplateExpression(s string) bool {
+	return hasTemplateExpression(s)
+}
+
 // Env represents the template execution environment containing facts and data
 type Env struct {
 	Facts      map[string]any    `json:"facts" yaml:"facts"`

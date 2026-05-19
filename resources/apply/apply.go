@@ -518,16 +518,7 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		apply.preMessage = parsed
 	}
 
-	err = apply.validateManifestAny(parser)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	manifestData["resources"] = resources
-
-	if len(resources) == 0 {
-		return nil, nil, fmt.Errorf("manifest must contain resources")
-	}
 
 	for i, resource := range resources {
 		for typeName, v := range resource {
@@ -543,7 +534,70 @@ func ResolveManifestReader(ctx context.Context, mgr model.Manager, dir string, m
 		}
 	}
 
+	// Schema validation runs after per-resource parsing so that non-deferred
+	// templates have already been resolved into concrete values. For fields
+	// that remain templated (e.g. deferred or runtime references) we substitute
+	// schema-satisfying placeholders so the structural validator can still
+	// inspect required fields, oneOf shapes and additionalProperties without
+	// rejecting valid-but-unresolved template expressions.
+	validationParser, err := buildValidationParser(parser, apply.resources)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = apply.validateManifestAny(validationParser)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(resources) == 0 {
+		return nil, nil, fmt.Errorf("manifest must contain resources")
+	}
+
 	return manifestData, apply, err
+}
+
+// buildValidationParser produces a manifestParser whose resources reflect the
+// post-resolution state of the supplied typed resources, with any remaining
+// template expressions replaced by their schema_placeholder value. It is used
+// solely to feed validateManifestAny and is never returned to callers.
+//
+// When the manifest produced no resolved resources the original raw resources
+// payload is left in place so the schema can flag malformed input (such as a
+// null or missing resources key) rather than silently accepting an empty array.
+func buildValidationParser(parser manifestParser, resources []map[string]model.ResourceProperties) (manifestParser, error) {
+	if len(resources) == 0 {
+		return parser, nil
+	}
+
+	validationResources := make([]map[string]yaml.RawMessage, 0, len(resources))
+
+	for _, resMap := range resources {
+		for typeName, prop := range resMap {
+			substituted, err := substituteTemplatesForValidation(prop)
+			if err != nil {
+				return parser, fmt.Errorf("preparing %s resource for validation: %w", typeName, err)
+			}
+
+			propYaml, err := substituted.ToYamlManifest()
+			if err != nil {
+				return parser, fmt.Errorf("marshaling %s resource for validation: %w", typeName, err)
+			}
+
+			validationResources = append(validationResources, map[string]yaml.RawMessage{
+				typeName: propYaml,
+			})
+		}
+	}
+
+	rawResources, err := yaml.Marshal(validationResources)
+	if err != nil {
+		return parser, fmt.Errorf("marshaling resources for validation: %w", err)
+	}
+
+	parser.CCM.Resources = rawResources
+
+	return parser, nil
 }
 
 func (a *Apply) Execute(ctx context.Context, mgr model.Manager, healthCheckOnly bool, userLog model.Logger) (model.SessionStore, error) {
