@@ -16,14 +16,15 @@ import (
 )
 
 type ensureFileCommand struct {
-	name         string
-	ensure       string
-	contentsFile string
-	contents     string
-	source       string
-	owner        string
-	mode         string
-	parent       *ensureCommand
+	name          string
+	ensure        string
+	contentsFile  string
+	contents      string
+	contentsIsSet bool
+	source        string
+	owner         string
+	mode          string
+	parent        *ensureCommand
 }
 
 func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
@@ -34,7 +35,7 @@ func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 	file.Arg("ensure", "Ensure value").Default(model.EnsurePresent).StringVar(&cmd.ensure)
 	file.Flag("owner", "User and group (user:group)").StringVar(&cmd.owner)
 	file.Flag("mode", "File mode (octal)").Default("0644").StringVar(&cmd.mode)
-	file.Flag("content", "Contents of the file, will be template parsed").PlaceHolder("STRING").StringVar(&cmd.contents)
+	file.Flag("content", "Contents of the file, will be template parsed").PlaceHolder("STRING").IsSetByUser(&cmd.contentsIsSet).StringVar(&cmd.contents)
 	file.Flag("content-file", "File containing the contents of the file, will be template parsed").PlaceHolder("FILE").ExistingFileVar(&cmd.contentsFile)
 	file.Flag("source", "File to copy in place verbatim").PlaceHolder("FILE").ExistingFileVar(&cmd.source)
 	file.Flag("registration", "The NATS Stream holding registration data").Default("REGISTRATION").Short('R').StringVar(&cmd.parent.registrationStream)
@@ -43,10 +44,10 @@ func registerEnsureFileCommand(ccm *fisk.CmdClause, parent *ensureCommand) {
 }
 
 func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
-	if c.contentsFile != "" && c.contents != "" {
+	if c.contentsFile != "" && c.contentsIsSet {
 		return fmt.Errorf("cannot specify both contents and contents-file")
 	}
-	if c.source != "" && (c.contents != "" || c.contentsFile != "") {
+	if c.source != "" && (c.contentsIsSet || c.contentsFile != "") {
 		return fmt.Errorf("cannot specify both source and contents or contents-file")
 	}
 
@@ -93,10 +94,12 @@ func (c *ensureFileCommand) fileAction(_ *fisk.ParseContext) error {
 		if err != nil {
 			return err
 		}
-		properties.Contents = string(cbytes)
+		s := string(cbytes)
+		properties.Contents = &s
 
-	case c.contents != "":
-		properties.Contents = c.contents
+	case c.contentsIsSet:
+		s := c.contents
+		properties.Contents = &s
 
 	case c.source != "":
 		properties.Source = c.source

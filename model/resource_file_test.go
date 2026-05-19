@@ -12,6 +12,10 @@ import (
 	"github.com/choria-io/ccm/templates"
 )
 
+func stringPtr(s string) *string {
+	return &s
+}
+
 var _ = Describe("FileResourceProperties", func() {
 	Describe("Validate", func() {
 		DescribeTable("validation tests",
@@ -122,6 +126,95 @@ var _ = Describe("FileResourceProperties", func() {
 			Entry("force with directory is rejected", "/tmp/test.txt", "directory", true, "'force: true' is only valid with 'ensure: absent'"),
 			Entry("force with filesystem root is rejected", "/", "absent", true, "'force: true' cannot be used with the filesystem root"),
 		)
+
+		It("Should reject content and source set together", func() {
+			prop := &FileResourceProperties{
+				CommonResourceProperties: CommonResourceProperties{
+					Name:   "/tmp/test.txt",
+					Ensure: EnsurePresent,
+				},
+				Owner:    "root",
+				Group:    "root",
+				Mode:     "0644",
+				Contents: stringPtr("inline"),
+				Source:   "/etc/source",
+			}
+			err := prop.Validate()
+			Expect(err).To(MatchError(ContainSubstring("'content' and 'source' are mutually exclusive")))
+		})
+	})
+
+	DescribeTable("ManagesContent",
+		func(contents *string, source string, expected bool) {
+			prop := &FileResourceProperties{Contents: contents, Source: source}
+			Expect(prop.ManagesContent()).To(Equal(expected))
+		},
+		Entry("content and source both unset", nil, "", false),
+		Entry("content is an empty pointer", stringPtr(""), "", true),
+		Entry("content is non-empty", stringPtr("hello"), "", true),
+		Entry("source is set", nil, "/etc/src", true),
+	)
+
+	Describe("Content", func() {
+		It("Should return empty string when content is nil", func() {
+			prop := &FileResourceProperties{}
+			Expect(prop.Content()).To(Equal(""))
+		})
+
+		It("Should return the dereferenced content when set", func() {
+			prop := &FileResourceProperties{Contents: stringPtr("hello")}
+			Expect(prop.Content()).To(Equal("hello"))
+		})
+	})
+
+	Describe("YAML round-trip for content", func() {
+		It("Should leave content nil when key is omitted", func() {
+			yamlData := `
+name: /tmp/test.txt
+ensure: present
+owner: root
+group: root
+mode: "0644"
+`
+			props, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			Expect(err).ToNot(HaveOccurred())
+			prop := props[0].(*FileResourceProperties)
+			Expect(prop.Contents).To(BeNil())
+			Expect(prop.ManagesContent()).To(BeFalse())
+		})
+
+		It("Should leave content nil when explicitly null", func() {
+			yamlData := `
+name: /tmp/test.txt
+ensure: present
+owner: root
+group: root
+mode: "0644"
+content: null
+`
+			props, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			Expect(err).ToNot(HaveOccurred())
+			prop := props[0].(*FileResourceProperties)
+			Expect(prop.Contents).To(BeNil())
+			Expect(prop.ManagesContent()).To(BeFalse())
+		})
+
+		It("Should preserve explicit empty content", func() {
+			yamlData := `
+name: /tmp/test.txt
+ensure: present
+owner: root
+group: root
+mode: "0644"
+content: ""
+`
+			props, err := NewFileResourcePropertiesFromYaml(yaml.RawMessage(yamlData))
+			Expect(err).ToNot(HaveOccurred())
+			prop := props[0].(*FileResourceProperties)
+			Expect(prop.Contents).ToNot(BeNil())
+			Expect(*prop.Contents).To(Equal(""))
+			Expect(prop.ManagesContent()).To(BeTrue())
+		})
 	})
 
 	Describe("ResolveTemplates", func() {
@@ -134,7 +227,7 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "{{ Facts.owner }}",
 				Group:    "{{ Facts.group }}",
 				Mode:     "{{ Facts.mode }}",
-				Contents: "Hello {{ Facts.name }}!",
+				Contents: stringPtr("Hello {{ Facts.name }}!"),
 			}
 
 			env := &templates.Env{
@@ -153,11 +246,11 @@ var _ = Describe("FileResourceProperties", func() {
 			Expect(prop.Owner).To(Equal("root"))
 			Expect(prop.Group).To(Equal("wheel"))
 			Expect(prop.Mode).To(Equal("0644"))
-			Expect(prop.Contents).To(Equal("Hello {{ Facts.name }}!"))
+			Expect(prop.Content()).To(Equal("Hello {{ Facts.name }}!"))
 
 			err = prop.ResolveDeferredTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(prop.Contents).To(Equal("Hello World!"))
+			Expect(prop.Content()).To(Equal("Hello World!"))
 		})
 
 		It("Should handle non-template strings", func() {
@@ -169,7 +262,7 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "Static content",
+				Contents: stringPtr("Static content"),
 			}
 
 			env := &templates.Env{
@@ -182,7 +275,7 @@ var _ = Describe("FileResourceProperties", func() {
 			Expect(prop.Owner).To(Equal("root"))
 			Expect(prop.Group).To(Equal("root"))
 			Expect(prop.Mode).To(Equal("0644"))
-			Expect(prop.Contents).To(Equal("Static content"))
+			Expect(prop.Content()).To(Equal("Static content"))
 		})
 
 		It("Should return error for invalid template in owner", func() {
@@ -194,7 +287,7 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "{{ invalid syntax }}",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "content",
+				Contents: stringPtr("content"),
 			}
 
 			env := &templates.Env{Facts: map[string]any{}}
@@ -212,7 +305,7 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "root",
 				Group:    "{{ invalid syntax }}",
 				Mode:     "0644",
-				Contents: "content",
+				Contents: stringPtr("content"),
 			}
 
 			env := &templates.Env{Facts: map[string]any{}}
@@ -230,7 +323,7 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "{{ invalid syntax }}",
-				Contents: "content",
+				Contents: stringPtr("content"),
 			}
 
 			env := &templates.Env{Facts: map[string]any{}}
@@ -248,14 +341,14 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "{{ invalid syntax }}",
+				Contents: stringPtr("{{ invalid syntax }}"),
 			}
 
 			env := &templates.Env{Facts: map[string]any{}}
 
 			err := prop.ResolveTemplates(env)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(prop.Contents).To(Equal("{{ invalid syntax }}"))
+			Expect(prop.Content()).To(Equal("{{ invalid syntax }}"))
 		})
 
 		It("Should return error for invalid template in deferred contents", func() {
@@ -267,7 +360,7 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "{{ invalid syntax }}",
+				Contents: stringPtr("{{ invalid syntax }}"),
 			}
 
 			env := &templates.Env{Facts: map[string]any{}}
@@ -328,7 +421,7 @@ var _ = Describe("FileResourceProperties", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "file content",
+				Contents: stringPtr("file content"),
 			}
 
 			raw, err := prop.ToYamlManifest()
@@ -365,7 +458,7 @@ content: "hello world"
 			Expect(prop.Owner).To(Equal("root"))
 			Expect(prop.Group).To(Equal("wheel"))
 			Expect(prop.Mode).To(Equal("0644"))
-			Expect(prop.Contents).To(Equal("hello world"))
+			Expect(prop.Content()).To(Equal("hello world"))
 			Expect(prop.Type).To(Equal(FileTypeName))
 		})
 
@@ -393,9 +486,9 @@ content: |
 			Expect(err).ToNot(HaveOccurred())
 			Expect(props).To(HaveLen(1))
 			prop := props[0].(*FileResourceProperties)
-			Expect(prop.Contents).To(ContainSubstring("line 1"))
-			Expect(prop.Contents).To(ContainSubstring("line 2"))
-			Expect(prop.Contents).To(ContainSubstring("line 3"))
+			Expect(prop.Content()).To(ContainSubstring("line 1"))
+			Expect(prop.Content()).To(ContainSubstring("line 2"))
+			Expect(prop.Content()).To(ContainSubstring("line 3"))
 		})
 
 		It("Should set Type to file", func() {

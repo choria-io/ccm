@@ -294,6 +294,70 @@ var _ = Describe("Posix Provider", func() {
 		})
 	})
 
+	Describe("SetAttributes", func() {
+		var (
+			currentUser  *user.User
+			currentGroup *user.Group
+		)
+
+		BeforeEach(func() {
+			var err error
+			currentUser, err = user.Current()
+			Expect(err).ToNot(HaveOccurred())
+			currentGroup, err = user.LookupGroupId(currentUser.Gid)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should update mode without rewriting content", func() {
+			tmpDir := GinkgoT().TempDir()
+			testFile := filepath.Join(tmpDir, "attrs.txt")
+			content := []byte("preserved content")
+			err := os.WriteFile(testFile, content, 0600)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = provider.SetAttributes(context.Background(), testFile, currentUser.Username, currentGroup.Name, "0644")
+			Expect(err).ToNot(HaveOccurred())
+
+			stat, err := os.Stat(testFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0644)))
+
+			read, err := os.ReadFile(testFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(read).To(Equal(content))
+		})
+
+		It("Should reject symlinks", func() {
+			tmpDir := GinkgoT().TempDir()
+			target := filepath.Join(tmpDir, "target.txt")
+			err := os.WriteFile(target, []byte("target"), 0600)
+			Expect(err).ToNot(HaveOccurred())
+			link := filepath.Join(tmpDir, "link")
+			err = os.Symlink(target, link)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = provider.SetAttributes(context.Background(), link, currentUser.Username, currentGroup.Name, "0644")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("symlink"))
+		})
+
+		It("Should error on missing file", func() {
+			tmpDir := GinkgoT().TempDir()
+			err := provider.SetAttributes(context.Background(), filepath.Join(tmpDir, "missing"), currentUser.Username, currentGroup.Name, "0644")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should reject invalid mode", func() {
+			tmpDir := GinkgoT().TempDir()
+			testFile := filepath.Join(tmpDir, "attrs.txt")
+			err := os.WriteFile(testFile, []byte("x"), 0600)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = provider.SetAttributes(context.Background(), testFile, currentUser.Username, currentGroup.Name, "invalid")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Describe("NewPosixProvider", func() {
 		It("Should create a provider with the given logger", func() {
 			p, err := NewPosixProvider(logger)

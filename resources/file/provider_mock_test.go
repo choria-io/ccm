@@ -85,6 +85,20 @@ func (mr *MockFileProviderMockRecorder) Remove(ctx, file, force any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockFileProvider)(nil).Remove), ctx, file, force)
 }
 
+// SetAttributes mocks base method.
+func (m *MockFileProvider) SetAttributes(ctx context.Context, file, owner, group, mode string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetAttributes", ctx, file, owner, group, mode)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetAttributes indicates an expected call of SetAttributes.
+func (mr *MockFileProviderMockRecorder) SetAttributes(ctx, file, owner, group, mode any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAttributes", reflect.TypeOf((*MockFileProvider)(nil).SetAttributes), ctx, file, owner, group, mode)
+}
+
 // Status mocks base method.
 func (m *MockFileProvider) Status(ctx context.Context, file string) (*model.FileState, error) {
 	m.ctrl.T.Helper()

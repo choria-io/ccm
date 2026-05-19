@@ -33,6 +33,10 @@ func checksum(content string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+func stringPtr(s string) *string {
+	return &s
+}
+
 var _ = Describe("File Type", func() {
 	var (
 		facts    = make(map[string]any)
@@ -77,7 +81,7 @@ var _ = Describe("File Type", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "Welcome",
+				Contents: stringPtr("Welcome"),
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(file).ToNot(BeNil())
@@ -126,7 +130,7 @@ var _ = Describe("File Type", func() {
 					Owner:    "root",
 					Group:    "root",
 					Mode:     mode,
-					Contents: "test",
+					Contents: stringPtr("test"),
 				})
 				Expect(err).ToNot(HaveOccurred())
 			},
@@ -149,7 +153,7 @@ var _ = Describe("File Type", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "test content",
+				Contents: stringPtr("test content"),
 			}
 			var err error
 			file, err = New(ctx, mgr, *properties)
@@ -265,7 +269,7 @@ var _ = Describe("File Type", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				file.prop.Source = sourceFile
-				file.prop.Contents = ""
+				file.prop.Contents = nil
 			})
 
 			It("Should return true when file checksum matches source file", func() {
@@ -318,7 +322,7 @@ var _ = Describe("File Type", func() {
 		Context("with directory ensure", func() {
 			BeforeEach(func() {
 				file.prop.Ensure = model.FileEnsureDirectory
-				file.prop.Contents = ""
+				file.prop.Contents = nil
 			})
 
 			It("Should return true when directory exists with matching properties", func() {
@@ -385,7 +389,7 @@ var _ = Describe("File Type", func() {
 				Owner:    "root",
 				Group:    "root",
 				Mode:     "0644",
-				Contents: "file content",
+				Contents: stringPtr("file content"),
 			}
 			file, err = New(ctx, mgr, *properties)
 			Expect(err).ToNot(HaveOccurred())
@@ -528,6 +532,187 @@ var _ = Describe("File Type", func() {
 				})
 			})
 
+			Context("when content is not managed (attributes only)", func() {
+				BeforeEach(func() {
+					file.prop.Ensure = model.EnsurePresent
+					file.prop.Contents = nil
+					file.prop.Source = ""
+				})
+
+				It("Should not change when attributes already match", func(ctx context.Context) {
+					state := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum("existing content not managed by ccm"),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(state, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeFalse())
+				})
+
+				It("Should call SetAttributes when owner differs and leave content untouched", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "nobody",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum("untouched content"),
+						},
+					}
+					finalState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum("untouched content"),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+					provider.EXPECT().SetAttributes(gomock.Any(), "/tmp/testfile", "root", "root", "0644").Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(finalState, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+
+				It("Should call SetAttributes when mode differs", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0600",
+							Checksum: checksum("untouched"),
+						},
+					}
+					finalState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum("untouched"),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+					provider.EXPECT().SetAttributes(gomock.Any(), "/tmp/testfile", "root", "root", "0644").Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(finalState, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+
+				It("Should create an empty file with attributes when absent", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
+						Metadata:            &model.FileMetadata{},
+					}
+					finalState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum(""),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+					provider.EXPECT().Store(gomock.Any(), "/tmp/testfile", []byte{}, "", "root", "root", "0644").Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(finalState, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+
+				It("Should error when path is a directory", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.FileEnsureDirectory},
+						Metadata: &model.FileMetadata{
+							Owner: "root",
+							Group: "root",
+							Mode:  "0755",
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+
+					event, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Errors).To(ContainElement(ContainSubstring("exists as a directory")))
+				})
+
+				It("Should surface SetAttributes errors", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "nobody",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum("untouched"),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+					provider.EXPECT().SetAttributes(gomock.Any(), "/tmp/testfile", "root", "root", "0644").Return(fmt.Errorf("chown failed"))
+
+					event, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(event.Errors).To(ContainElement(ContainSubstring("chown failed")))
+				})
+			})
+
+			Context("when ensure is present with explicit empty content", func() {
+				BeforeEach(func() {
+					file.prop.Ensure = model.EnsurePresent
+					file.prop.Contents = stringPtr("")
+					file.prop.Source = ""
+				})
+
+				It("Should write an empty file when content does not match", func(ctx context.Context) {
+					initialState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum("stale"),
+						},
+					}
+					finalState := &model.FileState{
+						CommonResourceState: model.CommonResourceState{Ensure: model.EnsurePresent},
+						Metadata: &model.FileMetadata{
+							Owner:    "root",
+							Group:    "root",
+							Mode:     "0644",
+							Checksum: checksum(""),
+						},
+					}
+
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(initialState, nil)
+					provider.EXPECT().Store(gomock.Any(), "/tmp/testfile", []byte{}, "", "root", "root", "0644").Return(nil)
+					provider.EXPECT().Status(gomock.Any(), "/tmp/testfile").Return(finalState, nil)
+
+					result, err := file.Apply(ctx)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.Changed).To(BeTrue())
+				})
+			})
+
 			Context("when ensure is absent", func() {
 				BeforeEach(func() {
 					file.prop.Ensure = model.EnsureAbsent
@@ -605,7 +790,7 @@ var _ = Describe("File Type", func() {
 			Context("when ensure is directory", func() {
 				BeforeEach(func() {
 					file.prop.Ensure = model.FileEnsureDirectory
-					file.prop.Contents = ""
+					file.prop.Contents = nil
 				})
 
 				It("Should create directory when absent", func(ctx context.Context) {
@@ -787,7 +972,7 @@ var _ = Describe("File Type", func() {
 					Owner:    "root",
 					Group:    "root",
 					Mode:     "0644",
-					Contents: "noop content",
+					Contents: stringPtr("noop content"),
 				}
 				var err error
 				noopFile, err = New(ctx, noopMgr, *noopProperties)
@@ -885,7 +1070,7 @@ var _ = Describe("File Type", func() {
 
 			It("Should not create directory when absent", func(ctx context.Context) {
 				noopFile.prop.Ensure = model.FileEnsureDirectory
-				noopFile.prop.Contents = ""
+				noopFile.prop.Contents = nil
 				initialState := &model.FileState{
 					CommonResourceState: model.CommonResourceState{Ensure: model.EnsureAbsent},
 					Metadata:            &model.FileMetadata{},

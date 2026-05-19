@@ -27,12 +27,28 @@ const (
 // FileResourceProperties defines the properties for a file resource
 type FileResourceProperties struct {
 	CommonResourceProperties `yaml:",inline"`
-	Contents                 string `json:"content,omitempty" yaml:"content,omitempty" template:"deferred"` // Contents specifies the desired file contents as a string; mutually exclusive with Source
-	Source                   string `json:"source,omitempty" yaml:"source,omitempty" template:"deferred"`   // Source specifies a local file path to use as the source for the file contents; mutually exclusive with Contents
-	Owner                    string `json:"owner" yaml:"owner"`                                             // Owner specifies the user that should own the file
-	Group                    string `json:"group" yaml:"group"`                                             // Group specifies the group that should own the file
-	Mode                     string `json:"mode" yaml:"mode"`                                               // Mode specifies the file permissions in octal notation (e.g., "0644")
-	Force                    bool   `json:"force,omitempty" yaml:"force,omitempty"`                         // Force allows removal of non-empty directories when Ensure is absent; has no effect on regular files
+	Contents                 *string `json:"content,omitempty" yaml:"content,omitempty" template:"deferred"` // Contents specifies the desired file contents as a string; mutually exclusive with Source. When nil, file contents are not managed and only owner/group/mode are enforced.
+	Source                   string  `json:"source,omitempty" yaml:"source,omitempty" template:"deferred"`   // Source specifies a local file path to use as the source for the file contents; mutually exclusive with Contents
+	Owner                    string  `json:"owner" yaml:"owner"`                                             // Owner specifies the user that should own the file
+	Group                    string  `json:"group" yaml:"group"`                                             // Group specifies the group that should own the file
+	Mode                     string  `json:"mode" yaml:"mode"`                                               // Mode specifies the file permissions in octal notation (e.g., "0644")
+	Force                    bool    `json:"force,omitempty" yaml:"force,omitempty"`                         // Force allows removal of non-empty directories when Ensure is absent; has no effect on regular files
+}
+
+// ManagesContent reports whether this resource manages the file's contents.
+// When false the resource only enforces owner/group/mode on an existing file
+// and creates an empty file with those attributes if it does not yet exist.
+func (p *FileResourceProperties) ManagesContent() bool {
+	return p.Contents != nil || p.Source != ""
+}
+
+// Content returns the desired file contents as a string, or an empty string
+// when contents are not explicitly set.
+func (p *FileResourceProperties) Content() string {
+	if p.Contents == nil {
+		return ""
+	}
+	return *p.Contents
 }
 
 // FileMetadata contains detailed metadata about a file
@@ -95,6 +111,10 @@ func (p *FileResourceProperties) Validate() error {
 		if p.Name == "/" {
 			return fmt.Errorf("'force: true' cannot be used with the filesystem root")
 		}
+	}
+
+	if p.Contents != nil && p.Source != "" {
+		return fmt.Errorf("'content' and 'source' are mutually exclusive")
 	}
 
 	// owner/group/mode describe a desired on-disk state and are not

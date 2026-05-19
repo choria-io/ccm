@@ -130,20 +130,39 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 			noopMessage = removeNoopMessage(initialStatus.Ensure, properties.Force)
 		}
 		refreshState = true
+	case initialStatus.Ensure == model.FileEnsureDirectory && properties.Ensure == model.EnsurePresent:
+		return nil, fmt.Errorf("%s exists as a directory; cannot manage it as a file", properties.Name)
+	case !properties.ManagesContent() && initialStatus.Ensure == model.EnsurePresent:
+		// attributes only: file exists, fix owner/group/mode without touching content
+		if !noop {
+			t.log.Info("Updating file attributes", "owner", properties.Owner, "group", properties.Group, "mode", properties.Mode)
+			err = p.SetAttributes(ctx, properties.Name, properties.Owner, properties.Group, properties.Mode)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			t.log.Info("Skipping attribute update as noop")
+			noopMessage = "Would have updated attributes"
+		}
+		refreshState = true
 	default:
 		// create
 		t.log.Debug("Creating file", "source", properties.Source, "working_dir", t.mgr.WorkingDirectory())
 
 		if !noop {
 			source := t.adjustedSource(properties)
-			err = p.Store(ctx, properties.Name, []byte(properties.Contents), source, properties.Owner, properties.Group, properties.Mode)
+			err = p.Store(ctx, properties.Name, []byte(properties.Content()), source, properties.Owner, properties.Group, properties.Mode)
 			if err != nil {
 				t.log.Error(fmt.Sprintf("Could not store new file %v", err))
 				return nil, err
 			}
 		} else {
 			t.log.Info("Skipping create as noop")
-			noopMessage = "Would have created the file"
+			if properties.ManagesContent() {
+				noopMessage = "Would have created the file"
+			} else {
+				noopMessage = "Would have created an empty file with requested attributes"
+			}
 		}
 		refreshState = true
 	}
@@ -184,7 +203,7 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 		return false, "", nil
 	}
 
-	if properties.Ensure != model.FileEnsureDirectory {
+	if properties.Ensure != model.FileEnsureDirectory && properties.ManagesContent() {
 		if properties.Source != "" {
 			path := t.adjustedSource(properties)
 			contentChecksum, err = iu.Sha256HashFile(path)
@@ -192,7 +211,7 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 				return false, "", err
 			}
 		} else {
-			contentChecksum, err = iu.Sha256HashBytes([]byte(properties.Contents))
+			contentChecksum, err = iu.Sha256HashBytes([]byte(properties.Content()))
 			if err != nil {
 				return false, "", err
 			}
