@@ -19,6 +19,7 @@ type FileProvider interface {
 
     CreateDirectory(ctx context.Context, dir string, owner string, group string, mode string) error
     Store(ctx context.Context, file string, contents []byte, source string, owner string, group string, mode string) error
+    SetAttributes(ctx context.Context, file string, owner string, group string, mode string) error
     Remove(ctx context.Context, file string, force bool) error
     Status(ctx context.Context, file string) (*model.FileState, error)
 }
@@ -30,6 +31,7 @@ type FileProvider interface {
 |-------------------|----------------------------------------------------------------------|
 | `Status`          | Query current file state (existence, type, content hash, attributes) |
 | `Store`           | Create or update a file with content and attributes                  |
+| `SetAttributes`   | Update owner, group and mode on an existing file without changing its content |
 | `CreateDirectory` | Create a directory with attributes                                   |
 | `Remove`          | Remove a file or directory; honors `force` for non-empty directories |
 
@@ -108,6 +110,30 @@ Files can receive content from two mutually exclusive sources:
 
 When using `source`, the path is relative to the manifest's working directory if one is set.
 
+## Attribute-only Management
+
+A file resource that omits both `content` and `source` manages only owner, group and mode. The file's contents are left untouched. This is useful when another resource (typically an `exec` or `package`) produces the file and CCM is responsible for enforcing its permissions.
+
+```yaml
+- file:
+    - /etc/sysconfig/myapp:
+        ensure: present
+        owner: root
+        group: root
+        mode: "0640"
+```
+
+Rules:
+
+- If the file exists, only owner, group and mode are adjusted. Content is never read or written.
+- If the file does not exist, an empty file is created with the requested owner, group and mode. This matches the behavior of Puppet's `file { ensure => present }` with no `content` or `source`.
+- If the path exists as a directory, the apply fails. Use `ensure: directory` to manage directories.
+- Symlinks are rejected by the posix provider's `SetAttributes` implementation to avoid silently mutating the target through the link.
+
+To create an explicit empty file rather than enter attribute-only mode, set `content: ""`. An omitted `content:` and `content: null` are equivalent and both mean "do not manage content".
+
+`content` and `source` remain mutually exclusive. Setting both is rejected at validation time.
+
 ## Required Properties
 
 Unlike some resources, file resources require explicit attributes:
@@ -180,10 +206,11 @@ Rules:
     ┌───────────────────────┼───────────────────────┐
     │ absent                │ directory             │ present
     ▼                       ▼                       ▼
-┌────────────┐      ┌───────────────┐      ┌───────────────┐
-│ Remove     │      │ CreateDir     │      │ Store         │
-│ (provider) │      │               │      │               │
-└────────────┘      └───────────────┘      └───────────────┘
+┌────────────┐      ┌───────────────┐      ┌───────────────────────────────┐
+│ Remove     │      │ CreateDir     │      │ Content managed or file       │
+│ (provider) │      │               │      │ absent? Store. Otherwise      │
+└────────────┘      └───────────────┘      │ SetAttributes.                │
+                                           └───────────────────────────────┘
 ```
 
 ## Idempotency
@@ -193,27 +220,31 @@ The file resource checks multiple attributes for idempotency:
 ### State Checks (in order)
 
 1. **Ensure match**: Current type matches desired (`present`/`absent`/`directory`)
-2. **Content match**: SHA256 checksum of contents matches (for `ensure: present`)
+2. **Content match**: SHA256 checksum of contents matches (for `ensure: present`, skipped in attribute-only mode)
 3. **Owner match**: Current owner matches desired, comparing by numeric UID when either side is a numeric value or resolves to one
 4. **Group match**: Current group matches desired, comparing by numeric GID when either side is a numeric value or resolves to one
 5. **Mode match**: Current permissions match desired
 
 ### Decision Table
 
-| Desired     | Current State              | Action                                                |
-|-------------|----------------------------|-------------------------------------------------------|
-| `absent`    | absent                     | None                                                  |
-| `absent`    | present (file or symlink)  | Remove                                                |
-| `absent`    | empty directory            | Remove                                                |
-| `absent`    | non-empty directory + `force: false` | Error: directory is not empty               |
-| `absent`    | non-empty directory + `force: true`  | Remove recursively                          |
-| `directory` | directory + matching attrs | None                                                  |
-| `directory` | absent/present             | CreateDirectory                                       |
-| `directory` | directory + wrong attrs    | CreateDirectory (updates attrs)                       |
-| `present`   | present + matching all     | None                                                  |
-| `present`   | absent                     | Store                                                 |
-| `present`   | present + wrong content    | Store                                                 |
-| `present`   | present + wrong attrs      | Store                                                 |
+| Desired                  | Current State                        | Action                                  |
+|--------------------------|--------------------------------------|-----------------------------------------|
+| `absent`                 | absent                               | None                                    |
+| `absent`                 | present (file or symlink)            | Remove                                  |
+| `absent`                 | empty directory                      | Remove                                  |
+| `absent`                 | non-empty directory + `force: false` | Error: directory is not empty           |
+| `absent`                 | non-empty directory + `force: true`  | Remove recursively                      |
+| `directory`              | directory + matching attrs           | None                                    |
+| `directory`              | absent/present                       | CreateDirectory                         |
+| `directory`              | directory + wrong attrs              | CreateDirectory (updates attrs)         |
+| `present` (content set)  | present + matching all               | None                                    |
+| `present` (content set)  | absent                               | Store                                   |
+| `present` (content set)  | present + wrong content              | Store                                   |
+| `present` (content set)  | present + wrong attrs                | Store                                   |
+| `present` (attrs-only)   | present + matching attrs             | None                                    |
+| `present` (attrs-only)   | present + wrong attrs                | SetAttributes                           |
+| `present` (attrs-only)   | absent                               | Store (creates empty file with attrs)   |
+| `present` (any mode)     | directory                            | Error: path exists as a directory       |
 
 ### Content Comparison
 
@@ -271,6 +302,8 @@ In noop mode, the file type:
 3. Logs what actions would be taken
 4. Sets appropriate `NoopMessage`:
    - "Would have created the file"
+   - "Would have created an empty file with requested attributes" (attribute-only mode, file absent)
+   - "Would have updated attributes" (attribute-only mode, attribute drift)
    - "Would have created directory"
    - "Would have removed the file" (regular file or symlink)
    - "Would have removed the directory" (directory, `force` not set)

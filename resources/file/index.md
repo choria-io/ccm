@@ -65,6 +65,22 @@ This creates `/etc/motd` with the given content, parsed through the template eng
 | `force` (boolean) | Allow `ensure: absent` to remove non-empty directories. Has no effect on regular files. Only valid with `ensure: absent`                                                                                                             |
 | `provider`        | Force a specific provider (`posix` only)                                                                                                                                                                                             |
 
+## Manage attributes only
+
+Omitting both `content` and `source` puts the resource in attribute-only mode. The file's contents are left untouched and only `owner`, `group`, and `mode` are enforced. This is useful when another resource produces the file and CCM is responsible for its permissions.
+
+```yaml
+- file:
+    - /etc/sysconfig/myapp:
+        ensure: present
+        owner: root
+        group: root
+        mode: "0640"
+```
+
+> [!info] Note
+> If the file does not exist, an empty file is created with the requested attributes. To create an explicit empty file in any other context, set `content: ""`. A symlink at `name` is rejected to avoid mutating the target through the link.
+
 ## Removal
 
 When `ensure: absent`, the file or directory at `name` is removed. The `owner`, `group`, and `mode` properties describe a desired on-disk state and are not consulted during removal, so they may be omitted.
