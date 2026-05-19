@@ -127,6 +127,20 @@ Use the `> [!info]` blockquote syntax for warnings and notes:
 
 Use **Warning** for constraints the reader must follow to avoid errors. Use **Note** for supplementary information. A custom label may replace `Warning` or `Note` when it adds clarity, such as `> [!info] Default Hierarchy`.
 
+## Version badges
+
+Mark features with the CCM release that introduced them using a Hugo `badge` shortcode. Place the badge immediately after the section heading or, for new properties, at the end of the description cell:
+
+```markdown
+## Manage attributes only {{% badge style="primary" title="Version" %}}0.0.29{{% /badge %}}
+
+| `force` (boolean) | Allow `ensure: absent` to remove non-empty directories {{% badge style="primary" title="Version" %}}0.0.28{{% /badge %}} |
+```
+
+Use `style="primary"` and `title="Version"`. The badge body is the release tag without a leading `v`.
+
+Add a version badge only when a feature is introduced. Do not retroactively badge pre-existing content, and remove the badge once the release in question is several versions behind current.
+
 ## Descriptions and explanations
 
 - After a tabbed example block, add one or two sentences explaining what the example does and why.
