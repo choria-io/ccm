@@ -104,4 +104,4 @@ overrides:
     service_name: apache2
 ```
 
-Here we define the inputs in `data` and the Hiera hierarchy along with OS-specific overrides. The data is referenced in the manifest using the `{{ Data.package_name }}` syntax.
+Here we define the inputs in `data` and the Hiera hierarchy along with OS-specific overrides. The data is referenced in the manifest using the `${ Data.package_name }` syntax.

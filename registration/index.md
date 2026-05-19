@@ -2,9 +2,6 @@
 
 The registration system publishes service discovery entries to NATS when managed resources reach a stable state. Resources that pass all health checks and are not in a failed state announce themselves to a shared registry. Other nodes discover these services dynamically through template lookups.
 
-> [!info] Supported Version
-> Added in version `0.0.20`
-
 ## Use cases
 
 * **Dynamic load balancer configuration** - Web server resources register themselves on successful deploy, and a file resource on the load balancer node uses template lookups to generate an upstream configuration

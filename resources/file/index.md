@@ -53,19 +53,19 @@ This creates `/etc/motd` with the given content, parsed through the template eng
 
 ## Properties
 
-| Property          | Description                                                                                                                                                                                                                          |
-|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`            | Absolute path to the file                                                                                                                                                                                                            |
-| `ensure`          | Desired state (`present`, `absent`, `directory`)                                                                                                                                                                                     |
-| `content`         | File contents, parsed through the template engine                                                                                                                                                                                    |
-| `source`          | Copy contents from another local file                                                                                                                                                                                                |
-| `owner`           | File owner as a username, or a numeric UID (a purely-numeric value is always interpreted as a UID). Required unless `ensure: absent`                                                                                                 |
-| `group`           | File group as a group name, or a numeric GID (a purely-numeric value is always interpreted as a GID). Required unless `ensure: absent`                                                                                               |
-| `mode`            | File permissions in octal notation (e.g., `"0644"`). For directories, the execute bit is added automatically to any permission triad that has read or write bits (e.g., `"0644"` becomes `"0755"`). Required unless `ensure: absent` |
-| `force` (boolean) | Allow `ensure: absent` to remove non-empty directories. Has no effect on regular files. Only valid with `ensure: absent`                                                                                                             |
-| `provider`        | Force a specific provider (`posix` only)                                                                                                                                                                                             |
+| Property           | Description                                                                                                                                                                                                                          |
+|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`             | Absolute path to the file                                                                                                                                                                                                            |
+| `ensure`           | Desired state (`present`, `absent`, `directory`)                                                                                                                                                                                     |
+| `content`          | File contents, parsed through the template engine                                                                                                                                                                                    |
+| `source`           | Copy contents from another local file                                                                                                                                                                                                |
+| `owner`            | File owner as a username, or a numeric UID (a purely-numeric value is always interpreted as a UID). Required unless `ensure: absent`                                                                                                 |
+| `group`            | File group as a group name, or a numeric GID (a purely-numeric value is always interpreted as a GID). Required unless `ensure: absent`                                                                                               |
+| `mode`             | File permissions in octal notation (e.g., `"0644"`). For directories, the execute bit is added automatically to any permission triad that has read or write bits (e.g., `"0644"` becomes `"0755"`). Required unless `ensure: absent` |
+| `force` (boolean)  | Allow `ensure: absent` to remove non-empty directories. Has no effect on regular files. Only valid with `ensure: absent` {{% badge style="primary"  title="Version" %}}0.0.28{{% /badge %}}                                          |
+| `provider`         | Force a specific provider (`posix` only)                                                                                                                                                                                             |
 
-## Manage attributes only
+## Manage attributes only {{% badge style="primary" title="Version" %}}0.0.29{{% /badge %}}
 
 Omitting both `content` and `source` puts the resource in attribute-only mode. The file's contents are left untouched and only `owner`, `group`, and `mode` are enforced. This is useful when another resource produces the file and CCM is responsible for its permissions.
 
@@ -106,7 +106,8 @@ By default, removing a directory fails if it is not empty. Set `force: true` to 
 * When the target is a symlink to a directory, only the symlink is removed; the target directory is left untouched
 * Without `force`, removing a non-empty directory fails with a hint that `force: true` is required. Every apply that removes a non-empty directory must opt in
 
-## Numeric owner and group
+## Numeric owner and group {{% badge style="primary" title="Version" %}}0.0.28{{% /badge %}}
+
 
 `owner` and `group` accept either a name or a numeric ID. A value composed entirely of digits is always treated as a UID or GID, even when a user or group with that literal name exists. The kernel does not require a matching entry in `/etc/passwd` or `/etc/group`, which is useful for container images or for files owned by accounts that only exist in another namespace.
 
