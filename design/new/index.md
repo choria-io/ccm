@@ -726,6 +726,16 @@ func (p *<Type>ResourceProperties) ResolveDeferredTemplates(env *templates.Env) 
 
 This method is called by `base.Base` after control evaluation passes, so templates are only evaluated for resources that will actually be applied. Because deferred resolution happens at apply time rather than during manifest parsing, templates using functions like `file()` can access content created by earlier resources in the same run. The default no-op implementation inherited from `CommonResourceProperties` is sufficient for types that have no `template:"deferred"` fields.
 
+#### Schema placeholders for deferred fields
+
+Manifest-level JSON schema validation runs after phase 1 template resolution, so any field that is still templated at that point — typically `template:"deferred"` fields — would otherwise fail a pattern constraint such as `^[A-Za-z_][A-Za-z0-9_]*=.+$` on the exec `environment` items. To keep the schema strict while permitting template expressions in those fields, add a `schema_placeholder:"..."` struct tag whose value satisfies the JSON schema pattern. During validation only, any remaining `${ ... }` / `{{ ... }}` value is rewritten to the placeholder before the schema check runs.
+
+```go
+Environment []string `json:"environment,omitempty" yaml:"environment,omitempty" template:"deferred" schema_placeholder:"PLACEHOLDER=x"`
+```
+
+When a deferred field has no `pattern` constraint a placeholder is not required; the substitution falls back to a generic string. Note: the schema's pattern check is only enforced on the placeholder, not on the user's template syntax, so partial templates like `"99${ x }"` will not be caught at validation time — rely on the resource's Go-side `Validate()` for value-level checks after deferred resolution completes.
+
 ### Provider Selection
 
 Providers declare manageability via `IsManageable` on the factory (see `model.ProviderFactory` in Step 3). Multiple providers can match; the one with highest priority is selected.
