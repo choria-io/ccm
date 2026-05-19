@@ -35,8 +35,8 @@ type ArchiveResourceProperties struct {
 	ExtractParent            string            `json:"extract_parent,omitempty" yaml:"extract_parent,omitempty"` // ExtractParent specifies the parent directory to extract the archive into
 	Cleanup                  bool              `json:"cleanup,omitempty" yaml:"cleanup,omitempty"`               // Cleanup specifies whether to remove the archive file after extraction
 	Creates                  string            `json:"creates,omitempty" yaml:"creates,omitempty"`               // Creates specifies a file that the archive creates; if this file exists, the archive will not be extracted on future runs
-	Owner                    string            `json:"owner" yaml:"owner"`                                       // Owner specifies the user that should own the file
-	Group                    string            `json:"group" yaml:"group"`                                       // Group specifies the group that should own the file
+	Owner                    string            `json:"owner,omitempty" yaml:"owner,omitempty"`                   // Owner specifies the user that should own the file; required unless ensure is absent
+	Group                    string            `json:"group,omitempty" yaml:"group,omitempty"`                   // Group specifies the group that should own the file; required unless ensure is absent
 }
 
 // ArchiveMetadata contains detailed metadata about an archive

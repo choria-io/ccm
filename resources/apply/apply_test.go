@@ -1200,6 +1200,94 @@ ccm:
 		Expect(err.Error()).To(ContainSubstring("jsonschema validation failed"))
 	})
 
+	It("accepts templated property values whose resolved form satisfies schema patterns", func() {
+		manifestContent := `
+data:
+  seed: /etc/issuer/seed
+  owner: root
+  group: wheel
+  key_mode: "0600"
+ccm:
+  resources:
+    - file:
+      - ${ Data.seed }:
+          ensure: present
+          owner: ${ Data.owner }
+          group: ${ Data.group }
+          mode: "${ Data.key_mode }"
+`
+		manifestPath := tempDir + "/templated-mode.yaml"
+		err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apply).NotTo(BeNil())
+
+		props := apply.Resources()[0]["file"].(*model.FileResourceProperties)
+		Expect(props.Name).To(Equal("/etc/issuer/seed"))
+		Expect(props.Mode).To(Equal("0600"))
+		Expect(props.Owner).To(Equal("root"))
+		Expect(props.Group).To(Equal("wheel"))
+	})
+
+	It("accepts ensure:absent file resources that omit mode, owner and group", func() {
+		manifestContent := `
+data:
+  log_level: INFO
+ccm:
+  resources:
+    - file:
+        - defaults:
+            ensure: absent
+            force: true
+        - /tmp/choria/config/server/machine/eam_requests: {}
+        - /tmp/choria/config/server/machine/check_choria: {}
+        - /tmp/choria/config/client/packed-plugins.json: {}
+`
+		manifestPath := tempDir + "/absent-bulk.yaml"
+		err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apply).NotTo(BeNil())
+		Expect(apply.Resources()).To(HaveLen(3))
+
+		for _, resMap := range apply.Resources() {
+			props := resMap["file"].(*model.FileResourceProperties)
+			Expect(props.Ensure).To(Equal(model.EnsureAbsent))
+			Expect(props.Mode).To(BeEmpty())
+			Expect(props.Owner).To(BeEmpty())
+			Expect(props.Group).To(BeEmpty())
+		}
+	})
+
+	It("accepts deferred-templated values that would not satisfy the schema pattern verbatim", func() {
+		manifestContent := `
+data:
+  log_level: INFO
+ccm:
+  resources:
+    - exec:
+        name: /bin/true
+        ensure: present
+        environment:
+          - LOG_LEVEL=${ Data.log_level }
+`
+		manifestPath := tempDir + "/templated-env.yaml"
+		err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, apply, err := ResolveManifestFilePath(ctx, mockMgr, manifestPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(apply).NotTo(BeNil())
+
+		props := apply.Resources()[0]["exec"].(*model.ExecResourceProperties)
+		// Environment is template:"deferred" so the entry is still templated until execution.
+		Expect(props.Environment).To(ConsistOf("LOG_LEVEL=${ Data.log_level }"))
+	})
+
 	It("parses fail_on_error as true when set", func() {
 		manifestContent := `
 data:
