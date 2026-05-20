@@ -666,6 +666,29 @@ if err != nil {
 }
 ```
 
+### File Ownership and Mode
+
+When a provider creates a file by writing to a temp file and renaming it into place, apply ownership and mode **by path after the rename**, not by file descriptor before it:
+
+```go
+err = os.Rename(tf.Name(), file)
+if err != nil {
+    return err
+}
+
+// chown before chmod: chown(2) clears setuid/setgid bits.
+err = os.Chown(file, uid, gid)
+if err != nil {
+    return err
+}
+
+return os.Chmod(file, parsedMode)
+```
+
+`fchown(2)` via `*os.File.Chown` is silently dropped by some shared-filesystem backends — notably Docker Desktop bind mounts on macOS/Windows (VirtioFS, gRPC-FUSE) and various FUSE-backed shares. The fchown call returns success but the ownership change does not survive the rename, leaving the target file owned by the caller. Path-based `chown(2)` and `chmod(2)` are forwarded correctly by these layers, so applying them after the rename is portable.
+
+See `resources/file/posix/posix.go` (`Store`, `SetAttributes`) and `resources/archive/http/http.go` (`Download`) for the established pattern.
+
 ### Template Resolution
 
 Template resolution uses a reflection-based struct walker (`templates.ResolveStructTemplates`) that automatically resolves `{{ expression }}` placeholders in all string-typed fields. The walker recurses into all composite types including slices, maps, nested structs, and pointer fields.
