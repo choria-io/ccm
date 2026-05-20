@@ -175,9 +175,10 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 			return nil, err
 		}
 
-		isStable, _, _ = t.isDesiredState(properties, finalStatus)
+		var reason string
+		isStable, reason, _ = t.isDesiredState(properties, finalStatus)
 		if !isStable {
-			return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
+			return nil, fmt.Errorf("%w: %s: %s", model.ErrDesiredStateFailed, properties.Ensure, reason)
 		}
 	}
 
@@ -186,9 +187,15 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	return finalStatus, nil
 }
 
+// isDesiredState reports whether state matches properties. The second return is
+// a human-readable reason describing the mismatch when stable is false, suitable
+// for inclusion in error messages.
 func (t *Type) isDesiredState(properties *model.ArchiveResourceProperties, state *model.ArchiveState) (bool, string, error) {
 	if properties.Ensure == model.EnsureAbsent {
-		return state.Ensure == model.EnsureAbsent, "", nil
+		if state.Ensure == model.EnsureAbsent {
+			return true, "", nil
+		}
+		return false, fmt.Sprintf("archive still exists (ensure=%s)", state.Ensure), nil
 	}
 
 	meta := state.Metadata
@@ -196,36 +203,36 @@ func (t *Type) isDesiredState(properties *model.ArchiveResourceProperties, state
 	// If Creates is specified, the extraction marker file must exist
 	if properties.Creates != "" && !meta.CreatesExists {
 		t.log.Debug("Creates file does not exist", "creates", properties.Creates)
-		return false, "", nil
+		return false, fmt.Sprintf("creates path missing: %s", properties.Creates), nil
 	}
 
 	// If cleanup is true and creates is not set the archive file must not exist
 	if properties.Cleanup && properties.Creates == "" && meta.ArchiveExists {
 		t.log.Debug("Archive file exists and cleanup is true")
-		return false, "", nil
+		return false, "archive file still present despite cleanup=true", nil
 	}
 
 	// If Cleanup is false, the archive file must exist
 	if !properties.Cleanup && !meta.ArchiveExists {
 		t.log.Debug("Archive file does not exist and cleanup is false")
-		return false, "", nil
+		return false, "archive file missing", nil
 	}
 
 	// If archive exists, verify owner, group, and checksum
 	if meta.ArchiveExists {
 		if !iu.UserIDMatches(properties.Owner, meta.Owner) {
 			t.log.Debug("Owner does not match", "state", meta.Owner, "requested", properties.Owner)
-			return false, "", nil
+			return false, fmt.Sprintf("owner mismatch: state=%s requested=%s", meta.Owner, properties.Owner), nil
 		}
 
 		if !iu.GroupIDMatches(properties.Group, meta.Group) {
 			t.log.Debug("Group does not match", "state", meta.Group, "requested", properties.Group)
-			return false, "", nil
+			return false, fmt.Sprintf("group mismatch: state=%s requested=%s", meta.Group, properties.Group), nil
 		}
 
 		if properties.Checksum != "" && meta.Checksum != properties.Checksum {
 			t.log.Debug("Checksum does not match", "state", meta.Checksum, "requested", properties.Checksum)
-			return false, "", nil
+			return false, fmt.Sprintf("checksum mismatch: state=%s requested=%s", meta.Checksum, properties.Checksum), nil
 		}
 	}
 

@@ -100,6 +100,8 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
+	initialStable, _ := t.isDesiredState(properties, initialStatus)
+
 	switch {
 	case properties.Ensure == "":
 		return nil, model.ErrInvalidEnsureValue
@@ -131,7 +133,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 
 		refreshState = true
 
-	case t.isDesiredState(properties, initialStatus):
+	case initialStable:
 		// nothing to do
 
 	case properties.Ensure == EnsureAbsent:
@@ -220,8 +222,9 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	}
 
 	if !noop {
-		if !t.isDesiredState(properties, finalStatus) {
-			return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
+		stable, reason := t.isDesiredState(properties, finalStatus)
+		if !stable {
+			return nil, fmt.Errorf("%w: %s: %s", model.ErrDesiredStateFailed, properties.Ensure, reason)
 		}
 	}
 
@@ -234,24 +237,35 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	return finalStatus, nil
 }
 
-func (t *Type) isDesiredState(properties *model.PackageResourceProperties, state *model.PackageState) bool {
+// isDesiredState reports whether state matches properties. The second return is
+// a human-readable reason describing the mismatch when stable is false, suitable
+// for inclusion in error messages.
+func (t *Type) isDesiredState(properties *model.PackageResourceProperties, state *model.PackageState) (bool, string) {
 	switch properties.Ensure {
 	case EnsurePresent: // anything but absent is ok
-		return state.Ensure != EnsureAbsent
+		if state.Ensure != EnsureAbsent {
+			return true, ""
+		}
+		return false, "package is absent, expected present"
 
 	case EnsureAbsent: // only absent is ok
-		return state.Ensure == EnsureAbsent
+		if state.Ensure == EnsureAbsent {
+			return true, ""
+		}
+		return false, fmt.Sprintf("package version %s installed, expected absent", state.Ensure)
 
 	case EnsureLatest: // we dont really know if its latest, OS can lie about it, latest is a bad idea so we check absent
-		return state.Ensure != EnsureAbsent
+		if state.Ensure != EnsureAbsent {
+			return true, ""
+		}
+		return false, "package is absent, expected latest"
 
 	default:
 		if iu.VersionCmp(state.Ensure, properties.Ensure, false) == 0 {
-			return true
+			return true, ""
 		}
+		return false, fmt.Sprintf("version mismatch: state=%s requested=%s", state.Ensure, properties.Ensure)
 	}
-
-	return false
 }
 
 // Info returns the current status of the package

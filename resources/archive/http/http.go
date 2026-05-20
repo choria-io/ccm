@@ -63,6 +63,12 @@ func (p *Provider) Download(ctx context.Context, properties *model.ArchiveResour
 	parent := filepath.Dir(properties.Name)
 	archiveName := filepath.Base(uri.Path)
 
+	// validate checks owner/group are always set
+	uid, gid, err := iu.LookupOwnerGroup(properties.Owner, properties.Group)
+	if err != nil {
+		return err
+	}
+
 	tf, err := os.CreateTemp(parent, fmt.Sprintf("%s-*", archiveName))
 	if err != nil {
 		return err
@@ -70,13 +76,6 @@ func (p *Provider) Download(ctx context.Context, properties *model.ArchiveResour
 	defer os.Remove(tf.Name())
 
 	p.log.Info("Saving archive", "dest", properties.Name, "tf", tf.Name())
-
-	// validate checks this is always set
-	err = iu.ChownFile(tf, properties.Owner, properties.Group)
-	if err != nil {
-		tf.Close()
-		return err
-	}
 
 	copied, err := io.Copy(tf, resp.Body)
 	if err != nil {
@@ -100,7 +99,14 @@ func (p *Provider) Download(ctx context.Context, properties *model.ArchiveResour
 		}
 	}
 
-	return os.Rename(tf.Name(), properties.Name)
+	err = os.Rename(tf.Name(), properties.Name)
+	if err != nil {
+		return err
+	}
+
+	// chown by path rather than fd: some filesystems (Docker Desktop bind
+	// mounts via VirtioFS/gRPC-FUSE) silently drop fchown across a rename.
+	return os.Chown(properties.Name, uid, gid)
 }
 
 func (p *Provider) Extract(ctx context.Context, properties *model.ArchiveResourceProperties, log model.Logger) error {

@@ -118,7 +118,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	isStable := t.isDesiredState(properties, initialStatus)
+	isStable, _ := t.isDesiredState(properties, initialStatus)
 	switch {
 	case shouldRefreshViaSubscribe:
 		t.log.Info("Refreshing via subscribe", "subscribe", refreshResource)
@@ -167,8 +167,9 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	}
 
 	if !noop {
-		if !t.isDesiredState(properties, finalStatus) {
-			return nil, fmt.Errorf("%w: exit code %d", model.ErrDesiredStateFailed, exitCode)
+		stable, reason := t.isDesiredState(properties, finalStatus)
+		if !stable {
+			return nil, fmt.Errorf("%w: exit code %d: %s", model.ErrDesiredStateFailed, exitCode, reason)
 		}
 	}
 
@@ -181,23 +182,26 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	return finalStatus, nil
 }
 
-func (t *Type) isDesiredState(properties *model.ExecResourceProperties, status *model.ExecState) bool {
+// isDesiredState reports whether status matches properties. The second return is
+// a human-readable reason describing the mismatch when stable is false, suitable
+// for inclusion in error messages.
+func (t *Type) isDesiredState(properties *model.ExecResourceProperties, status *model.ExecState) (bool, string) {
 	if properties.Creates != "" && status.CreatesSatisfied {
-		return true
+		return true, ""
 	}
 
 	if status.ExitCode == nil {
 		if properties.OnlyIf != "" && !status.OnlyIfSatisfied {
-			return true
+			return true, ""
 		}
 
 		if properties.Unless != "" && status.UnlessSatisfied {
-			return true
+			return true, ""
 		}
 	}
 
 	if status.ExitCode == nil && properties.RefreshOnly {
-		return true
+		return true, ""
 	}
 
 	returns := []int{0}
@@ -206,10 +210,13 @@ func (t *Type) isDesiredState(properties *model.ExecResourceProperties, status *
 	}
 
 	if status.ExitCode != nil {
-		return slices.Contains(returns, *status.ExitCode)
+		if slices.Contains(returns, *status.ExitCode) {
+			return true, ""
+		}
+		return false, fmt.Sprintf("exit code %d not in allowed returns %v", *status.ExitCode, returns)
 	}
 
-	return false
+	return false, "command did not run and no guard short-circuited"
 }
 
 func (t *Type) selectProviderUnlocked() error {
