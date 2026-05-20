@@ -866,7 +866,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})
@@ -885,7 +885,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -904,7 +904,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -923,7 +923,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})
@@ -942,7 +942,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -963,7 +963,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				desired, err := scaffold.isDesiredState(props, state, false)
+				desired, _, err := scaffold.isDesiredState(props, state, false)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(desired).To(BeTrue())
 			})
@@ -982,7 +982,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				desired, err := scaffold.isDesiredState(props, state, false)
+				desired, _, err := scaffold.isDesiredState(props, state, false)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(desired).To(BeTrue())
 			})
@@ -1001,7 +1001,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				desired, err := scaffold.isDesiredState(props, state, false)
+				desired, _, err := scaffold.isDesiredState(props, state, false)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(desired).To(BeTrue())
 			})
@@ -1020,7 +1020,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				desired, err := scaffold.isDesiredState(props, state, false)
+				desired, _, err := scaffold.isDesiredState(props, state, false)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(desired).To(BeFalse())
 			})
@@ -1042,7 +1042,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})
@@ -1062,7 +1062,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})
@@ -1082,7 +1082,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -1102,7 +1102,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeFalse())
 			})
@@ -1122,7 +1122,7 @@ var _ = Describe("Scaffold Type", func() {
 					},
 				}
 
-				stable, err := scaffold.isDesiredState(props, state, true)
+				stable, _, err := scaffold.isDesiredState(props, state, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(stable).To(BeTrue())
 			})

@@ -83,6 +83,11 @@ func (p *Provider) Store(ctx context.Context, file string, contents []byte, sour
 		return err
 	}
 
+	uid, gid, err := iu.LookupOwnerGroup(owner, group)
+	if err != nil {
+		return err
+	}
+
 	var sf *os.File
 
 	if source != "" {
@@ -99,21 +104,12 @@ func (p *Provider) Store(ctx context.Context, file string, contents []byte, sour
 	}
 	defer tf.Close()
 	defer os.Remove(tf.Name())
-	err = tf.Chmod(parsedMode)
-	if err != nil {
-		return err
-	}
 
 	if sf != nil {
 		_, err = io.Copy(tf, sf)
 	} else {
 		_, err = tf.Write(contents)
 	}
-	if err != nil {
-		return err
-	}
-
-	err = iu.ChownFile(tf, owner, group)
 	if err != nil {
 		return err
 	}
@@ -128,7 +124,16 @@ func (p *Provider) Store(ctx context.Context, file string, contents []byte, sour
 		return fmt.Errorf("could not rename temporary file: %w", err)
 	}
 
-	return nil
+	// chown and chmod by path rather than fd: some filesystems (Docker
+	// Desktop bind mounts via VirtioFS/gRPC-FUSE) silently drop fchown
+	// across a rename. chown runs before chmod because chown(2) clears
+	// setuid/setgid bits.
+	err = os.Chown(file, uid, gid)
+	if err != nil {
+		return err
+	}
+
+	return os.Chmod(file, parsedMode)
 }
 
 // SetAttributes updates owner, group and mode on an existing regular file

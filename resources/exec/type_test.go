@@ -141,6 +141,8 @@ var _ = Describe("Exec Type", func() {
 	Describe("isDesiredState", func() {
 		var exec *Type
 
+		stable := func(b bool, _ string) bool { return b }
+
 		BeforeEach(func(ctx context.Context) {
 			properties := &model.ExecResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{
@@ -157,13 +159,13 @@ var _ = Describe("Exec Type", func() {
 			It("Should return true when Creates is satisfied", func() {
 				exec.prop.Creates = "/tmp/marker"
 				status := &model.ExecState{CreatesSatisfied: true}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 
 			It("Should return false when Creates is not satisfied", func() {
 				exec.prop.Creates = "/tmp/marker"
 				status := &model.ExecState{CreatesSatisfied: false}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeFalse())
 			})
 		})
 
@@ -171,37 +173,37 @@ var _ = Describe("Exec Type", func() {
 			It("Should return true when RefreshOnly and no exit code", func() {
 				exec.prop.RefreshOnly = true
 				status := &model.ExecState{ExitCode: nil}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 
 			It("Should check exit code when RefreshOnly but has exit code", func() {
 				exec.prop.RefreshOnly = true
 				status := &model.ExecState{ExitCode: intPtr(0)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 
 				status = &model.ExecState{ExitCode: intPtr(1)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeFalse())
 			})
 		})
 
 		Context("with exit code checks", func() {
 			It("Should return true when exit code is 0 with default returns", func() {
 				status := &model.ExecState{ExitCode: intPtr(0)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 
 			It("Should return false when exit code is non-zero with default returns", func() {
 				status := &model.ExecState{ExitCode: intPtr(1)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeFalse())
 			})
 
 			It("Should use custom returns when specified", func() {
 				exec.prop.Returns = []int{0, 1, 2}
 				status := &model.ExecState{ExitCode: intPtr(1)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 
 				status = &model.ExecState{ExitCode: intPtr(3)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeFalse())
 			})
 		})
 
@@ -209,19 +211,19 @@ var _ = Describe("Exec Type", func() {
 			It("Should return true when OnlyIf set and not satisfied", func() {
 				exec.prop.OnlyIf = "test -f /tmp/ready"
 				status := &model.ExecState{OnlyIfSatisfied: false}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 
 			It("Should return false when OnlyIf set and satisfied", func() {
 				exec.prop.OnlyIf = "test -f /tmp/ready"
 				status := &model.ExecState{OnlyIfSatisfied: true}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeFalse())
 			})
 
 			It("Should not check OnlyIf when ExitCode is set", func() {
 				exec.prop.OnlyIf = "test -f /tmp/ready"
 				status := &model.ExecState{OnlyIfSatisfied: false, ExitCode: intPtr(0)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 		})
 
@@ -229,19 +231,19 @@ var _ = Describe("Exec Type", func() {
 			It("Should return true when Unless set and satisfied", func() {
 				exec.prop.Unless = "pgrep myapp"
 				status := &model.ExecState{UnlessSatisfied: true}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 
 			It("Should return false when Unless set and not satisfied", func() {
 				exec.prop.Unless = "pgrep myapp"
 				status := &model.ExecState{UnlessSatisfied: false}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeFalse())
 			})
 
 			It("Should not check Unless when ExitCode is set", func() {
 				exec.prop.Unless = "pgrep myapp"
 				status := &model.ExecState{UnlessSatisfied: true, ExitCode: intPtr(0)}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 		})
 
@@ -250,7 +252,7 @@ var _ = Describe("Exec Type", func() {
 				exec.prop.Creates = "/tmp/marker"
 				exec.prop.OnlyIf = "test -f /tmp/ready"
 				status := &model.ExecState{CreatesSatisfied: true, OnlyIfSatisfied: true}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeTrue())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeTrue())
 			})
 		})
 
@@ -258,7 +260,7 @@ var _ = Describe("Exec Type", func() {
 			It("Should return false when no exit code and not RefreshOnly", func() {
 				exec.prop.RefreshOnly = false
 				status := &model.ExecState{ExitCode: nil}
-				Expect(exec.isDesiredState(exec.prop, status)).To(BeFalse())
+				Expect(stable(exec.isDesiredState(exec.prop, status))).To(BeFalse())
 			})
 		})
 	})

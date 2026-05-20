@@ -108,7 +108,7 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	isStable, err := t.isDesiredState(properties, initialStatus, true)
+	isStable, _, err := t.isDesiredState(properties, initialStatus, true)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +149,12 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 		return nil, err
 	}
 
-	isStable, err = t.isDesiredState(properties, finalStatus, false)
+	isStable, reason, err := t.isDesiredState(properties, finalStatus, false)
 	if err != nil {
 		return nil, err
 	}
 	if !isStable {
-		return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
+		return nil, fmt.Errorf("%w: %s: %s", model.ErrDesiredStateFailed, properties.Ensure, reason)
 	}
 
 	t.FinalizeState(finalStatus, false, "", true, true, false)
@@ -182,7 +182,10 @@ func (t *Type) noopAffected(properties *model.ScaffoldResourceProperties, state 
 	return affected, verb
 }
 
-func (t *Type) isDesiredState(properties *model.ScaffoldResourceProperties, state *model.ScaffoldState, fromStatus bool) (bool, error) {
+// isDesiredState reports whether state matches properties. The second return is
+// a human-readable reason describing the mismatch when stable is false, suitable
+// for inclusion in error messages.
+func (t *Type) isDesiredState(properties *model.ScaffoldResourceProperties, state *model.ScaffoldState, fromStatus bool) (bool, string, error) {
 	meta := state.Metadata
 	changedCount := len(meta.Changed)
 	stableCount := len(meta.Stable)
@@ -193,19 +196,28 @@ func (t *Type) isDesiredState(properties *model.ScaffoldResourceProperties, stat
 
 	if properties.Ensure == model.EnsureAbsent {
 		if !meta.TargetExists {
-			return true, nil
+			return true, "", nil
 		}
 		t.log.Debug("desired state", "changed", meta.Changed, "stable", stableCount, "purged", purgedCount, "exist", meta.TargetExists)
-		return stableCount == 0 && changedCount == 0, nil
+		if stableCount == 0 && changedCount == 0 {
+			return true, "", nil
+		}
+		return false, fmt.Sprintf("target still has %d stable and %d changed files", stableCount, changedCount), nil
 	}
 
 	// a status call should show changes were made
 	if fromStatus {
-		return changedCount == 0 && stableCount > 0 && purgedCount == 0, nil
+		if changedCount == 0 && stableCount > 0 && purgedCount == 0 {
+			return true, "", nil
+		}
+		return false, fmt.Sprintf("scaffold needs work: changed=%d stable=%d purged=%d", changedCount, stableCount, purgedCount), nil
 	}
 
 	// a non status call should show that some changes were made or we have stable files
-	return changedCount > 0 || stableCount > 0 || purgedCount > 0, nil
+	if changedCount > 0 || stableCount > 0 || purgedCount > 0 {
+		return true, "", nil
+	}
+	return false, "scaffold produced no changed, stable, or purged files", nil
 }
 
 func (t *Type) Info(ctx context.Context) (any, error) {

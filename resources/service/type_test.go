@@ -53,6 +53,8 @@ var _ = Describe("Service Type", func() {
 	Describe("isDesiredState", func() {
 		var svc *Type
 
+		stable := func(b bool, _ string) bool { return b }
+
 		BeforeEach(func(ctx context.Context) {
 			properties := &model.ServiceResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{
@@ -73,7 +75,7 @@ var _ = Describe("Service Type", func() {
 				state := &model.ServiceState{
 					CommonResourceState: model.CommonResourceState{Ensure: stateEnsure},
 				}
-				Expect(svc.isDesiredState(props, state)).To(Equal(expected))
+				Expect(stable(svc.isDesiredState(props, state))).To(Equal(expected))
 			},
 			Entry("running matches running", model.ServiceEnsureRunning, model.ServiceEnsureRunning, true),
 			Entry("running does not match stopped", model.ServiceEnsureRunning, model.ServiceEnsureStopped, false),
@@ -91,7 +93,7 @@ var _ = Describe("Service Type", func() {
 					CommonResourceState: model.CommonResourceState{Ensure: model.ServiceEnsureRunning},
 					Metadata:            &model.ServiceMetadata{Enabled: stateEnabled},
 				}
-				Expect(svc.isDesiredState(props, state)).To(Equal(expected))
+				Expect(stable(svc.isDesiredState(props, state))).To(Equal(expected))
 			},
 			Entry("enable true matches enabled", boolPtr(true), true, true),
 			Entry("enable true does not match disabled", boolPtr(true), false, false),
@@ -552,7 +554,7 @@ var _ = Describe("Service Type", func() {
 
 				event, err := svc.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Errors).To(ContainElement("failed to reach desired state: running"))
+				Expect(event.Errors).To(ContainElement(ContainSubstring("failed to reach desired state: running")))
 			})
 
 			Context("with health check", func() {

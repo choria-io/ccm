@@ -212,8 +212,9 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	}
 
 	if !noop {
-		if !t.isDesiredState(properties, finalStatus) {
-			return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
+		stable, reason := t.isDesiredState(properties, finalStatus)
+		if !stable {
+			return nil, fmt.Errorf("%w: %s: %s", model.ErrDesiredStateFailed, properties.Ensure, reason)
 		}
 	}
 
@@ -226,25 +227,28 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	return finalStatus, nil
 }
 
-func (t *Type) isDesiredState(properties *model.ServiceResourceProperties, state *model.ServiceState) bool {
+// isDesiredState reports whether state matches properties. The second return is
+// a human-readable reason describing the mismatch when stable is false, suitable
+// for inclusion in error messages.
+func (t *Type) isDesiredState(properties *model.ServiceResourceProperties, state *model.ServiceState) (bool, string) {
 	switch {
 	case properties.Ensure == model.ServiceEnsureStopped && state.Ensure != model.ServiceEnsureStopped:
-		return false
+		return false, fmt.Sprintf("service is %s, expected stopped", state.Ensure)
 
 	case properties.Ensure == model.ServiceEnsureRunning && state.Ensure != model.ServiceEnsureRunning:
-		return false
+		return false, fmt.Sprintf("service is %s, expected running", state.Ensure)
 	}
 
 	switch {
 	case properties.Enable == nil:
 		// just leave it alone
 	case *properties.Enable && !state.Metadata.Enabled:
-		return false
+		return false, "service is disabled, expected enabled"
 	case !*properties.Enable && state.Metadata.Enabled:
-		return false
+		return false, "service is enabled, expected disabled"
 	}
 
-	return true
+	return true, ""
 }
 
 func (t *Type) Info(ctx context.Context) (any, error) {

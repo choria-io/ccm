@@ -48,6 +48,8 @@ var _ = Describe("Package Type", func() {
 	Describe("isDesiredState", func() {
 		var pkg *Type
 
+		stable := func(b bool, _ string) bool { return b }
+
 		BeforeEach(func(ctx context.Context) {
 			properties := &model.PackageResourceProperties{
 				CommonResourceProperties: model.CommonResourceProperties{
@@ -68,7 +70,7 @@ var _ = Describe("Package Type", func() {
 				state := &model.PackageState{
 					CommonResourceState: model.CommonResourceState{Ensure: stateEnsure},
 				}
-				Expect(pkg.isDesiredState(props, state)).To(Equal(expected))
+				Expect(stable(pkg.isDesiredState(props, state))).To(Equal(expected))
 			},
 			Entry("present matches any version", EnsurePresent, "1.2.3", true),
 			Entry("present does not match absent", EnsurePresent, EnsureAbsent, false),
@@ -385,7 +387,7 @@ var _ = Describe("Package Type", func() {
 
 				event, err := pkg.Apply(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(event.Errors).To(ContainElement("failed to reach desired state: absent"))
+				Expect(event.Errors).To(ContainElement(ContainSubstring("failed to reach desired state: absent")))
 			})
 
 			Context("with health check", func() {

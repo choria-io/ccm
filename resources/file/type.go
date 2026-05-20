@@ -177,9 +177,10 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	}
 
 	if !noop {
-		isStable, _, _ = t.isDesiredState(properties, finalStatus)
+		var reason string
+		isStable, reason, _ = t.isDesiredState(properties, finalStatus)
 		if !isStable {
-			return nil, fmt.Errorf("%w: %s", model.ErrDesiredStateFailed, properties.Ensure)
+			return nil, fmt.Errorf("%w: %s: %s", model.ErrDesiredStateFailed, properties.Ensure, reason)
 		}
 	}
 
@@ -188,22 +189,30 @@ func (t *Type) ApplyResource(ctx context.Context) (model.ResourceState, error) {
 	return finalStatus, nil
 }
 
+// isDesiredState reports whether state matches properties. The second return is
+// a human-readable reason describing the mismatch when stable is false, suitable
+// for inclusion in error messages.
 func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *model.FileState) (bool, string, error) {
 	if properties.Ensure == model.EnsureAbsent {
 		t.log.Debug("Checking if file is absent due to ensure=absent", "ensure", state.Ensure)
-		return state.Ensure == model.EnsureAbsent, "", nil
+		if state.Ensure == model.EnsureAbsent {
+			return true, "", nil
+		}
+		return false, fmt.Sprintf("file still exists (ensure=%s)", state.Ensure), nil
 	}
 
-	var contentChecksum string
-	var err error
 	meta := state.Metadata
 
 	if properties.Ensure != state.Ensure {
 		t.log.Debug("Ensure does not match", "requested", properties.Ensure, "state", state.Ensure)
-		return false, "", nil
+		return false, fmt.Sprintf("ensure mismatch: state=%s requested=%s", state.Ensure, properties.Ensure), nil
 	}
 
 	if properties.Ensure != model.FileEnsureDirectory && properties.ManagesContent() {
+		var (
+			contentChecksum string
+			err             error
+		)
 		if properties.Source != "" {
 			path := t.adjustedSource(properties)
 			contentChecksum, err = iu.Sha256HashFile(path)
@@ -219,18 +228,18 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 
 		if contentChecksum != meta.Checksum {
 			t.log.Debug("Content does not match", "requested", contentChecksum, "state", meta.Checksum)
-			return false, contentChecksum, nil
+			return false, fmt.Sprintf("content checksum mismatch: state=%s requested=%s", meta.Checksum, contentChecksum), nil
 		}
 	}
 
 	if !iu.UserIDMatches(properties.Owner, meta.Owner) {
 		t.log.Debug("Owner does not match", "state", meta.Owner, "requested", properties.Owner)
-		return false, contentChecksum, nil
+		return false, fmt.Sprintf("owner mismatch: state=%s requested=%s", meta.Owner, properties.Owner), nil
 	}
 
 	if !iu.GroupIDMatches(properties.Group, meta.Group) {
 		t.log.Debug("Group does not match", "state", meta.Group, "requested", properties.Group)
-		return false, contentChecksum, nil
+		return false, fmt.Sprintf("group mismatch: state=%s requested=%s", meta.Group, properties.Group), nil
 	}
 
 	desiredMode := properties.Mode
@@ -243,10 +252,10 @@ func (t *Type) isDesiredState(properties *model.FileResourceProperties, state *m
 
 	if meta.Mode != desiredMode {
 		t.log.Debug("Mode does not match", "state", meta.Mode, "requested", desiredMode)
-		return false, contentChecksum, nil
+		return false, fmt.Sprintf("mode mismatch: state=%s requested=%s", meta.Mode, desiredMode), nil
 	}
 
-	return true, contentChecksum, nil
+	return true, "", nil
 }
 
 func (t *Type) Info(ctx context.Context) (any, error) {
