@@ -31,12 +31,13 @@ In templates, you have direct access to:
 
 ### Available functions
 
-| Function                       | Description                                                                                                                                                               |
-|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `lookup(key, default)`         | Lookup data using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md). Example: `lookup("facts.host.info.os", "linux")`                           |
-| `readFile(path)`, `file(path)` | Read a file into a string. Relative paths are resolved from the working directory, absolute paths are used as-is                                                          |
-| `template(f)`                  | Parse `f` using templates. If `f` ends in `.templ`, reads the file first, if it ends in `.jet` calls the `jet()` function. Not available in Go templates (keyword clash)  |
-| `jet(f)`, `jet(f, "[[", "]]")` | Parse `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md) with optional custom delimiters. If `f` ends in `.jet`, reads the file first |
+| Function                       | Description                                                                                                                                                                                    |
+|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `lookup(key, default)`         | Lookup data using [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md). Example: `lookup("facts.host.info.os", "linux")`                                                |
+| `readFile(path)`, `file(path)` | Read a file into a string. Relative paths are resolved from the working directory, absolute paths are used as-is                                                                               |
+| `template(f)`                  | Parse `f` using templates. If `f` ends in `.templ`, reads the file first, if it ends in `.jet` calls the `jet()` function. Not available in Go templates (keyword clash)                       |
+| `jet(f)`, `jet(f, "[[", "]]")` | Parse `f` using [Jet templates](https://github.com/CloudyKit/jet/blob/master/docs/syntax.md) with optional custom delimiters. If `f` ends in `.jet`, reads the file first                      |
+| `kvGet(bucket, key)`           | Read a value from a NATS JetStream KV bucket. Requires a configured NATS context. Example: `kvGet("secrets", "db.password")` {{% badge style="primary" title="Version" %}}0.0.32{{% /badge %}} |
 
 ### GJSON path examples
 
