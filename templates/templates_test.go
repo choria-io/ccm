@@ -6,6 +6,7 @@ package templates
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 	"text/template"
 
@@ -229,6 +230,75 @@ var _ = Describe("Templates", func() {
 			result, err := ResolveTemplateString("{{ lookup('data.items.1') }}", env)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal("second"))
+		})
+	})
+
+	Describe("kvGet function", func() {
+		It("Should return the value for a bucket and key", func() {
+			env.KVGetFunc = func(bucket, key string) (string, error) {
+				Expect(bucket).To(Equal("secrets"))
+				Expect(key).To(Equal("db/password"))
+				return "s3cr3t", nil
+			}
+
+			result, err := ResolveTemplateString("{{ kvGet('secrets', 'db/password') }}", env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("s3cr3t"))
+		})
+
+		It("Should be available inside jet templates", func() {
+			env.KVGetFunc = func(bucket, key string) (string, error) {
+				return "s3cr3t", nil
+			}
+
+			result, err := ResolveTemplateString(`{{ jet('[[ kvGet("secrets", "db/password") ]]') }}`, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("s3cr3t"))
+		})
+
+		It("Should be available inside go templates", func() {
+			env.KVGetFunc = func(bucket, key string) (string, error) {
+				Expect(bucket).To(Equal("secrets"))
+				Expect(key).To(Equal("db/password"))
+				return "s3cr3t", nil
+			}
+
+			goTpl := `{{ kvGet "secrets" "db/password" }}`
+			tmpl, err := template.New("test").Funcs(env.GoFunctions()).Parse(goTpl)
+			Expect(err).ToNot(HaveOccurred())
+
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, env)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(buf.String()).To(Equal("s3cr3t"))
+		})
+
+		It("Should error when no KV function is configured", func() {
+			result, err := ResolveTemplateString("{{ kvGet('secrets', 'db/password') }}", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("kvGet function not available"))
+			Expect(result).To(Equal(""))
+		})
+
+		It("Should propagate errors from the KV function", func() {
+			env.KVGetFunc = func(bucket, key string) (string, error) {
+				return "", fmt.Errorf("nats context not set")
+			}
+
+			result, err := ResolveTemplateString("{{ kvGet('secrets', 'db/password') }}", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("nats context not set"))
+			Expect(result).To(Equal(""))
+		})
+
+		It("Should error with wrong number of arguments", func() {
+			env.KVGetFunc = func(bucket, key string) (string, error) {
+				return "s3cr3t", nil
+			}
+
+			_, err := ExprParse("kvGet('secrets')", env)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("kvGet requires 2 string arguments"))
 		})
 	})
 

@@ -875,6 +875,82 @@ var _ = Describe("TemplateEnvironment", func() {
 	})
 })
 
+var _ = Describe("templateKVGet", func() {
+	var (
+		ctrl    *gomock.Controller
+		mockLog *modelmocks.MockLogger
+		mockJS  *modelmocks.MockJetStream
+		mockKV  *modelmocks.MockKeyValue
+		mockEnt *modelmocks.MockKeyValueEntry
+		mgr     *CCM
+		ctx     context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockLog = modelmocks.NewMockLogger(ctrl)
+		mockJS = modelmocks.NewMockJetStream(ctrl)
+		mockKV = modelmocks.NewMockKeyValue(ctrl)
+		mockEnt = modelmocks.NewMockKeyValueEntry(ctrl)
+		mockLog.EXPECT().With(gomock.Any()).AnyTimes().Return(mockLog)
+		mockLog.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
+		ctx = context.Background()
+
+		var err error
+		mgr, err = NewManager(mockLog, mockLog)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("requires a bucket name", func() {
+		_, err := mgr.templateKVGet(ctx, "", "key")
+		Expect(err).To(MatchError("bucket name is required"))
+	})
+
+	It("requires a key", func() {
+		_, err := mgr.templateKVGet(ctx, "secrets", "")
+		Expect(err).To(MatchError("key is required"))
+	})
+
+	It("propagates JetStream connection errors", func() {
+		_, err := mgr.templateKVGet(ctx, "secrets", "db/password")
+		Expect(err).To(MatchError("nats context not set"))
+	})
+
+	It("returns the value for a bucket and key", func() {
+		mgr.js = mockJS
+		mockJS.EXPECT().KeyValue(gomock.Any(), "secrets").Return(mockKV, nil)
+		mockKV.EXPECT().Get(gomock.Any(), "db/password").Return(mockEnt, nil)
+		mockEnt.EXPECT().Value().Return([]byte("s3cr3t"))
+
+		val, err := mgr.templateKVGet(ctx, "secrets", "db/password")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(val).To(Equal("s3cr3t"))
+	})
+
+	It("wraps errors accessing the bucket", func() {
+		mgr.js = mockJS
+		mockJS.EXPECT().KeyValue(gomock.Any(), "secrets").Return(nil, fmt.Errorf("bucket not found"))
+
+		_, err := mgr.templateKVGet(ctx, "secrets", "db/password")
+		Expect(err).To(MatchError(ContainSubstring(`could not access KV bucket "secrets"`)))
+		Expect(err).To(MatchError(ContainSubstring("bucket not found")))
+	})
+
+	It("wraps errors getting the key", func() {
+		mgr.js = mockJS
+		mockJS.EXPECT().KeyValue(gomock.Any(), "secrets").Return(mockKV, nil)
+		mockKV.EXPECT().Get(gomock.Any(), "db/password").Return(nil, fmt.Errorf("key not found"))
+
+		_, err := mgr.templateKVGet(ctx, "secrets", "db/password")
+		Expect(err).To(MatchError(ContainSubstring(`could not get key "db/password" from bucket "secrets"`)))
+		Expect(err).To(MatchError(ContainSubstring("key not found")))
+	})
+})
+
 var _ = Describe("StartSession", func() {
 	var (
 		ctrl    *gomock.Controller

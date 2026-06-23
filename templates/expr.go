@@ -23,6 +23,7 @@ func ExprParse(query string, env *Env, opts ...expr.Option) (any, error) {
 			expr.Function("template", env.template),
 			expr.Function("jet", env.jet),
 			expr.Function("registrations", env.registrations),
+			expr.Function("kvGet", env.kvGet),
 		)
 	}
 

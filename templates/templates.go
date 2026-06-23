@@ -196,6 +196,9 @@ type Env struct {
 
 	RegistrationsFunc func(cluster, protocol, service, ip string) (any, error) `json:"-" yaml:"-"`
 
+	// KVGetFunc retrieves the value of a key from a NATS KV bucket, requires a NATS context to be configured
+	KVGetFunc func(bucket, key string) (string, error) `json:"-" yaml:"-"`
+
 	// DefaultOnMissing when true causes lookup() to return "" instead of an error
 	// when a key is missing and no default is provided
 	DefaultOnMissing bool `json:"-" yaml:"-"`
@@ -280,6 +283,27 @@ func (e *Env) registrations(params ...any) (any, error) {
 	}
 
 	return e.RegistrationsFunc(args[0], args[1], args[2], args[3])
+}
+
+func (e *Env) kvGet(params ...any) (any, error) {
+	if len(params) != 2 {
+		return nil, fmt.Errorf("kvGet requires 2 string arguments: bucket, key")
+	}
+
+	args := make([]string, 2)
+	for i, p := range params {
+		s, ok := p.(string)
+		if !ok {
+			return nil, fmt.Errorf("kvGet argument %d must be a string", i+1)
+		}
+		args[i] = s
+	}
+
+	if e.KVGetFunc == nil {
+		return nil, fmt.Errorf("kvGet function not available")
+	}
+
+	return e.KVGetFunc(args[0], args[1])
 }
 
 func (e *Env) lookup(params ...any) (any, error) {
