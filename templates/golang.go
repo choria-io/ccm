@@ -15,6 +15,7 @@ func (e *Env) GoFunctions() template.FuncMap {
 		"readFile":      e.goReadFile,
 		"file":          e.goReadFile,
 		"registrations": e.registrations,
+		"kvGet":         e.kvGet,
 		"jet":           e.goJet,
 	}
 }

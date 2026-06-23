@@ -31,6 +31,7 @@ func (e *Env) JetFunctions() map[string]jet.Func {
 		"readFile":      e.jetReadFile(),
 		"file":          e.jetReadFile(),
 		"registrations": e.jetRegistrations(),
+		"kvGet":         e.jetKVGet(),
 		"template":      e.jetTemplate(),
 	}
 }
@@ -169,6 +170,24 @@ func (e *Env) jetRegistrations() jet.Func {
 		val, err := e.registrations(cluster, protocol, service, ip)
 		if err != nil {
 			a.Panicf("registrations: %v", err)
+		}
+
+		return reflect.ValueOf(val)
+	}
+}
+
+func (e *Env) jetKVGet() jet.Func {
+	return func(a jet.Arguments) reflect.Value {
+		a.RequireNumOfArguments("kvGet", 2, 2)
+
+		var bucket, key string
+		if err := a.ParseInto(&bucket, &key); err != nil {
+			a.Panicf("kvGet: arguments must be strings: %v", err)
+		}
+
+		val, err := e.kvGet(bucket, key)
+		if err != nil {
+			a.Panicf("kvGet: %v", err)
 		}
 
 		return reflect.ValueOf(val)

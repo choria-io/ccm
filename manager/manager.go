@@ -622,7 +622,39 @@ func (m *CCM) TemplateEnvironment(ctx context.Context) (*templates.Env, error) {
 		return registration.JetStreamLookup(ctx, m, cluster, protocol, service, ip)
 	}
 
+	env.KVGetFunc = func(bucket, key string) (string, error) {
+		return m.templateKVGet(ctx, bucket, key)
+	}
+
 	return env, nil
+}
+
+// templateKVGet retrieves the value of a key from a NATS KV bucket for use in templates.
+// It requires a NATS context to have been configured via WithNatsContext().
+func (m *CCM) templateKVGet(ctx context.Context, bucket, key string) (string, error) {
+	if bucket == "" {
+		return "", fmt.Errorf("bucket name is required")
+	}
+	if key == "" {
+		return "", fmt.Errorf("key is required")
+	}
+
+	js, err := m.JetStream()
+	if err != nil {
+		return "", err
+	}
+
+	kv, err := js.KeyValue(ctx, bucket)
+	if err != nil {
+		return "", fmt.Errorf("could not access KV bucket %q: %w", bucket, err)
+	}
+
+	entry, err := kv.Get(ctx, key)
+	if err != nil {
+		return "", fmt.Errorf("could not get key %q from bucket %q: %w", key, bucket, err)
+	}
+
+	return string(entry.Value()), nil
 }
 
 // NoopMode reports the noop mode
