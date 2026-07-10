@@ -1,0 +1,52 @@
+/* codemap-hugo: custom components layered on hugo-theme-relearn.
+   Every class is namespaced cm- so it never affects the rest of the site.
+   Colors derive from relearn's own CSS variables, so light, dark, and auto
+   theme variants all work with no extra rules. */
+:root {
+  --cm-accent:  var(--PRIMARY-color, #2f81eb);
+  --cm-accent2: #e29a4d;                         /* relearn has no second accent */
+  --cm-accent3: #d64545;
+  --cm-text:    var(--MAIN-TEXT-color, #202020);
+  --cm-faint:   var(--BOX-GREY-color, #808080);
+  --cm-border:  var(--CODE-BLOCK-BORDER-color, #d2d2d2);
+  --cm-box-bg:  var(--CODE-BLOCK-BG-color, #fafafa);
+  --cm-soft:    color-mix(in srgb, var(--cm-accent) 12%, transparent);
+  --cm-mono:    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+/* Card grid. Prefer relearn's {{% children %}} for section listings; use this
+   only for concept groups that are not the section's own child pages. */
+.cm-card-grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); margin:1.4rem 0; }
+.cm-card { display:block; border:1px solid var(--cm-border); border-radius:10px; padding:1.1rem 1.2rem; text-decoration:none; color:inherit; transition:transform .12s, border-color .12s; }
+.cm-card:hover { transform:translateY(-2px); border-color:var(--cm-accent); text-decoration:none; }
+.cm-card .cm-ix { font-family:var(--cm-mono); font-size:.72rem; letter-spacing:1px; color:var(--cm-accent2); }
+.cm-card h4 { margin:.3rem 0 .4rem; }
+.cm-card p { margin:0; font-size:.9rem; opacity:.82; }
+
+/* Definition list for struct fields and config keys. */
+.cm-kv { display:grid; grid-template-columns:200px 1fr; gap:0 1.2rem; margin:1.2rem 0; }
+.cm-kv dt { font-family:var(--cm-mono); font-size:.84rem; color:var(--cm-accent); padding:.5rem 0; border-top:1px solid var(--cm-border); }
+.cm-kv dd { margin:0; padding:.5rem 0; border-top:1px solid var(--cm-border); opacity:.9; }
+.cm-kv dt:first-of-type, .cm-kv dd:first-of-type { border-top:none; }
+
+/* Numbered steps for ordered flows. */
+.cm-steps { counter-reset:step; list-style:none; padding:0; margin:1.4rem 0; }
+.cm-steps > li { position:relative; padding-left:3rem; margin:1.1rem 0; }
+.cm-steps > li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:-.1rem; width:2rem; height:2rem; border-radius:50%; background:var(--cm-soft); color:var(--cm-accent); display:grid; place-items:center; font-weight:700; border:1px solid var(--cm-accent); }
+.cm-steps > li b { display:block; }
+
+/* Terminal mock for the overview page. Fixed dark palette by design. */
+.cm-terminal { background:#05070c; border:1px solid #222c3f; border-radius:12px; font-family:var(--cm-mono); font-size:.82rem; color:#cdd6e6; overflow:hidden; margin:1.5rem 0; }
+.cm-terminal .cm-tbar { background:#10151f; padding:.5rem .8rem; border-bottom:1px solid #1c2537; }
+.cm-terminal .cm-tbar i { width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:.35rem; vertical-align:middle; }
+.cm-terminal .r{background:#ff5f57}.cm-terminal .y{background:#febc2e}.cm-terminal .g{background:#28c840}
+.cm-terminal .cm-tbody { padding:1rem 1.1rem; line-height:1.7; white-space:pre-wrap; }
+.cm-terminal .c-dim{color:#808080}.cm-terminal .c-accent{color:#70aef5}.cm-terminal .c-tool{color:#e29a4d}.cm-terminal .c-ok{color:#8fe3a8}.cm-terminal .c-warn{color:#f0b866}
+
+/* SVG diagrams. */
+.cm-diagram { margin:1.6rem 0; border:1px solid var(--cm-border); border-radius:12px; padding:1.4rem; background:var(--MAIN-BG-color, transparent); }
+.cm-diagram svg { width:100%; height:auto; display:block; }
+.cm-diagram figcaption { font-size:.82rem; color:var(--cm-faint); text-align:center; margin-top:.9rem; }
+.cm-svg-label { font:600 13px var(--cm-mono); fill:var(--cm-text); }
+.cm-svg-sub { font:11px var(--cm-mono); fill:var(--cm-faint); }
+.cm-svg-box { fill:var(--cm-box-bg); stroke:var(--cm-border); }
