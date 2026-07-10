@@ -46,7 +46,11 @@
 /* SVG diagrams. */
 .cm-diagram { margin:1.6rem 0; border:1px solid var(--cm-border); border-radius:12px; padding:1.4rem; background:var(--MAIN-BG-color, transparent); }
 .cm-diagram svg { width:100%; height:auto; display:block; }
-.cm-diagram figcaption { font-size:.82rem; color:var(--cm-faint); text-align:center; margin-top:.9rem; }
+.cm-diagram figcaption { font-size:.84rem; font-weight:500; color:color-mix(in srgb, var(--cm-text) 85%, var(--cm-faint)); text-align:center; margin-top:.9rem; }
 .cm-svg-label { font:600 13px var(--cm-mono); fill:var(--cm-text); }
-.cm-svg-sub { font:11px var(--cm-mono); fill:var(--cm-faint); }
+/* Sub-labels: 600 weight + a mostly-text fill so they read clearly in light and
+   dark. 10px leaves comfortable padding on the longest in-box label
+   ("packages · files · services", 27 chars) inside a 180px box; monospace advance
+   is weight-independent, so the bolder weight does not widen the text. */
+.cm-svg-sub { font:600 10px var(--cm-mono); fill:color-mix(in srgb, var(--cm-text) 74%, var(--cm-faint)); }
 .cm-svg-box { fill:var(--cm-box-bg); stroke:var(--cm-border); }
