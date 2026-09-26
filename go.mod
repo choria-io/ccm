@@ -1,37 +1,37 @@
 module github.com/choria-io/ccm
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/CloudyKit/jet/v6 v6.3.2
+	github.com/CloudyKit/jet/v6 v6.3.3
 	github.com/SladkyCitron/slogcolor v1.9.0
 	github.com/adrg/xdg v0.5.3
-	github.com/choria-io/appbuilder v0.19.0
+	github.com/choria-io/appbuilder v0.20.0
 	github.com/choria-io/fisk v0.9.1
 	github.com/choria-io/scaffold v0.0.11
 	github.com/choria-io/validator v0.0.2
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
-	github.com/goss-org/goss v0.4.9
+	github.com/goss-org/goss v0.4.10
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/nats-io/nats.go v1.52.0
-	github.com/onsi/ginkgo/v2 v2.32.0
-	github.com/onsi/gomega v1.42.1
-	github.com/prometheus/client_golang v1.23.2
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
+	github.com/nats-io/nats.go v1.54.0
+	github.com/onsi/ginkgo/v2 v2.33.0
+	github.com/onsi/gomega v1.44.0
+	github.com/prometheus/client_golang v1.24.1
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/segmentio/ksuid v1.0.4
-	github.com/shirou/gopsutil/v4 v4.26.6
-	github.com/sirupsen/logrus v1.9.4
-	github.com/synadia-io/orbit.go/jetstreamext v0.3.1
-	github.com/synadia-io/orbit.go/natscontext v0.1.2
+	github.com/shirou/gopsutil/v4 v4.26.8
+	github.com/sirupsen/logrus v1.10.2
+	github.com/synadia-io/orbit.go/jetstreamext v0.3.2
+	github.com/synadia-io/orbit.go/natscontext v0.1.3
 	github.com/tidwall/gjson v1.19.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/term v0.45.0
+	golang.org/x/term v0.46.0
 )
 
 require (
-	al.essio.dev/pkg/shellescape v1.6.0 // indirect
+	al.essio.dev/pkg/shellescape v1.6.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/CloudyKit/fastprinter v0.0.0-20251202014920-1725d2651bd4 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -44,30 +44,30 @@ require (
 	github.com/cheekybits/genny v1.0.0 // indirect
 	github.com/choria-io/goform v0.1.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ebitengine/purego v0.10.1 // indirect
+	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/ebitengine/purego v0.11.1 // indirect
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0 // indirect
+	github.com/google/pprof v0.0.0-20260926063103-aaccee046517 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/goss-org/GOnetstat v0.0.0-20230101144325-22be0bd9e64d // indirect
 	github.com/goss-org/go-ps v0.0.0-20230609005227-7b318e6a56e5 // indirect
 	github.com/guptarohit/asciigraph v0.10.0 // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
-	github.com/huandu/xstrings v1.5.0 // indirect
+	github.com/huandu/xstrings v1.6.1 // indirect
 	github.com/itchyny/gojq v0.12.19 // indirect
 	github.com/itchyny/timefmt-go v0.1.8 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.8.2 // indirect
-	github.com/klauspost/compress v1.19.0 // indirect
-	github.com/lufia/plan9stats v0.0.0-20260627054121-477a66015f15 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.8.3 // indirect
+	github.com/klauspost/compress v1.20.1 // indirect
+	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/mattn/go-runewidth v0.0.24 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/mattn/go-runewidth v0.0.30 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/miekg/dns v1.1.72 // indirect
+	github.com/miekg/dns v1.1.73 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
@@ -77,28 +77,28 @@ require (
 	github.com/oleiade/reflections v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.70.0 // indirect
-	github.com/prometheus/procfs v0.21.1 // indirect
+	github.com/power-devops/perfstat v0.0.0-20260916203055-22a1a467d9f0 // indirect
+	github.com/prometheus/client_model v0.6.3 // indirect
+	github.com/prometheus/common v0.71.0 // indirect
+	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/samber/lo v1.53.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/synadia-io/orbit.go/natsext v0.1.2 // indirect
+	github.com/synadia-io/orbit.go/natsext v0.1.3 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/xlab/tablewriter v0.0.0-20160610135559-80b567a11ad5 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/mod v0.38.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
-	golang.org/x/tools v0.48.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/tools v0.50.0 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
